@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest new functionality or an improvement
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What are you trying to do, and why? Describe the problem, not just the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-behavior
+    attributes:
+      label: Proposed behavior
+      description: What should the app do? Rough sketches or examples from other apps are welcome.
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance outcomes
+      description: How would we know this is done? A short list of observable outcomes.
+    validations:
+      required: false
+  - type: textarea
+    id: upstream-notes
+    attributes:
+      label: Upstream dependency notes
+      description: Does this depend on hermes-webui server capabilities? Anything upstream to link?
+    validations:
+      required: false

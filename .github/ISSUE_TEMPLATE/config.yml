@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability / Уязвимость
+    url: https://github.com/__OWNER__/murf/security/advisories/new
+    about: Please report security issues privately (see SECURITY.md).
+  - name: hermes-webui (server) issues
+    url: https://github.com/nesquena/hermes-webui/issues
+    about: Bugs in the WebUI server belong in the upstream project.
+  - name: Hermes Agent issues
+    url: https://github.com/NousResearch/hermes-agent/issues
+    about: Bugs in the agent itself belong in the upstream project.

@@ -1,0 +1,69 @@
+name: Bug report
+description: Something in the app is broken or behaving unexpectedly
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps that take a fresh install (or a known state) to the bug.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened.
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version / commit
+      description: MURF version (Settings → About) or the commit you built from source.
+    validations:
+      required: true
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version and device
+      placeholder: e.g. Android 16 on vivo X300, or API 34 emulator
+    validations:
+      required: true
+  - type: input
+    id: server-version
+    attributes:
+      label: hermes-webui server version
+      description: Settings → server info in the app, or the upstream tag/commit you deployed.
+    validations:
+      required: true
+  - type: dropdown
+    id: connection-path
+    attributes:
+      label: How the phone reaches the server
+      options:
+        - HTTPS tunnel (e.g. Cloudflare Tunnel)
+        - Reverse proxy
+        - Tailscale
+        - localhost (simulator only)
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recordings
+      description: Visual evidence helps a lot. Drag and drop to attach.
+    validations:
+      required: false
