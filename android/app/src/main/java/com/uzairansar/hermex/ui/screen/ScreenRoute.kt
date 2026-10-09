@@ -117,7 +117,8 @@ fun createScreenWebView(context: android.content.Context): WebView =
         layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
-        settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        // Статика noVNC кэшируется (сервер отдаёт её с max-age, а саму страницу — no-store), иначе каждое открытие экрана — ~40 загрузок
+        settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.mediaPlaybackRequiresUserGesture = true
         settings.allowFileAccess = false
         settings.allowContentAccess = false

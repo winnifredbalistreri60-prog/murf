@@ -31,7 +31,50 @@ body.ctl.kbdopen #kbd{display:flex}
 #kbd{gap:6px;padding:6px;align-items:center;flex:none}
 #txt{flex:1;min-width:0;height:36px;border-radius:9px;border:1px solid #44444c;background:#0d0d10;color:#fff;padding:0 10px;font:15px system-ui}
 #toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:rgba(30,30,34,.95);color:#fff;padding:7px 12px;border-radius:10px;display:none;z-index:9;font-size:12.5px;max-width:90%}
-</style></head>
+</style>
+<!-- noVNC: все модули сразу, а не цепочкой импортов (через VPN каждый шаг ~1 с) -->
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/rfb.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/keysym.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/int.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/logging.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/strings.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/browser.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/element.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/events.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/eventtarget.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/display.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/inflator.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/deflator.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/keyboard.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/gesturehandler.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/util/cursor.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/websock.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/des.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/xtscancodes.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/encodings.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/raw.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/copyrect.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/rre.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/hextile.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/tight.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/tightpng.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/base64.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/inflate.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/zstream.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/deflate.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/util.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/utils/common.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/adler32.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/crc32.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/inffast.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/inftrees.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/keysymdef.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/vkeys.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/fixedkeys.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/input/domkeytable.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/trees.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./vendor/pako/lib/zlib/messages.js">
+</head>
 <body>
 <div id="warn">⚠ Агент сейчас работает на этом экране — ваши клики и ввод могут ему помешать.</div>
 <div id="stage"><div id="wrap"><div id="screen"></div></div><div id="off"></div><div id="toast"></div>

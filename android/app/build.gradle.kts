@@ -23,8 +23,8 @@ android {
         applicationId = "ru.dredd20.agent"
         minSdk = 26
         targetSdk = 36
-        versionCode = 122
-        versionName = "1.2.2-murf"
+        versionCode = 123
+        versionName = "1.2.3-murf"
 
         // Адрес сервера по умолчанию для экрана подключения: ./gradlew -Pmurf.defaultServerUrl=https://your-server.example
         val defaultServerUrl = (project.findProperty("murf.defaultServerUrl") as String?).orEmpty()
