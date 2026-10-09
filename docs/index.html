@@ -8,7 +8,8 @@
 <meta name="keywords" content="MURF, Hermes Agent, Nous Research, AI agent, Android, Manus alternative, OpenManus, agentic AI, Termux, proot, Ubuntu, noVNC, self-hosted, open source, ИИ-агент">
 <link rel="canonical" href="https://winnifredbalistreri60-prog.github.io/murf/">
 <link rel="alternate" hreflang="en" href="https://winnifredbalistreri60-prog.github.io/murf/">
-<link rel="alternate" hreflang="ru" href="https://winnifredbalistreri60-prog.github.io/murf/#ru">
+<link rel="alternate" hreflang="ru" href="https://winnifredbalistreri60-prog.github.io/murf/ru/">
+<link rel="alternate" hreflang="x-default" href="https://winnifredbalistreri60-prog.github.io/murf/">
 <link rel="icon" type="image/png" href="assets/icon.png">
 <meta name="theme-color" content="#0c0c0e">
 <meta property="og:type" content="website">
@@ -38,7 +39,7 @@
   "softwareVersion": "1.2.5",
   "license": "https://opensource.org/licenses/MIT",
   "image": "https://winnifredbalistreri60-prog.github.io/murf/assets/social-preview.png",
-  "screenshot": "https://winnifredbalistreri60-prog.github.io/murf/screenshots/home.png",
+  "screenshot": "https://winnifredbalistreri60-prog.github.io/murf/screenshots/ru/home.png",
   "codeRepository": "https://github.com/winnifredbalistreri60-prog/murf",
   "inLanguage": ["en", "ru"],
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
@@ -71,15 +72,16 @@ section{margin-top:40px}h2{font-size:26px}footer{margin-top:48px;color:var(--mut
 <div class="btns">
   <a class="btn" href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest">⬇ Download APK</a>
   <a class="btn o" href="https://github.com/winnifredbalistreri60-prog/murf">★ GitHub</a>
-  <a class="btn o" href="#ru">Русский</a>
+  <a class="btn o" href="ru/">Русский</a>
 </div>
 <div class="shots">
-  <img src="screenshots/home.png" alt="MURF home screen" loading="lazy">
-  <img src="screenshots/chat-export.png" alt="Chat with the AI agent" loading="lazy">
-  <img src="screenshots/local-mode.png" alt="Local mode: Hermes Agent on the phone" loading="lazy">
-  <img src="screenshots/phone-bridge.png" alt="Phone bridge via Termux" loading="lazy">
-  <img src="screenshots/google-drive.png" alt="Google Drive export" loading="lazy">
+  <img src="screenshots/ru/home.png" alt="MURF home screen" loading="lazy">
+  <img src="screenshots/ru/chat-export.png" alt="Chat with the AI agent" loading="lazy">
+  <img src="screenshots/ru/local-mode.png" alt="Local mode: Hermes Agent on the phone" loading="lazy">
+  <img src="screenshots/ru/phone-bridge.png" alt="Phone bridge via Termux" loading="lazy">
+  <img src="screenshots/ru/google-drive.png" alt="Google Drive export" loading="lazy">
 </div>
+<p class="mut" style="font-size:13px">Screenshots show the Russian UI; the app is fully available in English.</p>
 <section>
 <h2>Features</h2>
 <div class="grid">
@@ -91,10 +93,17 @@ section{margin-top:40px}h2{font-size:26px}footer{margin-top:48px;color:var(--mut
   <div class="card"><h3>Everything from Hermex</h3>Sessions, projects, tasks, kanban, skills, memory, stats, multiple servers and profiles; export to Markdown/PDF and Google Drive.</div>
 </div>
 </section>
-<section id="ru" lang="ru">
-<h2>По-русски</h2>
-<p><b>MURF</b> — Android-приложение с открытым кодом для своего ИИ-агента на базе Hermes Agent: чат с агентом, живой экран его рабочего стола с просмотром и управлением, мост к телефону через Termux (команды, фото, файлы — с подтверждением) и локальный режим, когда весь агент работает прямо на телефоне в Ubuntu (proot). Свой сервер и свой провайдер модели — открытая альтернатива облачным агентам вроде Manus.</p>
-<div class="btns"><a class="btn" href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest">⬇ Скачать APK</a><a class="btn o" href="https://github.com/winnifredbalistreri60-prog/murf#readme">Инструкция</a></div>
+<section>
+<h2>Like Codex or Claude desktop — but on your phone, with your own agent</h2>
+<p>Like OpenAI's <a href="https://openai.com/index/introducing-the-codex-app/">Codex app</a> and Anthropic's <a href="https://code.claude.com/docs/en/desktop">Claude Desktop</a>, MURF is a client for an AI agent that works on a computer, shows its steps and tool calls, asks for approval and handles files. The difference: MURF is an Android app for the open-source Hermes Agent on your own Ubuntu server (or on the phone itself), with a live view of the agent's own desktop, a Termux phone bridge and any model provider. <a href="https://github.com/winnifredbalistreri60-prog/murf#how-murf-compares-to-codex-desktop-and-claude-desktop">Full comparison</a>.</p>
+<p class="mut" style="font-size:13px">MURF is not affiliated with or endorsed by OpenAI or Anthropic. Codex, ChatGPT and Claude are trademarks of their respective owners.</p>
+</section>
+<section>
+<h2>Tablets and TV boxes</h2>
+<div class="grid">
+  <div class="card"><h3>Tablet version: in development</h3>Planned layout: chat and the live agent screen side by side, landscape. <a href="https://github.com/winnifredbalistreri60-prog/murf/issues/6">Issue #6</a></div>
+  <div class="card"><h3>TV box as the server (experimental)</h3>An always-on aarch64 TV box running Hermes Agent — natively on Armbian/Debian or via Termux on Android. Not yet tested on a TV box. <a href="https://github.com/winnifredbalistreri60-prog/murf#use-a-tv-box-as-the-server-experimental">Requirements</a> · <a href="https://github.com/winnifredbalistreri60-prog/murf/issues/7">Issue #7</a></div>
+</div>
 </section>
 <footer>MURF is a fork of <a href="https://github.com/uzairansaruzi/hermex">Hermex</a>. Built on <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>, <a href="https://github.com/nesquena/hermes-webui">hermes-webui</a>, <a href="https://github.com/novnc/noVNC">noVNC</a> and <a href="https://termux.dev">Termux</a>. License: MIT.</footer>
 </main>

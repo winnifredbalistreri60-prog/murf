@@ -2,6 +2,8 @@
 
 <h1 align="center">MURF — Android app for your own AI agent</h1>
 
+<p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
+
 <p align="center">
   <a href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/winnifredbalistreri60-prog/murf?label=release&color=ffb300"></a>
   <a href="https://github.com/winnifredbalistreri60-prog/murf/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/winnifredbalistreri60-prog/murf/total?color=ff8f00"></a>
@@ -13,95 +15,95 @@
 
 <p align="center">
   <b>Open-source Android client for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>: chat with your AI agent, watch and control its live desktop, let it use your phone through Termux — or run the whole agent on the phone in local Ubuntu.</b><br>
-  A self-hosted, open-source alternative to cloud agent apps like Manus.
-</p>
-<p align="center">
-  <b>Android-клиент для своего ИИ-агента на базе Hermes Agent:</b> чат с агентом, живой экран его рабочего стола с управлением, мост к телефону через Termux и локальный режим — весь агент на телефоне (Ubuntu в proot). Открытый код, свой сервер.
+  Your server, any model provider — a self-hosted, open-source alternative to cloud agent apps like Manus.
 </p>
 
 <p align="center">
-  <a href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest"><b>⬇️ Скачать APK / Download APK</b></a> ·
-  <a href="https://winnifredbalistreri60-prog.github.io/murf/">Сайт / Website</a> ·
-  <a href="#english">English</a> ·
+  <a href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest"><b>⬇️ Download APK</b></a> ·
+  <a href="https://winnifredbalistreri60-prog.github.io/murf/">Website</a> ·
   <a href="#faq">FAQ</a>
 </p>
 
-<p align="center"><img src="docs/assets/demo.gif" width="270" alt="MURF demo: home, chat, agent screen, phone bridge, local mode"></p>
+<p align="center"><img src="docs/assets/demo-ru.gif" width="270" alt="MURF demo: home, chat, agent screen, phone bridge, local mode"></p>
 
-## Быстрый старт / Quick start
+## Quick start
 
-1. Скачайте `murf-X.Y.Z.apk` из [последнего релиза](https://github.com/winnifredbalistreri60-prog/murf/releases/latest) и установите (Android 8.0+). Сверьте SHA-256 из описания релиза. / Download the APK from the [latest release](https://github.com/winnifredbalistreri60-prog/murf/releases/latest) and install it (Android 8.0+).
-2. **Свой сервер** — введите адрес и пароль hermes-webui (примеры nginx и служб — в [`server/`](server/README.md)). / **Your server:** enter your hermes-webui URL and password (configs in [`server/`](server/README.md)).
-3. **Или без сервера** — «Локальная среда» → «Установить» (нужен Termux, arm64, ≥ 4,5 ГБ). / **Or no server at all:** Local environment → Install (Termux, arm64, ≥ 4.5 GB).
+1. Download `murf-X.Y.Z.apk` from the [latest release](https://github.com/winnifredbalistreri60-prog/murf/releases/latest) and install it (Android 8.0+). Check the SHA-256 from the release notes.
+2. **Your server:** enter your hermes-webui URL and password (nginx and service examples in [`server/`](server/README.md)).
+3. **Or no server at all:** Local environment → Install (needs Termux, arm64, ≥ 4.5 GB free).
 
-## Сравнение / Comparison
+## Comparison
 
 | | **MURF** | Manus (app) | OpenManus | Hermes Agent via Telegram |
 |---|---|---|---|---|
-| Открытый код / Open source | ✅ MIT | ❌ | ✅ | ✅ |
-| Свой сервер / Self-hosted | ✅ | ❌ cloud | ✅ | ✅ |
-| Нативное Android-приложение / Native Android app | ✅ | ✅ | ❌ | via Telegram |
-| Живой экран агента / Live agent desktop | ✅ view + control | ✅ view | ❌ | ❌ |
-| Агент действует на телефоне / Agent uses your phone (Termux, camera, files) | ✅ with confirmation | ❌ | ❌ | ❌ |
-| Весь агент на телефоне / Whole agent on the phone | ✅ local mode | ❌ | ❌ | ❌ |
-| Модель / Model | any provider supported by Hermes Agent | Manus | any (config) | any provider supported by Hermes Agent |
+| Open source | ✅ MIT | ❌ | ✅ | ✅ |
+| Self-hosted | ✅ | ❌ cloud | ✅ | ✅ |
+| Native Android app | ✅ | ✅ | ❌ | via Telegram |
+| Live agent desktop | ✅ view + control | ✅ view | ❌ | ❌ |
+| Agent uses your phone (Termux, camera, files) | ✅ with confirmation | ❌ | ❌ | ❌ |
+| Whole agent on the phone | ✅ local mode | ❌ | ❌ | ❌ |
+| Model | any provider supported by Hermes Agent | Manus | any (config) | any provider supported by Hermes Agent |
 
-<sub>По публичной информации на октябрь 2026; поправки приветствуются. / Based on public information as of Oct 2026; corrections welcome.</sub>
+<sub>Based on public information as of Oct 2026; corrections welcome.</sub>
 
-## О проекте
+Compared with the Codex and Claude desktop apps — see [below](#how-murf-compares-to-codex-desktop-and-claude-desktop).
 
-**MURF** — Android-клиент для своего ИИ-агента на базе [Hermes Agent](https://github.com/NousResearch/hermes-agent) и [hermes-webui](https://github.com/nesquena/hermes-webui).
-Это форк [Hermex](https://github.com/uzairansaruzi/hermex) (нативный клиент hermes-webui) с упором на работу с телефона: живой экран агента, мост к телефону через Termux, локальный режим «весь агент на телефоне».
+## About
 
+**MURF** is an Android client for your own AI agent built on [Hermes Agent](https://github.com/NousResearch/hermes-agent) and [hermes-webui](https://github.com/nesquena/hermes-webui).
+It is a fork of [Hermex](https://github.com/uzairansaruzi/hermex) (a native hermes-webui client) focused on the phone: a live agent screen, a phone bridge via Termux, and a local mode that runs the whole agent on the phone.
 
-| Главное меню | Экран агента в чате | Экспорт беседы | Локальный режим |
+| Home | Agent screen | Chat export | Local mode |
 |---|---|---|---|
-| ![](docs/screenshots/home.png) | ![](docs/screenshots/live-screen.png) | ![](docs/screenshots/chat-export.png) | ![](docs/screenshots/local-mode.png) |
+| ![](docs/screenshots/ru/home.png) | ![](docs/screenshots/ru/live-screen.png) | ![](docs/screenshots/ru/chat-export.png) | ![](docs/screenshots/ru/local-mode.png) |
 
-| Телефон и Termux | Google Диск | Размер шрифта | Язык |
+| Phone & Termux | Google Drive | Font size | Language |
 |---|---|---|---|
-| ![](docs/screenshots/phone-bridge.png) | ![](docs/screenshots/google-drive.png) | ![](docs/screenshots/font-size.png) | ![](docs/screenshots/language.png) |
+| ![](docs/screenshots/ru/phone-bridge.png) | ![](docs/screenshots/ru/google-drive.png) | ![](docs/screenshots/ru/font-size.png) | ![](docs/screenshots/ru/language.png) |
 
-## Возможности
+<sub>Screenshots currently show the Russian UI; the app itself is fully available in English (Settings → Appearance → Language). English screenshots: [#2](https://github.com/winnifredbalistreri60-prog/murf/issues/2).</sub>
 
-- **Чат с агентом** — потоковые ответы, шаги инструментов, мышление, **субагенты**, **подтверждения** опасных действий (в чате и уведомлением).
-- **Живой экран агента** (noVNC) — открывается отдельно или поверх чата, два режима:
-  - «Смотреть» — только просмотр, ввод отбрасывается **на сервере** (отдельный прокси «только просмотр»), а не только в приложении;
-  - «Управлять» — тап = клик, удержание = правый клик, два пальца = прокрутка, зум и перемещение, панель клавиш (Esc/Tab/Ctrl/Alt/Shift/Enter/стрелки), ввод кириллицы, снимок экрана; управление разрешено только с вашего Origin.
-- **Мост «Телефон»** — агент на сервере просит телефон выполнить действие (команда в Termux, фото, геопозиция, файлы, буфер обмена, уведомления, батарея, SMS по желанию); каждое действие подтверждается, кроме разрешённых «всегда».
-- **Google Диск** — отправка сообщений, бесед, файлов и снимков экрана в Диск; подключение Диска к агенту через rclone (токен, без пароля).
-- **Экспорт** — беседа в Markdown/PDF/буфер, «Поделиться», сохранение в Загрузки.
-- **Проверка обновлений** сервера: Hermes Agent и WebUI, пробный запуск, резервная копия и автоматический откат.
-- **Локальный режим** — весь агент на телефоне: Ubuntu (proot) в Termux, Hermes Agent, WebUI, рабочий стол XFCE + браузер, вход в провайдера (device code) прямо из среды; переключение профиля «Сервер / Телефон (локально)» и предложение переключиться, если сервер недоступен. **Проверено на реальном телефоне** (vivo X300, Android 16, arm64, MURF 1.2.4).
-- Всё, что умеет Hermex: сессии, проекты, задачи, канбан, навыки, память, статистика, несколько серверов и профилей.
+## Features
 
-Новое в 1.2.x:
+- **Agent chat** — streaming answers, tool steps, reasoning, **subagents**, **approvals** for risky actions (in chat and as a notification).
+- **Live agent screen** (noVNC) — opens from the monitor button in the chat header (green dot = the agent is working) or as its own screen; two modes:
+  - *View* — view-only; input is dropped **on the server** by a view-only proxy, not just in the app;
+  - *Control* — tap = click, long press = right click, two fingers = scroll, zoom and pan, key bar (Esc/Tab/Ctrl/Alt/Shift/Enter/arrows), Cyrillic input, screenshot; control is allowed only from your Origin.
+- **Phone bridge** — the agent on the server asks the phone to do something (Termux command, photo, location, files, clipboard, notifications, battery, SMS if enabled); every action is confirmed unless you allowed it “always”.
+- **Google Drive** — send messages, chats, files and screenshots to Drive; connect Drive to the agent through rclone (token, no password).
+- **Export** — chat to Markdown/PDF/clipboard, Share, save to Downloads.
+- **Server update checker** for Hermes Agent and WebUI: dry run, backup and automatic rollback.
+- **Local mode** — the whole agent on the phone: Ubuntu (proot) in Termux, Hermes Agent, WebUI, XFCE desktop + browser, provider login (device code) from inside the environment; “Server / Phone (local)” profile switch and an offer to switch when the server is unreachable. **Tested on a real phone** (vivo X300, Android 16, arm64, MURF 1.2.4).
+- **Language picker** — system default or any bundled language; MURF screens in English and Russian, English fallback.
+- Everything from Hermex: sessions, projects, tasks, kanban, skills, memory, stats, multiple servers and profiles.
 
-| Версия | Что появилось |
+What's new in 1.2.x:
+
+| Version | What's new |
 |---|---|
-| 1.2.0 | Локальный режим: установка с прогрессом и продолжением после обрыва, вход в провайдера, прокси, перенос настроек с сервера, профиль «Телефон (локально)» |
-| 1.2.1 | Запасная установка без proot-distro (чистый proot) |
-| 1.2.2 | **Выбор языка** — «Как в системе» или любой встроенный (на Android 13+ и в системных настройках языка приложения); экраны MURF на русском и английском, для остальных языков — английский |
-| 1.2.3 | Экран агента открывается в 2–3 раза быстрее (параллельная загрузка noVNC, кэш) |
-| 1.2.4 | Локальный экран: исправлено вечное «Подключение…»; **«Диагностика»** локальной среды с отчётом; «Перезапустить экран» и «Показать журнал» прямо на экране |
-| 1.2.5 | Экран агента в чате — **по кнопке** с монитором в шапке (зелёная точка — агент работает); мини-превью в углу чата — по желанию: «Настройки → Взаимодействие → Мини-превью экрана в чате» (перетаскивается, закрывается ×) |
+| 1.2.0 | Local mode: install with progress and resume, provider login, proxy, settings import from the server, “Phone (local)” profile |
+| 1.2.1 | Fallback install without proot-distro (plain proot) |
+| 1.2.2 | **Language picker**; MURF screens in Russian and English |
+| 1.2.3 | Agent screen opens 2–3× faster (parallel noVNC loading, cache) |
+| 1.2.4 | Local screen: fixed endless “Connecting…”; local-environment **Diagnostics** with a report; “Restart screen” and “Show log” right on the screen |
+| 1.2.5 | Agent screen in chat opens **on demand** from the monitor button in the header; optional mini-preview (Settings → Interaction, off by default; draggable, dismiss with ×) |
 
-Из 1.1.x остаются: **размер шрифта** для всего приложения, **свайпы** между разделами и к экрану агента (отключаются в настройках), режим «Управлять», экран поверх чата.
+From 1.1.x: app-wide **font size**, **swipe** navigation between sections and to the agent screen (can be turned off), Control mode, screen over the chat.
 
-## Архитектура
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Phone["Телефон"]
+  subgraph Phone["Phone"]
     App["MURF (Android)"]
     Termux["Termux (+ Termux:API)"]
-    Local["Локальный режим:<br>Ubuntu proot → Hermes + WebUI + XFCE"]
+    Local["Local mode:<br>Ubuntu proot → Hermes + WebUI + XFCE"]
   end
-  subgraph Server["Сервер"]
+  subgraph Server["Server"]
     Nginx["nginx (TLS)<br>/  /agent/  /screen/  /phone/"]
     WebUI["hermes-webui :8787"]
     Agent["Hermes Agent<br>(gateway, API :8642)"]
-    Desk["Рабочий стол агента<br>Xvnc + websockify/noVNC"]
+    Desk["Agent desktop<br>Xvnc + websockify/noVNC"]
     Relay["phone-relay :8790/:8791"]
   end
   App -- HTTPS / SSE --> Nginx
@@ -110,148 +112,188 @@ flowchart LR
   Nginx --> Desk
   Nginx --> Relay
   Agent -- MCP agent_tools --> Relay
-  Relay -. запросы к телефону .-> App
+  Relay -. requests to the phone .-> App
   App -- RUN_COMMAND --> Termux
   App -. http://127.0.0.1:18080 .-> Local
 ```
 
-## Сборка
+## Build
 
-Нужны JDK 17 и Android SDK (platform 36).
+JDK 17 and Android SDK (platform 36).
 
 ```bash
 cd android
 ./gradlew assembleDebug                      # app/build/outputs/apk/debug/
-# адрес сервера по умолчанию на экране подключения (необязательно):
+# optional default server URL on the connect screen:
 ./gradlew assembleDebug -Pmurf.defaultServerUrl=https://your-server.example
 ```
 
-Подписанный релиз: задайте `HERMEX_ANDROID_KEYSTORE_FILE`, `HERMEX_ANDROID_KEY_ALIAS` и пароли хранилища ключей через переменные окружения или `~/.gradle/gradle.properties` (никогда не в репозитории), затем `./gradlew assembleRelease`.
+Signed release: set `HERMEX_ANDROID_KEYSTORE_FILE`, `HERMEX_ANDROID_KEY_ALIAS` and the keystore passwords via environment variables or `~/.gradle/gradle.properties` (never in the repo), then `./gradlew assembleRelease`.
 
-`applicationId` — `ru.dredd20.agent` (оставлен ради обновлений поверх уже установленных сборок). Для своей сборки смените его в `android/app/build.gradle.kts`.
+`applicationId` is `ru.dredd20.agent` (kept so updates install over existing builds). Change it in `android/app/build.gradle.kts` for your own build.
 
-## Сервер
+## Server
 
-Нужен свой сервер с Hermes Agent и hermes-webui; MURF подключается к нему по HTTPS с паролем WebUI. Примеры конфигураций (с заглушками `your-server.example`) — в [`server/`](server/README.md):
+You need your own server with Hermes Agent and hermes-webui; MURF connects over HTTPS with the WebUI password. Example configs (with `your-server.example` placeholders) live in [`server/`](server/README.md):
 
-- `server/examples/nginx-murf.conf` — nginx: WebUI, API агента, экран, мост «Телефон»;
-- `server/agent-screen/` — страница экрана (noVNC), прокси «только просмотр», unit-файлы systemd;
-- `server/phone-relay/` — мост «Телефон» и MCP-сервер `agent_tools` для агента;
-- `server/local-mode/` — скрипты локального режима (Termux + proot).
+- `server/examples/nginx-murf.conf` — nginx: WebUI, agent API, screen, phone bridge;
+- `server/agent-screen/` — screen page (noVNC), view-only proxy, systemd units;
+- `server/phone-relay/` — phone bridge and the `agent_tools` MCP server for the agent;
+- `server/local-mode/` — local mode scripts (Termux + proot).
 
-## Локальный режим: установка и решение проблем
+## Local mode: install and troubleshooting
 
-Весь агент работает на телефоне, без сервера: Termux → Ubuntu 24.04 (proot) → Hermes Agent + WebUI + рабочий стол XFCE. Приложение подключается к `http://127.0.0.1:18080` (только локально).
+The whole agent runs on the phone, no server: Termux → Ubuntu 24.04 (proot) → Hermes Agent + WebUI + XFCE desktop. The app connects to `http://127.0.0.1:18080` (local only).
 
-**Требования:** телефон arm64 с современным ядром (проверено на Android 16; Android 9 и ядра 4.x не подходят), [Termux](https://f-droid.org/packages/com.termux/) из F-Droid или GitHub (не из Google Play), **≥ 4,5 ГБ** свободного места (среда занимает ~4 ГБ), интернет на время установки.
+**Requirements:** an arm64 phone with a modern kernel (tested on Android 16; Android 9 / 4.x kernels don't work), [Termux](https://f-droid.org/packages/com.termux/) from F-Droid or GitHub (not Google Play), **≥ 4.5 GB** free (the environment takes ~4 GB), internet during install.
 
-### Установка
+### Install
 
-1. Установите Termux, в MURF откройте «Телефон и Termux» и выдайте разрешение «Запуск команд в Termux».
-2. Меню → «Локальная среда» → **«Установить»**. Откроется Termux с журналом; установка идёт 20–60 мин и продолжается с места остановки, если её прервать. Прогресс виден в MURF.
-3. **«Запустить»** (WebUI поднимается 1–3 мин) → **«Войти в провайдера»** → откройте ссылку и подтвердите код.
-4. В разделе «Подключение» выберите **«Телефон (локально)»**.
+1. Install Termux; in MURF open “Phone & Termux” and grant “Run commands in Termux”.
+2. Menu → Local environment → **Install**. Termux opens with the log; install takes 20–60 min and resumes if interrupted. Progress is shown in MURF.
+3. **Start** (WebUI comes up in 1–3 min) → **Log in to provider** → open the link and confirm the code.
+4. Under Connection pick **Phone (local)**.
 
-Вручную в Termux: `curl -fsSL https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download/install.sh | bash`, затем `murf-local install && murf-local start`.
+Manually in Termux: `curl -fsSL https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download/install.sh | bash`, then `murf-local install && murf-local start`.
 
-### Обновление
+### Update
 
-После обновления MURF: «Локальная среда» → **«Обновить»** (скрипты из приложения кладутся в Termux, уже установленное не скачивается заново) → **«Остановить»** → **«Запустить»**. В Termux то же самое: `murf-local update && murf-local restart`.
+After updating MURF: Local environment → **Update** (scripts are copied into Termux, nothing already installed is downloaded again) → **Stop** → **Start**. In Termux: `murf-local update && murf-local restart`.
 
-### Если что-то не работает
+### If something doesn't work
 
-- **«Диагностика»** («Локальная среда» → «Диагностика») проверяет Ubuntu, службы, порты, файлы и WebSocket экрана, VNC и ограничения Android и выдаёт короткий отчёт ✅/⚠️/❌ с подсказками. Кнопка **«Отправить отчёт»** — поделиться им (или «Копировать»).
-- **Экран не подключается** — через 15 с на экране появится причина и кнопки **«Перезапустить экран»** и **«Показать журнал»**.
-- Команды Termux:
+- **Diagnostics** (Local environment → Diagnostics) checks Ubuntu, services, ports, screen files and WebSocket, VNC and Android limits and gives a short ✅/⚠️/❌ report with hints. **Send report** to share it (or Copy).
+- **Screen doesn't connect** — after 15 s the screen shows the reason and **Restart screen** / **Show log** buttons.
+- Termux commands:
 
-| Команда | Что делает |
+| Command | What it does |
 |---|---|
-| `murf-local status` | состояние в JSON |
-| `murf-local doctor` | та же проверка, что «Диагностика» |
-| `murf-local restart-screen` | перезапуск рабочего стола и websockify внутри работающей среды |
-| `murf-local logs screen` | хвост журналов экрана (рабочий стол, websockify, прокси, nginx) |
-| `murf-local logs gateway` / `webui` / `setup` | журналы агента, WebUI, установки |
-| `murf-local restart` / `stop` | перезапуск / остановка среды |
-| `murf-local proxy URL\|off` | прокси для провайдера |
+| `murf-local status` | status as JSON |
+| `murf-local doctor` | same checks as Diagnostics |
+| `murf-local restart-screen` | restart the desktop and websockify inside the running environment |
+| `murf-local logs screen` | tail of screen logs (desktop, websockify, proxy, nginx) |
+| `murf-local logs gateway` / `webui` / `setup` | agent, WebUI, install logs |
+| `murf-local restart` / `stop` | restart / stop the environment |
+| `murf-local proxy URL\|off` | proxy for the provider |
 
-### Чтобы Android не убивал среду
+### Keep Android from killing the environment
 
-- **Для разработчиков → «Отключить ограничения дочерних процессов»** (Android 12+). Без этого Android убивает «лишние» процессы Termux (phantom process killer) — среда или экран внезапно пропадают. На Android 12–13 без этого пункта: `adb shell device_config put activity_manager max_phantom_processes 2147483647`.
-- **Wakelock:** оставьте уведомление Termux и включите в нём «Acquire wakelock» (`murf-local start` делает это сам).
-- **Батарея:** MURF и Termux — «Без ограничений». **vivo / OriginOS:** «i Менеджер» → управление приложениями → разрешить **автозапуск** и **высокое энергопотребление в фоне** для Termux и MURF (в MURF есть кнопка «vivo: автозапуск/фон»).
+- **Developer options → Disable child process restrictions** (Android 12+). Otherwise Android kills “extra” Termux processes (phantom process killer). On Android 12–13 without this option: `adb shell device_config put activity_manager max_phantom_processes 2147483647`.
+- **Wakelock:** keep the Termux notification and enable “Acquire wakelock” (`murf-local start` does it).
+- **Battery:** MURF and Termux — “Unrestricted”. **vivo / OriginOS:** allow **autostart** and **high background power use** for Termux and MURF (MURF has a “vivo: autostart/background” button).
 
-### Провайдер, VPN, прокси
+### Provider, VPN, proxy
 
-Если `api.x.ai` недоступен из вашей сети (например, ответ 403), включите VPN на телефоне на весь трафик (включая Termux) или задайте прокси: «Локальная среда» → «Прокси» (например `socks5h://127.0.0.1:10808` от v2rayNG) или `murf-local proxy URL`. «Проверить доступ» покажет, работает ли прямое соединение и прокси.
+If the provider API is blocked in your network (e.g. HTTP 403), use a phone-wide VPN (including Termux) or set a proxy: Local environment → Proxy (e.g. `socks5h://127.0.0.1:10808` from v2rayNG) or `murf-local proxy URL`. “Check access” shows whether the direct connection and the proxy work.
 
-### Проверенные устройства
+### Tested devices
 
-| Устройство | Android | Архитектура | MURF | Результат |
+| Device | Android | Arch | MURF | Result |
 |---|---|---|---|---|
-| vivo X300 | 16 | arm64 | 1.2.4 | ✅ локальный режим: установка, агент, WebUI, экран агента |
-| Тестовая машина (proot) | — | x86_64 | 1.2.4 | ✅ полная проверка скриптов: установка, службы, экран (просмотр/управление), диагностика |
-| Эмулятор | 9 (ядро 4.4) | x86_64 | 1.2.1 | ❌ Ubuntu 24.04 в proot не работает (старое ядро) |
+| vivo X300 | 16 | arm64 | 1.2.4 | ✅ local mode: install, agent, WebUI, agent screen |
+| Test machine (proot) | — | x86_64 | 1.2.4 | ✅ full script check: install, services, screen (view/control), diagnostics |
+| Emulator | 9 (kernel 4.4) | x86_64 | 1.2.1 | ❌ Ubuntu 24.04 in proot doesn't work (old kernel) |
 
-Будем рады отчётам о других телефонах — откройте issue и приложите отчёт «Диагностика».
+Reports from other phones are welcome — open an issue and attach the Diagnostics report ([#1](https://github.com/winnifredbalistreri60-prog/murf/issues/1)).
 
-### Ограничения
+### Limitations
 
-- Android 9 и старые ядра (4.x) не поддерживаются: Ubuntu 24.04 в proot там не работает.
-- Docker и systemd недоступны (службы запускает собственный супервизор).
-- Нужно ≥ 4,5 ГБ места; первая установка — 20–60 мин.
-- Рабочий стол и браузер агента на телефоне медленнее, чем на сервере; при нехватке памяти Android может выгрузить среду.
-- Мост «Телефон» и Google Диск в первую очередь рассчитаны на серверный профиль.
+- Android 9 and old kernels (4.x) are not supported: Ubuntu 24.04 in proot doesn't run there.
+- No Docker or systemd (services are started by our own supervisor).
+- Needs ≥ 4.5 GB; the first install takes 20–60 min.
+- The agent's desktop and browser are slower on the phone than on a server; under memory pressure Android may kill the environment.
+- The phone bridge and Google Drive are primarily designed for the server profile.
 
-## Безопасность
+## Security
 
-- Пароль WebUI и cookie хранятся в зашифрованном хранилище (EncryptedSharedPreferences); секреты в репозитории не хранятся.
-- Экран агента и API моста закрыты авторизацией WebUI (nginx `auth_request`), управление экраном — только с вашего Origin.
-- Каждое действие на телефоне подтверждается; ссылки для файлов одноразовые и короткоживущие.
-- Локальный режим слушает только `127.0.0.1`; перенос секретов с сервера — только после отдельного подтверждения.
+- The WebUI password and cookie are stored in encrypted storage (EncryptedSharedPreferences); no secrets are kept in the repo.
+- The agent screen and bridge API are protected by the WebUI session (nginx `auth_request`); screen control is allowed only from your Origin.
+- Every phone action is confirmed; file links are one-time and short-lived.
+- Local mode listens only on `127.0.0.1`; importing secrets from the server requires a separate confirmation.
 
-Сообщить об уязвимости: см. [SECURITY.md](SECURITY.md).
+Report a vulnerability: see [SECURITY.md](SECURITY.md).
+
+## How MURF compares to Codex desktop and Claude desktop
+
+MURF is similar in spirit to OpenAI's [Codex app](https://openai.com/index/introducing-the-codex-app/) and Anthropic's [Claude Desktop](https://code.claude.com/docs/en/desktop): it is a client for an AI agent that does the work on a computer, shows its steps and tool calls, asks for approval before risky actions, and works with files.
+
+The differences:
+
+- **Mobile client.** MURF is an Android app; Codex and Claude Desktop are desktop apps.
+- **Your own agent.** MURF connects to the open-source [Hermes Agent](https://github.com/NousResearch/hermes-agent) on your own Ubuntu server, or runs it on the phone (local mode). Use any model provider Hermes Agent supports.
+- **The agent's own desktop.** The agent works on a separate desktop on the server, and you watch it live or take control from your phone. Codex and Claude operate apps on your own computer (computer use).
+- **Agent ↔ phone.** The agent can ask your phone to run a Termux command, take a photo or hand over a file — each action is confirmed by you.
+
+| | **MURF** | Codex app | Claude Desktop |
+|---|---|---|---|
+| Runs on | Android | macOS, Windows; Linux in preview | macOS, Windows; Linux in beta |
+| Shows agent steps and tool calls | ✅ | ✅ | ✅ |
+| Approvals before actions | ✅ | ✅ approval policy + sandbox | ✅ permission modes |
+| Agent operates a GUI desktop | ✅ its own Ubuntu desktop on your server | ✅ computer use (macOS) | ✅ computer use (beta, Pro/Max, macOS & Windows) |
+| Live agent screen on your phone | ✅ view + control | — | — |
+| MCP tools | ✅ via Hermes Agent | ✅ plugins and MCP servers | ✅ connectors are MCP servers |
+| Agent acts on your phone | ✅ Termux, camera, files — with confirmation | — | — |
+| Self-hosted / fully on your own device | ✅ server or phone | — | — |
+| Models | any provider supported by Hermes Agent | OpenAI models (ChatGPT sign-in) | Claude models |
+| Open-source app | ✅ MIT | — ([Codex CLI](https://github.com/openai/codex) is open source) | — |
+
+<sub>✅ = confirmed by official docs as of Oct 2026 ([Codex app](https://openai.com/index/introducing-the-codex-app/), [Codex: computer use and more](https://openai.com/index/codex-for-almost-everything/), [Codex approvals & sandbox](https://developers.openai.com/codex/agent-approvals-security), [Claude Desktop](https://code.claude.com/docs/en/desktop), [Claude computer use](https://support.claude.com/en/articles/14128542-let-claude-use-your-computer-in-cowork), [Install Claude Desktop](https://support.claude.com/en/articles/10065433-install-claude-desktop)); “—” = not listed in those sources. MURF is not affiliated with or endorsed by OpenAI or Anthropic; Codex, ChatGPT and Claude are trademarks of their respective owners.</sub>
+
+## Tablets
+
+**Tablet version: in development.** Planned layout: chat and the live agent screen side by side, landscape. Discussion: [Tablet version issue](https://github.com/winnifredbalistreri60-prog/murf/issues/6).
+
+## Use a TV box as the server (experimental)
+
+> **Not yet tested on a TV box.** Below, every requirement is marked as measured by us, cited from official docs, or our estimate.
+
+Two ways:
+
+1. **TV box running Linux** (flashed with Armbian/Debian): install Hermes Agent with the official [Linux installer](https://github.com/NousResearch/hermes-agent#linux-macos-wsl2), hermes-webui per its [quick start](https://github.com/nesquena/hermes-webui#quick-start), nginx and the screen from [`server/`](server/README.md). MURF connects to it as a server. No proot needed.
+2. **Android TV box:** Termux + MURF local-mode scripts (Ubuntu 24.04 in proot), same as on a phone.
+
+| Requirement | Value | Source |
+|---|---|---|
+| Architecture | aarch64 (arm64) | Hermes Agent's Termux package is aarch64 ([Hermes Agent README](https://github.com/NousResearch/hermes-agent)); local mode tested on arm64 |
+| Android (way 2) | ≥ 7 for Termux | [Termux README](https://github.com/termux/termux-app) |
+| Kernel (way 2) | an Android 9 emulator with kernel 4.4 **fails**: apt in Ubuntu 24.04 dies with `realpath: ENOSYS`; Android 16 (vivo X300) works. Exact minimum not determined | measured by us |
+| Storage | local-mode install takes ~4 GB; README asks for ≥ 4.5 GB free. We recommend ≥ 8 GB free for logs, browser cache and updates | ~4 GB measured; 8 GB is an **estimate** |
+| RAM | not measured. We recommend ≥ 4 GB if you want the XFCE desktop + browser | **estimate** |
+| Power and cooling | 24/7 use: heatsink/fan, wired Ethernet | **recommendation** |
+
+Common aarch64 TV-box chips include Amlogic S905X3 / S905X4 / S922X and Rockchip RK3566 / RK3588 — this is not a list of tested devices. Discussion: [TV box server mode issue](https://github.com/winnifredbalistreri60-prog/murf/issues/7).
+
+## Roadmap
+
+- Tablet version (chat + agent screen side by side, landscape) — in development.
+- TV box as the server — experimental.
+- More UI languages ([#4](https://github.com/winnifredbalistreri60-prog/murf/issues/4)), testing local mode on more phones ([#1](https://github.com/winnifredbalistreri60-prog/murf/issues/1)).
 
 ## FAQ
 
-**Это замена Manus? / Is this a Manus alternative?**
-MURF — открытый клиент для вашего собственного агента (Hermes Agent): вы сами выбираете сервер и провайдера модели, экран агента — ваш рабочий стол. / MURF is an open-source client for an agent you host yourself (Hermes Agent): your server, your model provider, your agent desktop.
+**Is this a Manus alternative?**
+MURF is an open-source client for an agent you host yourself (Hermes Agent): your server, your model provider, your agent desktop.
 
-**Нужен ли сервер? / Do I need a server?**
-Нет: локальный режим запускает Hermes Agent, WebUI и рабочий стол XFCE прямо на телефоне (Termux + Ubuntu в proot). Сервер быстрее и удобнее для долгих задач. / No — local mode runs Hermes Agent, WebUI and an XFCE desktop on the phone (Termux + Ubuntu in proot). A server is faster for long tasks.
+**Do I need a server?**
+No — local mode runs Hermes Agent, WebUI and an XFCE desktop on the phone (Termux + Ubuntu in proot). A server is faster for long tasks.
 
-**Какие модели? / Which models?**
-Любые, которые поддерживает Hermes Agent (настраиваются в агенте, не в приложении). / Whatever Hermes Agent supports — configured in the agent, not in the app.
+**Which models?**
+Whatever Hermes Agent supports — configured in the agent, not in the app.
 
-**Агент может что-то сделать с телефоном без спроса? / Can the agent act on my phone without asking?**
-Нет: каждое действие (команда Termux, фото, файлы, геопозиция) подтверждается, кроме тех, что вы сами разрешили «всегда». / No — every action needs your confirmation unless you allowed it “always”.
+**Can the agent act on my phone without asking?**
+No — every action (Termux command, photo, files, location) needs your confirmation unless you allowed it “always”.
 
-**Где Google Play? / Is it on Google Play?**
-Пока только APK из [Releases](https://github.com/winnifredbalistreri60-prog/murf/releases) (подписан, SHA-256 в описании релиза). / APK from Releases only for now (signed; SHA-256 in release notes).
+**Is it on Google Play?**
+APK from [Releases](https://github.com/winnifredbalistreri60-prog/murf/releases) only for now (signed; SHA-256 in the release notes).
 
-**Как помочь? / How to help?**
-⭐ Звезда репозиторию, отчёты «Диагностика» с других телефонов, переводы, issues с метками `good first issue` / `help wanted`. См. [CONTRIBUTING.md](CONTRIBUTING.md). / Star the repo, send Diagnostics reports from other phones, translations, `good first issue` / `help wanted` issues.
+**Does it work on tablets?**
+Tablet version: in development.
 
-## Благодарности
+**How can I help?**
+Star the repo, send Diagnostics reports from other phones, translations, issues labeled `good first issue` / `help wanted`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-[Hermex](https://github.com/uzairansaruzi/hermex) (Uzair Ansar) · [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research) · [hermes-webui](https://github.com/nesquena/hermes-webui) · [noVNC](https://github.com/novnc/noVNC) · [Termux](https://termux.dev). Подробнее — [NOTICE.md](NOTICE.md).
+## Credits
 
-Лицензия — [MIT](LICENSE).
+[Hermex](https://github.com/uzairansaruzi/hermex) (Uzair Ansar) · [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research) · [hermes-webui](https://github.com/nesquena/hermes-webui) · [noVNC](https://github.com/novnc/noVNC) · [Termux](https://termux.dev). See [NOTICE.md](NOTICE.md).
 
----
-
-## English
-
-**MURF** is an Android client for your own AI agent built on [Hermes Agent](https://github.com/NousResearch/hermes-agent) and [hermes-webui](https://github.com/nesquena/hermes-webui), forked from [Hermex](https://github.com/uzairansaruzi/hermex).
-
-**Features:** streaming chat with tool steps, subagents and approvals; a live agent screen (noVNC) with a **view mode enforced server-side** (a view-only proxy drops input) and a control mode (tap/right-click/scroll, zoom, key bar, Cyrillic input); a phone bridge (the agent asks the phone to run Termux commands, take photos, get location, move files — each confirmed); Google Drive export and rclone hookup; Markdown/PDF export; app-wide **font size**; **swipe** navigation; **server update checker** with dry run and rollback; in-app **language picker** (system default or any bundled language; MURF screens in Russian and English, English fallback); **local mode** — the whole agent on the phone (Ubuntu 24.04 in proot via Termux) with built-in **diagnostics**. Since 1.2.5 the agent screen in chat opens **on demand** from the monitor button in the chat header (green dot = agent is working); the floating mini-preview is optional (Settings → Interaction, off by default; draggable, dismiss with ×).
-
-**Local mode — tested on a real device:** vivo X300, Android 16, arm64, MURF 1.2.4.
-
-- Requirements: an arm64 phone with a modern kernel (tested on Android 16), Termux from F-Droid/GitHub, ≥ 4.5 GB free space. Android 9 / 4.x kernels are not supported.
-- Install: grant MURF “Run commands in Termux” → Local environment → Install → Start → Log in to provider → switch the profile to “Phone (local)”.
-- Update: Local environment → Update → Stop → Start (or `murf-local update && murf-local restart`).
-- Troubleshooting: Local environment → **Diagnostics** (send the report), or `murf-local doctor`, `murf-local restart-screen`, `murf-local logs screen`. If the screen does not connect within 15 s, the app shows the reason with “Restart screen” / “Show log”.
-- Keep it alive: Developer options → **Disable child process restrictions** (Android 12+ phantom process killer), keep the Termux wakelock, set MURF and Termux battery to “Unrestricted”; on vivo allow autostart and high background power use.
-- If the provider API is blocked in your network, use a phone-wide VPN or set a proxy (`murf-local proxy socks5h://127.0.0.1:10808`).
-
-Build: `cd android && ./gradlew assembleDebug` (JDK 17, Android SDK 36). Optional default server: `-Pmurf.defaultServerUrl=https://your-server.example`. Server examples with placeholders live in [`server/`](server/README.md). License: MIT.
+License: [MIT](LICENSE).

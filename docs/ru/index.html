@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MURF — Android-приложение с открытым кодом для своего ИИ-агента (Hermes Agent)</title>
+<meta name="description" content="MURF — Android-приложение с открытым кодом для Hermes Agent: чат с ИИ-агентом, живой экран его рабочего стола с управлением, мост к телефону через Termux и локальный режим — весь агент на телефоне в Ubuntu. Открытая альтернатива Manus на своём сервере.">
+<meta name="keywords" content="MURF, Hermes Agent, Nous Research, AI agent, Android, Manus alternative, OpenManus, agentic AI, Termux, proot, Ubuntu, noVNC, self-hosted, open source, ИИ-агент">
+<link rel="canonical" href="https://winnifredbalistreri60-prog.github.io/murf/ru/">
+<link rel="alternate" hreflang="en" href="https://winnifredbalistreri60-prog.github.io/murf/">
+<link rel="alternate" hreflang="ru" href="https://winnifredbalistreri60-prog.github.io/murf/ru/">
+<link rel="alternate" hreflang="x-default" href="https://winnifredbalistreri60-prog.github.io/murf/">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<meta name="theme-color" content="#0c0c0e">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MURF">
+<meta property="og:title" content="MURF — Android-приложение для своего ИИ-агента">
+<meta property="og:description" content="Android-клиент для Hermes Agent с открытым кодом: живой экран агента, мост к телефону через Termux, локальная Ubuntu на телефоне.">
+<meta property="og:url" content="https://winnifredbalistreri60-prog.github.io/murf/ru/">
+<meta property="og:image" content="https://winnifredbalistreri60-prog.github.io/murf/assets/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MURF — Android-приложение для своего ИИ-агента">
+<meta name="twitter:description" content="Android-клиент для Hermes Agent: живой экран агента, Termux, локальная Ubuntu на телефоне.">
+<meta name="twitter:image" content="https://winnifredbalistreri60-prog.github.io/murf/assets/social-preview.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "MURF",
+  "operatingSystem": "Android 8.0+",
+  "applicationCategory": "UtilitiesApplication",
+  "description": "Open-source Android client for Hermes Agent: chat with your AI agent, live agent desktop with control, Termux phone bridge and a local mode that runs the whole agent on the phone.",
+  "url": "https://winnifredbalistreri60-prog.github.io/murf/ru/",
+  "downloadUrl": "https://github.com/winnifredbalistreri60-prog/murf/releases/latest",
+  "softwareVersion": "1.2.5",
+  "license": "https://opensource.org/licenses/MIT",
+  "image": "https://winnifredbalistreri60-prog.github.io/murf/assets/social-preview.png",
+  "screenshot": "https://winnifredbalistreri60-prog.github.io/murf/screenshots/ru/home.png",
+  "codeRepository": "https://github.com/winnifredbalistreri60-prog/murf",
+  "inLanguage": "ru",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+}
+</script>
+<style>
+:root{--bg:#0c0c0e;--fg:#f2f2f4;--mut:#a8a8b0;--acc:#ffc400;--card:#17171b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--acc)}main{max-width:1040px;margin:0 auto;padding:32px 20px 64px}
+header{display:flex;gap:20px;align-items:center}header img{width:84px;height:84px;border-radius:20px}
+h1{font-size:clamp(28px,5vw,44px);margin:0;line-height:1.15}h1 b{color:var(--acc)}
+.lead{font-size:19px;color:var(--fg);max-width:760px}.mut{color:var(--mut)}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0}
+.btn{display:inline-block;padding:12px 20px;border-radius:999px;background:var(--acc);color:#111;font-weight:700;text-decoration:none}
+.btn.o{background:transparent;color:var(--acc);border:2px solid var(--acc)}
+.shots{display:flex;gap:14px;overflow-x:auto;padding:8px 0 16px}.shots img{height:420px;border-radius:22px;border:8px solid #2a2a2f}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{background:var(--card);border-radius:16px;padding:16px 18px}.card h3{margin:0 0 6px;color:var(--acc);font-size:17px}
+section{margin-top:40px}h2{font-size:26px}footer{margin-top:48px;color:var(--mut);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <img src="../assets/icon.png" alt="Логотип MURF">
+  <div><h1><b>MURF</b> — Android-приложение для своего ИИ-агента</h1>
+  <div class="mut">Открытый код · MIT · Android 8.0+ · Kotlin / Jetpack Compose</div></div>
+</header>
+<p class="lead">MURF — Android-приложение с открытым кодом для своего ИИ-агента на базе <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>: чат с агентом, <b>живой экран</b> его рабочего стола с просмотром и управлением, мост к телефону через <b>Termux</b> и локальный режим, когда <b>весь агент работает на телефоне</b> в Ubuntu. Свой сервер и любой провайдер модели — открытая альтернатива облачным агентам вроде Manus.</p>
+<div class="btns">
+  <a class="btn" href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest">⬇ Скачать APK</a>
+  <a class="btn o" href="https://github.com/winnifredbalistreri60-prog/murf/blob/main/README.ru.md">Инструкция</a>
+  <a class="btn o" href="../">English</a>
+</div>
+<div class="shots">
+  <img src="../screenshots/ru/home.png" alt="Главное меню MURF" loading="lazy">
+  <img src="../screenshots/ru/chat-export.png" alt="Чат с ИИ-агентом" loading="lazy">
+  <img src="../screenshots/ru/local-mode.png" alt="Локальный режим: Hermes Agent на телефоне" loading="lazy">
+  <img src="../screenshots/ru/phone-bridge.png" alt="Мост к телефону через Termux" loading="lazy">
+  <img src="../screenshots/ru/google-drive.png" alt="Экспорт в Google Диск" loading="lazy">
+</div>
+<section>
+<h2>Возможности</h2>
+<div class="grid">
+  <div class="card"><h3>Чат с агентом</h3>Потоковые ответы, шаги инструментов, мышление, субагенты и подтверждения опасных действий.</div>
+  <div class="card"><h3>Живой экран агента</h3>Экран компьютера агента (noVNC): просмотр (ввод отбрасывается на сервере) или полное управление с зумом и панелью клавиш.</div>
+  <div class="card"><h3>Мост к телефону</h3>Агент просит телефон выполнить команду в Termux, сделать фото, передать файл или геопозицию — каждое действие подтверждается.</div>
+  <div class="card"><h3>Локальный режим</h3>Hermes Agent + WebUI + рабочий стол XFCE в Ubuntu 24.04 (proot) прямо на телефоне, со встроенной диагностикой.</div>
+  <div class="card"><h3>Свой сервер</h3>Ваш сервер, ваш провайдер модели. Примеры nginx и systemd в репозитории.</div>
+  <div class="card"><h3>Всё из Hermex</h3>Сессии, проекты, задачи, канбан, навыки, память, статистика, несколько серверов и профилей; экспорт в Markdown/PDF и Google Диск.</div>
+</div>
+</section>
+<section>
+<h2>Как Codex и Claude Desktop — но на телефоне и со своим агентом</h2>
+<p>Как <a href="https://openai.com/index/introducing-the-codex-app/">приложение Codex</a> от OpenAI и <a href="https://code.claude.com/docs/en/desktop">Claude Desktop</a> от Anthropic, MURF — клиент для ИИ-агента, который работает на компьютере, показывает шаги и вызовы инструментов, спрашивает подтверждение и работает с файлами. Разница: MURF — Android-приложение для Hermes Agent (открытый код) на вашем Ubuntu-сервере или прямо на телефоне, с живым экраном собственного рабочего стола агента, мостом к телефону через Termux и любым провайдером модели. <a href="https://github.com/winnifredbalistreri60-prog/murf/blob/main/README.ru.md#murf-и-десктоп-приложения-codex-и-claude">Подробное сравнение</a>.</p>
+<p class="mut" style="font-size:13px">MURF не связан с OpenAI и Anthropic и не одобрен ими. Codex, ChatGPT и Claude — товарные знаки их владельцев.</p>
+</section>
+<section>
+<h2>Планшеты и ТВ-приставки</h2>
+<div class="grid">
+  <div class="card"><h3>Версия для планшетов: в разработке</h3>План: чат и живой экран агента рядом, альбомная ориентация. <a href="https://github.com/winnifredbalistreri60-prog/murf/issues/6">Issue #6</a></div>
+  <div class="card"><h3>ТВ-приставка как сервер (экспериментально)</h3>Постоянно включённая aarch64-приставка с Hermes Agent — напрямую на Armbian/Debian или через Termux на Android. На ТВ-приставке ещё не проверено. <a href="https://github.com/winnifredbalistreri60-prog/murf/blob/main/README.ru.md#тв-приставка-как-сервер-экспериментально">Требования</a> · <a href="https://github.com/winnifredbalistreri60-prog/murf/issues/7">Issue #7</a></div>
+</div>
+</section>
+<footer>MURF — форк <a href="https://github.com/uzairansaruzi/hermex">Hermex</a>. Основан на <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>, <a href="https://github.com/nesquena/hermes-webui">hermes-webui</a>, <a href="https://github.com/novnc/noVNC">noVNC</a> и <a href="https://termux.dev">Termux</a>. Лицензия MIT.</footer>
+</main>
+</body>
+</html>
