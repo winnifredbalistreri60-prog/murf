@@ -9,6 +9,7 @@
 #   murf-svc proxy URL|off  — прокси для провайдера (HTTPS_PROXY/ALL_PROXY), перезапуск агента
 #   murf-svc netcheck       — доступность провайдера напрямую/через прокси (JSON)
 #   murf-svc import URL [--with-secrets] — перенос настроек с сервера (архив из MURF)
+#   murf-svc restart-screen — перезапуск экрана (выполнит супервизор в течение ~3 с)
 #   murf-svc creds          — JSON с локальными адресом/паролем WebUI (для приложения MURF)
 export HOME=/root LANG=C.UTF-8 LC_ALL=C.UTF-8
 export PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -26,7 +27,7 @@ svc_cmd() {
     gateway)   echo "env PYTHONUNBUFFERED=1 $HERMES_BIN gateway run" ;;
     webui)     echo "bash -c 'set -a; . /root/.hermes/webui.env; set +a; cd /root/hermes-webui && exec python3 bootstrap.py --no-browser --skip-agent-install --foreground'" ;;
     viewproxy) echo "python3 $MURF_DIR/rfb_viewonly_proxy.py" ;;
-    wsview)    echo "websockify --web /root/agent-screen --unix-target=/root/.cache/agent-screen/view.sock 127.0.0.1:18081" ;;
+    wsview)    echo "websockify --unix-target=/root/.cache/agent-screen/view.sock 127.0.0.1:18081" ;;
     wsctl)     echo "websockify --unix-target=/root/.hermes/bot-desktop/rfb.sock 127.0.0.1:18082" ;;
     api)       echo "python3 $MURF_DIR/murf_api.py" ;;
     nginx)     echo "nginx -c $MURF_HOME/nginx.conf -p $RUN/nginx -g 'daemon off;'" ;;
@@ -38,24 +39,44 @@ tree_kill() { # pid — убить процесс и всех потомков
   for c in $(pgrep -P "$p" 2>/dev/null); do tree_kill "$c"; done
   kill "$p" 2>/dev/null
 }
-loop() { # name
+start_one() { # name — запустить службу в отдельной сессии/группе (killpg внутри Hermes не заденет супервизор)
   local n=$1 cmd; cmd=$(svc_cmd "$n")
+  [ -f "$LOGS/$n.log" ] && [ "$(stat -c %s "$LOGS/$n.log" 2>/dev/null || echo 0)" -gt 5000000 ] && mv -f "$LOGS/$n.log" "$LOGS/$n.log.1"
+  echo "[$(date '+%F %T')] start $n" >> "$LOGS/$n.log"
+  setsid bash -c "exec $cmd" >> "$LOGS/$n.log" 2>&1 < /dev/null &
+  echo $! > "$RUN/$n.pid"; date +%s > "$RUN/$n.started"
+}
+# один цикл-супервизор на все службы (раньше — отдельный bash на каждую: лишние процессы,
+# а Android 12+ убивает «лишние» дочерние процессы Termux — phantom process killer)
+supervise() {
+  local n now
   while [ -f "$RUN/svc.pid" ]; do
-    [ -f "$LOGS/$n.log" ] && [ "$(stat -c %s "$LOGS/$n.log" 2>/dev/null || echo 0)" -gt 5000000 ] && mv -f "$LOGS/$n.log" "$LOGS/$n.log.1"
-    echo "[$(date '+%F %T')] start $n" >> "$LOGS/$n.log"
-    # отдельная сессия/группа процессов: killpg внутри Hermes (уборка рабочего стола) не заденет супервизор
-    setsid bash -c "exec $cmd" >> "$LOGS/$n.log" 2>&1 < /dev/null &
-    echo $! > "$RUN/$n.pid"
-    wait $!
-    echo "[$(date '+%F %T')] exit $n code=$? — перезапуск через 5 с" >> "$LOGS/$n.log"
-    sleep 5
+    sleep 3; now=$(date +%s)
+    for n in $SERVICES; do
+      alive "$RUN/$n.pid" && continue
+      [ $((now - $(cat "$RUN/$n.started" 2>/dev/null || echo 0))) -lt 5 ] && continue
+      echo "[$(date '+%F %T')] exit $n — перезапуск" >> "$LOGS/$n.log"; start_one "$n"
+    done
+    # запрос перезапуска экрана (murf-local restart-screen / кнопка в MURF). Выполняется здесь, в том же proot,
+    # что и остальные службы: Termux-proot прячет длинные пути UNIX-сокетов в своём временном каталоге,
+    # и сокет, созданный в другом proot-процессе, websockify не увидит.
+    if [ -f "$RUN/restart-screen.req" ]; then rm -f "$RUN/restart-screen.req"; do_restart_screen >> "$LOGS/desktop.log" 2>&1; fi
   done
+}
+do_restart_screen() {
+  echo "[$(date '+%F %T')] перезапуск экрана"
+  bash "$MURF_DIR/desktop.sh" stop >/dev/null 2>&1
+  pkill -x Xvnc 2>/dev/null; pkill -x Xtigervnc 2>/dev/null; sleep 1
+  for n in viewproxy wsview wsctl; do [ -f "$RUN/$n.pid" ] && tree_kill "$(cat "$RUN/$n.pid")"; rm -f "$RUN/$n.started"; done
+  rm -f /root/.cache/agent-screen/view.sock
+  setsid bash "$MURF_DIR/desktop.sh" start < /dev/null &
+  echo "[$(date '+%F %T')] экран: запуск отправлен"
 }
 cleanup_all() {
   for n in $SERVICES; do
     [ -f "$RUN/$n.loop" ] && tree_kill "$(cat "$RUN/$n.loop")"
     [ -f "$RUN/$n.pid" ] && tree_kill "$(cat "$RUN/$n.pid")"
-    rm -f "$RUN/$n.loop" "$RUN/$n.pid"
+    rm -f "$RUN/$n.loop" "$RUN/$n.pid" "$RUN/$n.started"
   done
   # остатки (рабочий стол бота, процессы WebUI/агента)
   pkill -f "hermes gateway run" 2>/dev/null; pkill -f "bootstrap.py --no-browser" 2>/dev/null
@@ -70,11 +91,11 @@ cmd_run() {
   trap 'rm -f "$RUN/svc.pid"; cleanup_all; exit 0' TERM INT HUP
   cleanup_all 2>/dev/null
   echo $$ > "$RUN/svc.pid"
-  for n in $SERVICES; do loop "$n" & echo $! > "$RUN/$n.loop"; done
+  for n in $SERVICES; do start_one "$n"; done
   # рабочий стол бота (экран) — поднять сразу, чтобы вкладка «Экран» работала; дальше Hermes сам гасит его после 30 мин простоя
   ( sleep 20; setsid bash "$MURF_DIR/desktop.sh" start >> "$LOGS/desktop.log" 2>&1 < /dev/null ) &
   echo "MURF local: службы запущены, http://127.0.0.1:$PORT/  (журналы: $LOGS)"
-  while [ -f "$RUN/svc.pid" ]; do sleep 30; done
+  supervise
 }
 cmd_stop() {
   if alive "$RUN/svc.pid"; then kill "$(cat "$RUN/svc.pid")" 2>/dev/null; sleep 2; fi
@@ -88,7 +109,7 @@ cmd_status() {
   local installed=false; [ -x "$HERMES_BIN" ] && [ -f /root/hermes-webui/bootstrap.py ] && installed=true
   printf '{"installed":%s,"running":%s,"port":%s,"services":{%s},"health":%s}\n' "$installed" "$running" "$PORT" "${svcs%,}" "$h"
 }
-cmd_restart() { local n=$1; [ -f "$RUN/$n.pid" ] && tree_kill "$(cat "$RUN/$n.pid")"; echo "перезапуск $n"; }
+cmd_restart() { local n=$1; [ -f "$RUN/$n.pid" ] && tree_kill "$(cat "$RUN/$n.pid")"; rm -f "$RUN/$n.started"; echo "перезапуск $n"; }
 
 cmd_login() {
   local prov=${1:-xai-oauth}
@@ -213,5 +234,6 @@ case "${1:-status}" in
   netcheck) cmd_netcheck ;;
   import) shift; cmd_import "$@" ;;
   creds) cmd_creds ;;
-  *) sed -n '2,13p' "$0"; exit 2 ;;
+  restart-screen) touch "$RUN/restart-screen.req"; echo "запрос на перезапуск экрана отправлен" ;;
+  *) sed -n '2,14p' "$0"; exit 2 ;;
 esac

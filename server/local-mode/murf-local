@@ -8,9 +8,11 @@
 #   murf-local login-status | netcheck | creds
 #   murf-local proxy URL|off      — прокси для провайдера (например socks5h://127.0.0.1:10808 от v2rayNG)
 #   murf-local import URL [--with-secrets] — перенос настроек с сервера
-#   murf-local logs [setup|gateway|webui|nginx|...]
+#   murf-local logs [screen|setup|gateway|webui|nginx|...]
+#   murf-local doctor            — проверка всех частей среды, короткий отчёт (для «Диагностика» в MURF)
+#   murf-local restart-screen    — перезапуск экрана агента (Xvnc + websockify)
 #   murf-local uninstall --yes    — удалить среду полностью
-MURF_LOCAL_VERSION=1.2.1
+MURF_LOCAL_VERSION=1.2.4
 D="$HOME/.murf-local"
 PD_DIR="$PREFIX/var/lib/proot-distro"
 DISTRO="${MURF_DISTRO:-$(cat "$HOME/.murf-local/distro" 2>/dev/null || echo murf-ubuntu)}"
@@ -125,6 +127,11 @@ cmd_install() {
   tprogress done 5 inner "Установка внутри Ubuntu"
   inner bash /opt/murf/setup.sh
   local rc=$?
+  if [ $rc = 0 ] && svc_running; then
+    # среда запущена: новый конфиг nginx (статика экрана) применится перезапуском nginx в работающем супервизоре
+    inner /usr/local/bin/murf-svc restart nginx >/dev/null 2>&1 && echo "nginx перезапущен с новым конфигом"
+    echo "Для полного обновления служб: «Остановить» → «Запустить» в MURF (или murf-local restart)"
+  fi
   [ $rc = 0 ] && echo "=== Готово. Запуск: murf-local start ===" || echo "=== Ошибка установки (код $rc), лог: $D/logs/install.log; повторный запуск продолжит с места остановки ==="
   return $rc
 }
@@ -166,8 +173,74 @@ cmd_status() {
 }
 cmd_logs() {
   local n=${1:-setup} f
+  if [ "$n" = screen ]; then
+    for f in desktop wsview wsctl viewproxy nginx; do echo "== $f =="; tail -n "${2:-15}" "$INNER_HOME/logs/$f.log" 2>/dev/null || echo "(нет)"; done
+    echo "== nginx error =="; tail -n "${2:-15}" "$INNER_HOME/run/nginx/logs-error.log" 2>/dev/null || echo "(нет)"
+    return 0
+  fi
   case "$n" in install|svc) f="$D/logs/$n.log" ;; *) f="$INNER_HOME/logs/$n.log" ;; esac
   tail -n "${2:-80}" "$f" 2>/dev/null || echo "нет журнала $f"
+}
+jget() { # json key — значение true/false/число по ключу (без jq)
+  printf '%s' "$1" | grep -o "\"$2\": *[a-z0-9]*" | head -1 | sed 's/.*: *//'
+}
+cmd_restart_screen() {
+  installed || { echo "среда не установлена"; return 2; }
+  if ! svc_running; then echo "среда не запущена — запускаю"; cmd_start; return; fi
+  # перезапуск выполняет супервизор внутри уже работающего proot (сокеты экрана видны только там)
+  touch "$INNER_HOME/run/restart-screen.req"; echo "запрос на перезапуск экрана отправлен"
+  local i h
+  for i in $(seq 1 8); do sleep 2; [ -f "$INNER_HOME/run/restart-screen.req" ] || break; done
+  if [ -f "$INNER_HOME/run/restart-screen.req" ]; then
+    echo "работающие службы старой версии не понимают запрос — перезапускаю среду целиком"
+    rm -f "$INNER_HOME/run/restart-screen.req"; cmd_stop >/dev/null 2>&1; sleep 2; cmd_start; return
+  fi
+  sleep 4
+  for i in $(seq 1 38); do
+    h=$(curl -fsS -m 5 "http://127.0.0.1:$PORT/murf/health?full=1" 2>/dev/null)
+    [ "$(jget "$h" view_sock)" = true ] && [ "$(jget "$h" rfb_sock)" = true ] && [ "$(jget "$h" screen_view)" = true ] && { echo "экран запущен"; return 0; }
+    sleep 2
+  done
+  echo "экран не поднялся за 80 с — смотрите murf-local logs screen / murf-local doctor"; return 1
+}
+cmd_doctor() {
+  local ok=0 bad=0 warn=0
+  y() { echo "✅ $*"; ok=$((ok+1)); }; n() { echo "❌ $*"; bad=$((bad+1)); }; w() { echo "⚠️ $*"; warn=$((warn+1)); }
+  code() { curl -s -o /dev/null -m "${2:-5}" -w '%{http_code}' "$1" 2>/dev/null; }
+  echo "MURF — диагностика локальной среды ($(date '+%F %T'))"
+  echo "murf-local $MURF_LOCAL_VERSION · Android $(getprop ro.build.version.release 2>/dev/null) · $(getprop ro.product.manufacturer 2>/dev/null) $(getprop ro.product.model 2>/dev/null) · $(uname -m)"
+  echo "режим: $(raw_mode && echo 'proot (запасной)' || echo "proot-distro $DISTRO"); Termux ${TERMUX_VERSION:-?}"
+  local free_mb; free_mb=$(df -Pk "$HOME" | awk 'NR==2{print int($4/1024)}'); [ "${free_mb:-0}" -gt 1000 ] && y "свободно $free_mb МБ" || w "мало места: $free_mb МБ"
+  [ -d "$ROOTFS/usr" ] && y "Ubuntu установлена" || { n "Ubuntu (rootfs) не установлена → «Установить»"; }
+  installed && y "Hermes и настройки на месте" || n "установка не завершена → «Установить/Обновить»"
+  local inner_v; inner_v=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' "$ROOTFS/opt/murf/murf_api.py" 2>/dev/null)
+  [ "$inner_v" = "murf-local/$MURF_LOCAL_VERSION" ] && y "скрипты внутри Ubuntu: $inner_v" || w "скрипты внутри Ubuntu: ${inner_v:-нет} (ожидается $MURF_LOCAL_VERSION) → «Обновить»"
+  if [ -f "$ROOTFS/root/agent-screen/core/rfb.js" ] && [ -f "$ROOTFS/root/agent-screen/core/crypto/des.js" ]; then y "файлы экрана noVNC на месте"
+  else n "нет файлов экрана noVNC (core/) → «Обновить» среду"; fi
+  if svc_running; then y "службы запущены (супервизор pid $(cat "$INNER_HOME/run/svc.pid" 2>/dev/null))"; else n "службы не запущены → «Запустить»"; fi
+  local s dead=""; for s in gateway webui viewproxy wsview wsctl api nginx; do pid_alive "$INNER_HOME/run/$s.pid" || dead="$dead $s"; done
+  [ -z "$dead" ] && y "все 7 служб живы" || n "не работают:$dead"
+  local c; c=$(code "http://127.0.0.1:$PORT/murf/health"); [ "$c" = 200 ] && y "nginx :$PORT отвечает" || n "nginx :$PORT не отвечает (HTTP $c)"
+  local h; h=$(curl -fsS -m 10 "http://127.0.0.1:$PORT/murf/health?full=1" 2>/dev/null)
+  if [ -n "$h" ]; then
+    [ "$(jget "$h" webui)" = true ] && y "WebUI :8787" || n "WebUI :8787 не отвечает (запускается 1–3 мин после старта)"
+    [ "$(jget "$h" api)" = true ] && y "API агента :8642" || w "API агента :8642 не отвечает"
+    [ "$(jget "$h" provider_logged_in)" = true ] && y "вход в провайдера выполнен" || w "вход в провайдера не выполнен → «Войти»"
+    c=$(code "http://127.0.0.1:$PORT/screen/core/rfb.js"); [ "$c" = 200 ] && y "страница экрана: модули noVNC отдаются" || n "модули noVNC: HTTP $c (страница будет висеть на «Подключение…»)"
+    [ "$(jget "$h" screen_view)" = true ] && y "websockify просмотра :18081" || n "websockify просмотра :18081 не слушает"
+    [ "$(jget "$h" screen_control)" = true ] && y "websockify управления :18082" || n "websockify управления :18082 не слушает"
+    [ "$(jget "$h" xvnc)" = true ] && y "Xvnc (рабочий стол) запущен" || n "Xvnc не запущен → «Перезапустить экран»"
+    [ "$(jget "$h" rfb_sock)" = true ] && y "VNC отвечает (rfb.sock)" || n "VNC не отвечает на rfb.sock"
+    [ "$(jget "$h" view_sock)" = true ] && y "прокси просмотра отвечает (view.sock)" || n "прокси просмотра (view.sock) не отвечает"
+    c=$(curl -s -o /dev/null -m 5 -w '%{http_code}' -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H 'Sec-WebSocket-Protocol: binary' http://127.0.0.1:18081/websockify 2>/dev/null)  # ключ — пример из RFC 6455; gitleaks:allow
+    [ "$c" = 101 ] && y "WebSocket экрана: 101" || n "WebSocket экрана: HTTP $c"
+  else n "служебный API :18083 не отвечает"; fi
+  local np; np=$(ps -A -o pid= 2>/dev/null | wc -l)
+  [ "$np" -lt 28 ] && y "процессов Termux: $np" || w "процессов Termux: $np — Android 12+ может убивать лишние (включите «Отключить ограничения дочерних процессов» в «Для разработчиков»)"
+  local pp; pp=$(/system/bin/settings get global settings_enable_monitor_phantom_procs 2>/dev/null)
+  case "$pp" in false) y "ограничение дочерних процессов отключено" ;; true) w "ограничение дочерних процессов ВКЛЮЧЕНО → «Для разработчиков» → «Отключить ограничения дочерних процессов»" ;; *) echo "ℹ️ ограничение дочерних процессов: не удалось проверить (проверьте «Для разработчиков»)" ;; esac
+  echo "итог: ок $ok · предупреждений $warn · ошибок $bad"
+  echo "--- журнал экрана (хвост) ---"; cmd_logs screen 6 2>/dev/null | cut -c1-200
 }
 cmd_uninstall() {
   [ "${1:-}" = "--yes" ] || { echo "подтвердите: murf-local uninstall --yes"; return 2; }
@@ -188,8 +261,10 @@ case "${1:-status}" in
   login-status|netcheck|creds) installed && inner /usr/local/bin/murf-svc "$1" || echo '{"error":"not installed"}' ;;
   proxy|import) installed || { echo "сначала установка"; exit 2; }; inner /usr/local/bin/murf-svc "$@" ;;
   logs) shift; cmd_logs "$@" ;;
+  doctor) cmd_doctor ;;
+  restart-screen) cmd_restart_screen ;;
   uninstall) shift; cmd_uninstall "$@" ;;
   version) echo "$MURF_LOCAL_VERSION" ;;
   _inner) shift; inner "$@" ;;
-  *) sed -n '2,13p' "$0"; exit 2 ;;
+  *) sed -n '2,15p' "$0"; exit 2 ;;
 esac

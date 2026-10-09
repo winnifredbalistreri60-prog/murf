@@ -238,6 +238,8 @@ fun ScreenRoute(
                     reloadKey = reloadKey,
                     onWebView = { webView = it },
                 )
+                // локальный профиль: через 15 с без соединения — причина и «Перезапустить экран» / «Показать журнал»
+                LocalScreenGuard(server, { webView }, { reloadKey++ }, Modifier.align(Alignment.BottomCenter), key = reloadKey to control)
             }
         }
     }
@@ -497,6 +499,7 @@ fun AgentScreenOverlay(
                 factory = { context -> holder.obtain(context, url) },
                 update = { holder.load(url) },
             )
+            LocalScreenGuard(server, { holder.webView }, { holder.reload() }, Modifier.align(Alignment.BottomCenter), key = url)
         }
         Box(
             Modifier

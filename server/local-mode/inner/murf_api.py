@@ -10,7 +10,7 @@ HOME = os.path.expanduser("~")
 HERMES = os.path.join(HOME, ".hermes")
 BD = os.path.join(HERMES, "bot-desktop")
 MURF = os.path.join(HOME, ".murf")
-VERSION = "murf-local/1.2.0"
+VERSION = "murf-local/1.2.4"
 
 
 def port_open(port, host="127.0.0.1"):
@@ -21,6 +21,37 @@ def port_open(port, host="127.0.0.1"):
         return False
     finally:
         s.close()
+
+
+def rfb_banner(path):
+    """Отвечает ли VNC на UNIX-сокете (первые байты «RFB 003.00x»)."""
+    s = socket.socket(socket.AF_UNIX); s.settimeout(2)
+    try:
+        s.connect(path); return s.recv(12).startswith(b"RFB ")
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+
+def novnc_ok():
+    a = os.path.join(HOME, "agent-screen")
+    return all(os.path.isfile(os.path.join(a, f)) for f in ("index.html", "core/rfb.js", "core/crypto/des.js", "vendor/pako/lib/zlib/inflate.js"))
+
+
+def xvnc_running():
+    try:
+        r = subprocess.run(["pgrep", "-x", "Xvnc|Xtigervnc"], capture_output=True, timeout=3)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def screen_details():
+    """Подробности для диагностики экрана (вызывается по ?full=1 — подключается к VNC)."""
+    return {"novnc": novnc_ok(), "xvnc": xvnc_running(),
+            "rfb_sock": rfb_banner(os.path.join(BD, "rfb.sock")),
+            "view_sock": rfb_banner(os.path.join(HOME, ".cache", "agent-screen", "view.sock"))}
 
 
 def provider_logged_in():
@@ -106,7 +137,12 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.split("?")[0] == "/murf/health":
-            return self.send_json(200, health())
+            h = health()
+            if "full=1" in self.path:
+                h["screen"] = screen_details()
+            else:
+                h["novnc"] = novnc_ok()
+            return self.send_json(200, h)
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self):

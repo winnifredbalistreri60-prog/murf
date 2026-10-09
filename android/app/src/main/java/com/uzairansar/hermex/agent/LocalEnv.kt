@@ -90,11 +90,44 @@ object LocalEnv {
     suspend fun pushScripts(context: Context): TermuxResult {
         val bytes = withContext(Dispatchers.IO) { context.assets.open("murf-local.tgz").use { it.readBytes() } }
         val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        val cmd = "mkdir -p ~/.murf-local && printf '%s' '$b64' | base64 -d > ~/.murf-local/bundle.tgz && " +
-            "tar -xzf ~/.murf-local/bundle.tgz -C ~/.murf-local && rm -f ~/.murf-local/bundle.tgz && " +
+        // Комплект с noVNC ~170 КБ (base64 ~230 КБ), а один аргумент команды в Linux — не больше 128 КБ:
+        // передаём частями по 60 КБ и склеиваем в Termux.
+        val parts = b64.chunked(60_000)
+        parts.forEachIndexed { i, part ->
+            val op = if (i == 0) ">" else ">>"
+            val r = Termux.run(context, "mkdir -p ~/.murf-local && printf '%s' '$part' $op ~/.murf-local/bundle.b64", timeoutMs = 60_000)
+            if (r.error != null || (r.exitCode ?: 0) != 0) return r
+        }
+        val cmd = "cd ~/.murf-local && base64 -d bundle.b64 > bundle.tgz && rm -f bundle.b64 && " +
+            "tar -xzf bundle.tgz -C ~/.murf-local && rm -f bundle.tgz && " +
             "chmod 755 ~/.murf-local/murf-local && ln -sf ~/.murf-local/murf-local \$PREFIX/bin/murf-local && " +
             "echo murf-local \$(cat ~/.murf-local/VERSION)"
         return Termux.run(context, cmd, timeoutMs = 60_000)
+    }
+
+    /** `murf-local doctor`: короткий отчёт по всем частям среды (свежие скрипты кладём перед запуском). */
+    suspend fun doctor(context: Context): String {
+        pushScripts(context)
+        return Termux.run(context, "murf-local doctor", timeoutMs = 120_000).combined().trim()
+    }
+
+    /** Перезапуск экрана агента (Xvnc + websockify) внутри уже работающей среды. */
+    suspend fun restartScreen(context: Context): TermuxResult {
+        pushScripts(context)
+        return Termux.run(context, "murf-local restart-screen", timeoutMs = 150_000)
+    }
+
+    suspend fun screenLogs(context: Context): String =
+        Termux.run(context, "murf-local logs screen 15", timeoutMs = 30_000).combined().trim()
+
+    /** Подробное состояние экрана из работающей среды (?full=1: noVNC, Xvnc, VNC-сокеты). */
+    suspend fun screenHealth(): JSONObject? = withContext(Dispatchers.IO) {
+        runCatching {
+            OkHttpClient.Builder().connectTimeout(2, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
+                .newCall(Request.Builder().url("$URL/murf/health?full=1").build()).execute().use { r ->
+                    if (r.isSuccessful) JSONObject(r.body!!.string()) else null
+                }
+        }.getOrNull()
     }
 
     suspend fun status(context: Context): LocalStatus {

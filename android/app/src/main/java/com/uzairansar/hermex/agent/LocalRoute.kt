@@ -113,6 +113,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
     var loginInfo by remember { mutableStateOf<JSONObject?>(null) }
     var loginPolling by remember { mutableStateOf(false) }
     var logText by remember { mutableStateOf<String?>(null) }
+    var diagText by remember { mutableStateOf<String?>(null) }
     var fallback by remember { mutableStateOf(LocalEnv.fallbackOffer(context)) }
     val termuxOk = remember(refresh) { Termux.isInstalled(context) && Termux.hasPermission(context) }
     val activeUrl = (authState as? AuthState.LoggedIn)?.server
@@ -237,6 +238,33 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                     }) { Text(tr("Остановить", "Stop")) }
                     TextButton(enabled = termuxOk, onClick = { act(tr("Журнал", "Log")) { logText = LocalEnv.logs(context, if (status?.installed == true) "gateway" else "install"); null } }) { Text(tr("Журнал", "Log")) }
                     TextButton(onClick = { LocalEnv.openTermux(context) }) { Text(tr("Открыть Termux", "Open Termux")) }
+                }
+            }
+
+            LSection(tr("Диагностика", "Diagnostics")) {
+                Text(tr("Проверяет все части среды (Ubuntu, службы, порты, файлы и WebSocket экрана, VNC, ограничения Android) и показывает короткий отчёт. Его можно отправить разработчику.",
+                    "Checks every part of the environment (Ubuntu, services, ports, screen files and WebSocket, VNC, Android limits) and shows a short report you can send to the developer."),
+                    style = MaterialTheme.typography.bodySmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(enabled = termuxOk && busy == null, modifier = Modifier.testTag("local_doctor"), onClick = {
+                        act(tr("Диагностика (до 1 мин)", "Diagnostics (up to 1 min)")) { diagText = LocalEnv.doctor(context); null }
+                    }) { Text(tr("Диагностика", "Diagnostics")) }
+                    OutlinedButton(enabled = termuxOk && busy == null && status?.installed == true, onClick = {
+                        act(tr("Перезапуск экрана (до 1,5 мин)", "Restarting the screen (up to 1.5 min)")) { LocalEnv.restartScreen(context).combined().trim().takeLast(400) }
+                    }) { Text(tr("Перезапустить экран", "Restart screen")) }
+                    TextButton(enabled = termuxOk, onClick = { act(tr("Журнал экрана", "Screen log")) { logText = LocalEnv.screenLogs(context); null } }) { Text(tr("Журнал экрана", "Screen log")) }
+                }
+                diagText?.let { t ->
+                    Card(Modifier.fillMaxWidth().testTag("local_doctor_report")) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SelectionContainer { Text(t, fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 14.sp) }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { AgentShare.shareText(context, t, tr("MURF — диагностика локальной среды", "MURF — local environment diagnostics")) }) { Text(tr("Отправить отчёт", "Send report")) }
+                                OutlinedButton(onClick = { AgentShare.copy(context, t); AgentShare.toast(context, tr("Отчёт скопирован", "Report copied")) }) { Text(tr("Копировать", "Copy")) }
+                                TextButton(onClick = { diagText = null }) { Text(tr("Скрыть", "Hide")) }
+                            }
+                        }
+                    }
                 }
             }
 

@@ -49,7 +49,7 @@ body.ctl.kbdopen #kbd{display:flex}
 <link rel="modulepreload" crossorigin="use-credentials" href="./core/input/gesturehandler.js">
 <link rel="modulepreload" crossorigin="use-credentials" href="./core/util/cursor.js">
 <link rel="modulepreload" crossorigin="use-credentials" href="./core/websock.js">
-<link rel="modulepreload" crossorigin="use-credentials" href="./core/des.js">
+<link rel="modulepreload" crossorigin="use-credentials" href="./core/crypto/des.js">
 <link rel="modulepreload" crossorigin="use-credentials" href="./core/input/xtscancodes.js">
 <link rel="modulepreload" crossorigin="use-credentials" href="./core/encodings.js">
 <link rel="modulepreload" crossorigin="use-credentials" href="./core/decoders/raw.js">
@@ -93,9 +93,16 @@ body.ctl.kbdopen #kbd{display:flex}
   <button data-k="Page_Up">PgUp</button><button data-k="Page_Down">PgDn</button>
   <button id="k-zoom" title="Увеличение">🔍 1×</button><button id="k-pan" title="Двигать увеличенный экран">✋</button>
 </div>
+<script>
+// MURF: сторож загрузки. Если модуль noVNC не выполнился (файлы core/ не отдались), показываем причину, а не вечное «Подключение…»
+window.murfState={js:false,connected:false,attempts:0,failed:[],t0:Date.now()};
+addEventListener('error',function(e){var t=e.target;if(t&&t!==window&&(t.src||t.href)){murfState.failed.push(String(t.src||t.href).replace(location.origin,''));}},true);
+setTimeout(function(){if(!murfState.js){var m=document.getElementById('msg');if(m)m.textContent='Не загрузились файлы экрана (noVNC)'+(murfState.failed.length?': '+murfState.failed.slice(0,2).join(', '):'')+'. Перезапустите экран или откройте «Диагностика».';var d=document.getElementById('dot');if(d)d.style.background='#e5484d';}},12000);
+</script>
 <script type="module" crossorigin="use-credentials">
 import RFB from './core/rfb.js';
 import KeyTable from './core/input/keysym.js';
+const MS=window.murfState||(window.murfState={failed:[]}); MS.js=true;
 const q=new URLSearchParams(location.search);
 const MINI=!!q.get('mini'), CTL=q.get('mode')==='control' && !MINI;
 const $=id=>document.getElementById(id);
@@ -116,11 +123,13 @@ function status(){
 function connect(){
   const base=location.pathname.replace(/[^/]*$/,'');
   const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+base+(CTL?'control/websockify':'websockify');
-  try{ rfb=new RFB($('screen'),url,{shared:true}); }catch(e){ setTimeout(connect,5000); return; }
+  MS.attempts++; MS.ws='connecting';
+  try{ rfb=new RFB($('screen'),url,{shared:true}); }catch(e){ MS.ws='error'; MS.lastError=String(e&&e.message||e); setTimeout(connect,5000); return; }
   rfb.viewOnly=!CTL; rfb.scaleViewport=true; rfb.resizeSession=false; rfb.background='#000';
+  rfb.addEventListener('securityfailure',e=>{MS.lastError='securityfailure: '+((e.detail&&e.detail.reason)||'');});
   rfb.focusOnClick=CTL; rfb.showDotCursor=CTL;
-  rfb.addEventListener('connect',()=>{connected=true;$('off').style.display='none';status();});
-  rfb.addEventListener('disconnect',()=>{connected=false;status();
+  rfb.addEventListener('connect',()=>{connected=true;MS.connected=true;MS.ws='open';MS.everConnected=true;$('off').style.display='none';status();});
+  rfb.addEventListener('disconnect',(e)=>{connected=false;MS.connected=false;MS.ws='closed';MS.clean=!!(e&&e.detail&&e.detail.clean);MS.lastDisconnect=Date.now();status();
     // локальный режим MURF: экран бота мог быть не запущен — один раз просим его поднять (на сервере это 404)
     if(!window.__deskStart){ window.__deskStart=1; fetch('/phone/api/screen/start',{method:'POST',credentials:'same-origin',headers:{'X-Agent-App':'1'}}).catch(()=>{}); }
     setTimeout(connect,4000);});

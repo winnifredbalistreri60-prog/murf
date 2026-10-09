@@ -108,11 +108,18 @@ if ! is_done webui || ! [ -f /root/hermes-webui/bootstrap.py ]; then
 fi
 # index.html/прокси из комплекта скриптов приложения новее payload — копируем всегда
 [ -f "$MURF_DIR/index.html" ] && mkdir -p /root/agent-screen && cp -f "$MURF_DIR/index.html" /root/agent-screen/index.html
-if [ ! -d /root/agent-screen/core ]; then # без payload: noVNC с GitHub
-  rm -rf /tmp/novnc && git clone --depth 1 -b v1.5.0 https://github.com/novnc/noVNC /tmp/novnc \
-    && mkdir -p /root/agent-screen && cp -a /tmp/novnc/core /tmp/novnc/vendor /root/agent-screen/ ; rm -rf /tmp/novnc
+# noVNC: в payload с сервера core/vendor могли оказаться ссылками на /usr/share/novnc (там пакет системы),
+# а в Ubuntu телефона такого пакета нет — ссылки «висят», модули отдаются 404 и экран вечно «Подключение…».
+# Поэтому каждый install/update проверяет и ставит noVNC из комплекта (novnc-1.6.0.tgz), запасной путь — GitHub.
+novnc_ok() { [ -f /root/agent-screen/core/rfb.js ] && [ -f /root/agent-screen/core/crypto/des.js ] && [ -f /root/agent-screen/vendor/pako/lib/zlib/inflate.js ]; }
+if ! novnc_ok; then
+  echo "noVNC: core/vendor отсутствуют или битые ссылки — восстанавливаю"
+  mkdir -p /root/agent-screen && rm -rf /root/agent-screen/core /root/agent-screen/vendor
+  if [ -s "$MURF_DIR/novnc-1.6.0.tgz" ]; then tar -xzf "$MURF_DIR/novnc-1.6.0.tgz" -C /root/agent-screen core vendor
+  else rm -rf /tmp/novnc && git clone -q --depth 1 -b v1.6.0 https://github.com/novnc/noVNC /tmp/novnc \
+    && cp -a /tmp/novnc/core /tmp/novnc/vendor /root/agent-screen/; rm -rf /tmp/novnc; fi
 fi
-[ -d /root/agent-screen/core ] || echo "ВНИМАНИЕ: нет noVNC (core/) — вкладка «Экран» не будет работать"
+novnc_ok && echo "noVNC: ок" || echo "ВНИМАНИЕ: нет noVNC (core/) — вкладка «Экран» не будет работать"
 
 # ---------- 5. Конфиг, ключи ----------
 STEP=config
@@ -160,7 +167,8 @@ PY
 sed "s/@PORT@/$NGINX_PORT/g" "$MURF_DIR/nginx.conf" > "$MURF_HOME/nginx.conf"
 mkdir -p "$MURF_HOME/run/nginx"
 nginx -t -c "$MURF_HOME/nginx.conf" -p "$MURF_HOME/run/nginx" 2>&1 | tail -2
-cp -f "$MURF_DIR/svc.sh" /usr/local/bin/murf-svc && chmod 755 /usr/local/bin/murf-svc
+# через новый файл + mv: работающий супервизор (bash читает скрипт по ходу) не испортится
+install -m 755 "$MURF_DIR/svc.sh" /usr/local/bin/murf-svc.new && mv -f /usr/local/bin/murf-svc.new /usr/local/bin/murf-svc
 # В proot панель XFCE иногда не может подключиться к D-Bus (SCM_CREDENTIALS) и выходит — а вместе с ней
 # лаунчер Hermes гасит Xvnc. Обёртка держит сессию живой, экран продолжает работать (окна, xfwm4, рабочий стол).
 cat > /usr/local/bin/xfce4-panel <<'SH'
