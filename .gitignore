@@ -1,0 +1,30 @@
+# Build outputs
+build/
+.gradle/
+.kotlin/
+android/app/release/
+*.apk
+*.aab
+!android/app/src/main/assets/*.tgz
+dist/
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+local.properties
+captures/
+
+# Secrets — never commit
+*.jks
+*.keystore
+*.p12
+.env
+.env.*
+!*.env.example
+secrets*.txt
+keystore.properties
+
+# Python
+__pycache__/
+*.pyc
