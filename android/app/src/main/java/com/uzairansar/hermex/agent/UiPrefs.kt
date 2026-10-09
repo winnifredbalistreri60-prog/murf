@@ -65,6 +65,7 @@ object UiPrefs {
     private var sp: SharedPreferences? = null
     private val _fontScale = MutableStateFlow(1f)
     private val _swipes = MutableStateFlow(true)
+    private val _miniPreview = MutableStateFlow(false)
 
     /** Режим живого экрана: false — «Смотреть» (по умолчанию при каждом запуске), true — «Управлять». Не сохраняется. */
     private val _screenControl = MutableStateFlow(false)
@@ -72,6 +73,8 @@ object UiPrefs {
     fun setScreenControl(v: Boolean) { _screenControl.value = v }
     val fontScale: StateFlow<Float> = _fontScale
     val swipesEnabled: StateFlow<Boolean> = _swipes
+    /** Плавающее мини-превью экрана агента в чате во время работы агента (по умолчанию выключено — экран по кнопке). */
+    val miniPreview: StateFlow<Boolean> = _miniPreview
 
     fun init(context: Context) {
         if (sp != null) return
@@ -79,6 +82,7 @@ object UiPrefs {
         sp = prefs
         _fontScale.value = clamp(prefs.getFloat("font_scale", 1f))
         _swipes.value = prefs.getBoolean("swipes", true)
+        _miniPreview.value = prefs.getBoolean("mini_preview", false)
     }
 
     fun clamp(v: Float): Float = ((v.coerceIn(MIN_SCALE, MAX_SCALE) * 20f).roundToInt() / 20f)
@@ -87,6 +91,11 @@ object UiPrefs {
         val c = clamp(v)
         _fontScale.value = c
         sp?.edit()?.putFloat("font_scale", c)?.apply()
+    }
+
+    fun setMiniPreview(v: Boolean) {
+        _miniPreview.value = v
+        sp?.edit()?.putBoolean("mini_preview", v)?.apply()
     }
 
     fun setSwipesEnabled(v: Boolean) {

@@ -303,6 +303,16 @@ fun SettingsRoute(
                     )
                     SettingsFootnote(tr("Главное меню: влево/вправо — следующий/предыдущий раздел (Чаты → Экран → Телефон → Диск → панели). В чате: вправо от левой половины — к списку чатов, влево — экран агента; на экране агента вправо — закрыть.", "Main menu: swipe left/right — next/previous section (Chats → Screen → Phone → Drive → panels). In chat: swipe right from the left half — to the chat list, left — agent screen; on the agent screen swipe right — close."))
                     SettingsDivider()
+                    val miniOn by com.uzairansar.hermex.agent.UiPrefs.miniPreview.collectAsState()
+                    SettingsToggleRow(
+                        label = tr("Мини-превью экрана в чате", "Mini screen preview in chat"),
+                        iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_monitor,
+                        value = miniOn,
+                        switchTestTag = "mini_preview_toggle",
+                        onValueChange = com.uzairansar.hermex.agent.UiPrefs::setMiniPreview,
+                    )
+                    SettingsFootnote(tr("Выключено: экран агента открывается кнопкой с монитором в шапке чата (зелёная точка — агент работает). Включено: пока агент работает, в углу чата маленький экран — его можно перетащить или закрыть ×.", "Off: the agent screen opens with the monitor button in the chat header (green dot — the agent is working). On: while the agent works, a small screen sits in the chat corner — drag it or close it with ×."))
+                    SettingsDivider()
                     SettingsToggleRow(
                         label = localizedString("Haptic Feedback"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_haptic_phone,

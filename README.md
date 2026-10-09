@@ -37,6 +37,7 @@
 | 1.2.2 | **Выбор языка** — «Как в системе» или любой встроенный (на Android 13+ и в системных настройках языка приложения); экраны MURF на русском и английском, для остальных языков — английский |
 | 1.2.3 | Экран агента открывается в 2–3 раза быстрее (параллельная загрузка noVNC, кэш) |
 | 1.2.4 | Локальный экран: исправлено вечное «Подключение…»; **«Диагностика»** локальной среды с отчётом; «Перезапустить экран» и «Показать журнал» прямо на экране |
+| 1.2.5 | Экран агента в чате — **по кнопке** с монитором в шапке (зелёная точка — агент работает); мини-превью в углу чата — по желанию: «Настройки → Взаимодействие → Мини-превью экрана в чате» (перетаскивается, закрывается ×) |
 
 Из 1.1.x остаются: **размер шрифта** для всего приложения, **свайпы** между разделами и к экрану агента (отключаются в настройках), режим «Управлять», экран поверх чата.
 
@@ -175,7 +176,7 @@ cd android
 
 **MURF** is an Android client for your own AI agent built on [Hermes Agent](https://github.com/NousResearch/hermes-agent) and [hermes-webui](https://github.com/nesquena/hermes-webui), forked from [Hermex](https://github.com/uzairansaruzi/hermex).
 
-**Features:** streaming chat with tool steps, subagents and approvals; a live agent screen (noVNC) with a **view mode enforced server-side** (a view-only proxy drops input) and a control mode (tap/right-click/scroll, zoom, key bar, Cyrillic input); a phone bridge (the agent asks the phone to run Termux commands, take photos, get location, move files — each confirmed); Google Drive export and rclone hookup; Markdown/PDF export; app-wide **font size**; **swipe** navigation; **server update checker** with dry run and rollback; in-app **language picker** (system default or any bundled language; MURF screens in Russian and English, English fallback); **local mode** — the whole agent on the phone (Ubuntu 24.04 in proot via Termux) with built-in **diagnostics**.
+**Features:** streaming chat with tool steps, subagents and approvals; a live agent screen (noVNC) with a **view mode enforced server-side** (a view-only proxy drops input) and a control mode (tap/right-click/scroll, zoom, key bar, Cyrillic input); a phone bridge (the agent asks the phone to run Termux commands, take photos, get location, move files — each confirmed); Google Drive export and rclone hookup; Markdown/PDF export; app-wide **font size**; **swipe** navigation; **server update checker** with dry run and rollback; in-app **language picker** (system default or any bundled language; MURF screens in Russian and English, English fallback); **local mode** — the whole agent on the phone (Ubuntu 24.04 in proot via Termux) with built-in **diagnostics**. Since 1.2.5 the agent screen in chat opens **on demand** from the monitor button in the chat header (green dot = agent is working); the floating mini-preview is optional (Settings → Interaction, off by default; draggable, dismiss with ×).
 
 **Local mode — tested on a real device:** vivo X300, Android 16, arm64, MURF 1.2.4.
 

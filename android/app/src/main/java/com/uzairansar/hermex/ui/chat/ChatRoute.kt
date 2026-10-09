@@ -1191,11 +1191,16 @@ fun ChatRoute(
                 )
             }
         }
-        if (state.isStreaming && screenServer != null && !showsScreenOverlay) {
+        // Мини-превью экрана — только если включено в настройках; закрытое × не появляется до конца текущей задачи.
+        val miniPreviewOn by com.uzairansar.hermex.agent.UiPrefs.miniPreview.collectAsState()
+        var miniPreviewDismissed by remember(sessionId) { mutableStateOf(false) }
+        LaunchedEffect(state.isStreaming) { if (!state.isStreaming) miniPreviewDismissed = false }
+        if (miniPreviewOn && !miniPreviewDismissed && state.isStreaming && screenServer != null && !showsScreenOverlay) {
             com.uzairansar.hermex.ui.screen.MiniScreenPreview(
                 server = screenServer,
                 cookies = remember(screenServer) { screenCookies() },
                 onOpen = { showsScreenOverlay = true },
+                onDismiss = { miniPreviewDismissed = true },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = topBarHeight + 8.dp, end = 12.dp),

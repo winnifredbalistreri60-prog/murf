@@ -18,6 +18,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -245,22 +247,29 @@ fun ScreenRoute(
     }
 }
 
-/** Small live preview shown over the chat while the agent works; tap opens the full screen. */
+/** Small live preview over the chat while the agent works (opt-in): tap opens the full screen, drag to move, × hides it. */
 @Composable
 fun MiniScreenPreview(
     server: HttpUrl,
     cookies: List<Cookie>,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null,
     width: Dp = 168.dp,
     height: Dp = 105.dp,
 ) {
     remember(server, cookies) { syncScreenCookies(server, cookies); true }
+    var dx by rememberSaveable { mutableFloatStateOf(0f) }
+    var dy by rememberSaveable { mutableFloatStateOf(0f) }
     Box(
         modifier = modifier
+            .offset { IntOffset(dx.roundToInt(), dy.roundToInt()) }
             .size(width, height)
+            .shadow(8.dp, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.Black),
+            .background(Color.Black)
+            .pointerInput(Unit) { detectDragGestures { change, drag -> change.consume(); dx += drag.x; dy += drag.y } }
+            .testTag("chat_mini_preview"),
     ) {
         LiveScreenView(url = screenUrl(server, mini = true), modifier = Modifier.fillMaxSize())
         // Transparent layer: WebView must not eat the tap.
@@ -271,6 +280,14 @@ fun MiniScreenPreview(
             fontSize = 10.sp,
             modifier = Modifier.align(Alignment.BottomStart).background(Color(0x99000000)).padding(horizontal = 6.dp, vertical = 2.dp),
         )
+        if (onDismiss != null) {
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(3.dp).size(26.dp).clip(CircleShape).background(Color(0xB3000000))
+                    .clickable(onClick = onDismiss).semantics { contentDescription = tr("Скрыть превью", "Hide preview") }
+                    .testTag("chat_mini_preview_close"),
+                contentAlignment = Alignment.Center,
+            ) { Text("×", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+        }
     }
 }
 
