@@ -1,11 +1,58 @@
-<p align="center"><img src="android/app/src/main/res/drawable-nodpi/hermex_app_icon.png" width="96" alt="MURF"></p>
+<p align="center"><img src="android/app/src/main/res/drawable-nodpi/hermex_app_icon.png" width="96" alt="MURF logo"></p>
 
-# MURF
+<h1 align="center">MURF — Android app for your own AI agent</h1>
+
+<p align="center">
+  <a href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/winnifredbalistreri60-prog/murf?label=release&color=ffb300"></a>
+  <a href="https://github.com/winnifredbalistreri60-prog/murf/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/winnifredbalistreri60-prog/murf/total?color=ff8f00"></a>
+  <a href="https://github.com/winnifredbalistreri60-prog/murf/actions/workflows/android.yml"><img alt="Android CI" src="https://github.com/winnifredbalistreri60-prog/murf/actions/workflows/android.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/winnifredbalistreri60-prog/murf"></a>
+  <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84?logo=android&logoColor=white">
+  <a href="https://github.com/winnifredbalistreri60-prog/murf/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/winnifredbalistreri60-prog/murf?style=social"></a>
+</p>
+
+<p align="center">
+  <b>Open-source Android client for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>: chat with your AI agent, watch and control its live desktop, let it use your phone through Termux — or run the whole agent on the phone in local Ubuntu.</b><br>
+  A self-hosted, open-source alternative to cloud agent apps like Manus.
+</p>
+<p align="center">
+  <b>Android-клиент для своего ИИ-агента на базе Hermes Agent:</b> чат с агентом, живой экран его рабочего стола с управлением, мост к телефону через Termux и локальный режим — весь агент на телефоне (Ubuntu в proot). Открытый код, свой сервер.
+</p>
+
+<p align="center">
+  <a href="https://github.com/winnifredbalistreri60-prog/murf/releases/latest"><b>⬇️ Скачать APK / Download APK</b></a> ·
+  <a href="https://winnifredbalistreri60-prog.github.io/murf/">Сайт / Website</a> ·
+  <a href="#english">English</a> ·
+  <a href="#faq">FAQ</a>
+</p>
+
+<p align="center"><img src="docs/assets/demo.gif" width="270" alt="MURF demo: home, chat, agent screen, phone bridge, local mode"></p>
+
+## Быстрый старт / Quick start
+
+1. Скачайте `murf-X.Y.Z.apk` из [последнего релиза](https://github.com/winnifredbalistreri60-prog/murf/releases/latest) и установите (Android 8.0+). Сверьте SHA-256 из описания релиза. / Download the APK from the [latest release](https://github.com/winnifredbalistreri60-prog/murf/releases/latest) and install it (Android 8.0+).
+2. **Свой сервер** — введите адрес и пароль hermes-webui (примеры nginx и служб — в [`server/`](server/README.md)). / **Your server:** enter your hermes-webui URL and password (configs in [`server/`](server/README.md)).
+3. **Или без сервера** — «Локальная среда» → «Установить» (нужен Termux, arm64, ≥ 4,5 ГБ). / **Or no server at all:** Local environment → Install (Termux, arm64, ≥ 4.5 GB).
+
+## Сравнение / Comparison
+
+| | **MURF** | Manus (app) | OpenManus | Hermes Agent via Telegram |
+|---|---|---|---|---|
+| Открытый код / Open source | ✅ MIT | ❌ | ✅ | ✅ |
+| Свой сервер / Self-hosted | ✅ | ❌ cloud | ✅ | ✅ |
+| Нативное Android-приложение / Native Android app | ✅ | ✅ | ❌ | via Telegram |
+| Живой экран агента / Live agent desktop | ✅ view + control | ✅ view | ❌ | ❌ |
+| Агент действует на телефоне / Agent uses your phone (Termux, camera, files) | ✅ with confirmation | ❌ | ❌ | ❌ |
+| Весь агент на телефоне / Whole agent on the phone | ✅ local mode | ❌ | ❌ | ❌ |
+| Модель / Model | any provider supported by Hermes Agent | Manus | any (config) | any provider supported by Hermes Agent |
+
+<sub>По публичной информации на октябрь 2026; поправки приветствуются. / Based on public information as of Oct 2026; corrections welcome.</sub>
+
+## О проекте
 
 **MURF** — Android-клиент для своего ИИ-агента на базе [Hermes Agent](https://github.com/NousResearch/hermes-agent) и [hermes-webui](https://github.com/nesquena/hermes-webui).
 Это форк [Hermex](https://github.com/uzairansaruzi/hermex) (нативный клиент hermes-webui) с упором на работу с телефона: живой экран агента, мост к телефону через Termux, локальный режим «весь агент на телефоне».
 
-> English summary is [below](#english).
 
 | Главное меню | Экран агента в чате | Экспорт беседы | Локальный режим |
 |---|---|---|---|
@@ -163,6 +210,26 @@ cd android
 - Локальный режим слушает только `127.0.0.1`; перенос секретов с сервера — только после отдельного подтверждения.
 
 Сообщить об уязвимости: см. [SECURITY.md](SECURITY.md).
+
+## FAQ
+
+**Это замена Manus? / Is this a Manus alternative?**
+MURF — открытый клиент для вашего собственного агента (Hermes Agent): вы сами выбираете сервер и провайдера модели, экран агента — ваш рабочий стол. / MURF is an open-source client for an agent you host yourself (Hermes Agent): your server, your model provider, your agent desktop.
+
+**Нужен ли сервер? / Do I need a server?**
+Нет: локальный режим запускает Hermes Agent, WebUI и рабочий стол XFCE прямо на телефоне (Termux + Ubuntu в proot). Сервер быстрее и удобнее для долгих задач. / No — local mode runs Hermes Agent, WebUI and an XFCE desktop on the phone (Termux + Ubuntu in proot). A server is faster for long tasks.
+
+**Какие модели? / Which models?**
+Любые, которые поддерживает Hermes Agent (настраиваются в агенте, не в приложении). / Whatever Hermes Agent supports — configured in the agent, not in the app.
+
+**Агент может что-то сделать с телефоном без спроса? / Can the agent act on my phone without asking?**
+Нет: каждое действие (команда Termux, фото, файлы, геопозиция) подтверждается, кроме тех, что вы сами разрешили «всегда». / No — every action needs your confirmation unless you allowed it “always”.
+
+**Где Google Play? / Is it on Google Play?**
+Пока только APK из [Releases](https://github.com/winnifredbalistreri60-prog/murf/releases) (подписан, SHA-256 в описании релиза). / APK from Releases only for now (signed; SHA-256 in release notes).
+
+**Как помочь? / How to help?**
+⭐ Звезда репозиторию, отчёты «Диагностика» с других телефонов, переводы, issues с метками `good first issue` / `help wanted`. См. [CONTRIBUTING.md](CONTRIBUTING.md). / Star the repo, send Diagnostics reports from other phones, translations, `good first issue` / `help wanted` issues.
 
 ## Благодарности
 

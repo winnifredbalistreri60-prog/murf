@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://winnifredbalistreri60-prog.github.io/murf/sitemap.xml

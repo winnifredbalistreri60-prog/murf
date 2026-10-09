@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use MURF in your work, please cite it as below."
+title: "MURF: Android app for your own AI agent (Hermes Agent client)"
+type: software
+authors:
+  - alias: winnifredbalistreri60-prog
+repository-code: "https://github.com/winnifredbalistreri60-prog/murf"
+url: "https://winnifredbalistreri60-prog.github.io/murf/"
+abstract: >-
+  Open-source Android client for Hermes Agent: chat with an AI agent, live agent
+  desktop (noVNC) with view and control modes, a Termux phone bridge, and a local
+  mode that runs the whole agent on the phone in Ubuntu (proot).
+keywords:
+  - android
+  - ai-agent
+  - hermes-agent
+  - termux
+  - novnc
+  - self-hosted
+license: MIT
+version: "1.2.5"
+date-released: "2026-10-09"
