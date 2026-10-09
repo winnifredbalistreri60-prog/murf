@@ -35,13 +35,13 @@ flowchart LR
   subgraph Phone["Телефон"]
     App["MURF (Android)"]
     Termux["Termux (+ Termux:API)"]
-    Local["Локальный режим:\nUbuntu proot → Hermes + WebUI + XFCE"]
+    Local["Локальный режим:<br>Ubuntu proot → Hermes + WebUI + XFCE"]
   end
   subgraph Server["Сервер"]
-    Nginx["nginx (TLS)\n/  /agent/  /screen/  /phone/"]
+    Nginx["nginx (TLS)<br>/  /agent/  /screen/  /phone/"]
     WebUI["hermes-webui :8787"]
-    Agent["Hermes Agent\n(gateway, API :8642)"]
-    Desk["Рабочий стол агента\nXvnc + websockify/noVNC"]
+    Agent["Hermes Agent<br>(gateway, API :8642)"]
+    Desk["Рабочий стол агента<br>Xvnc + websockify/noVNC"]
     Relay["phone-relay :8790/:8791"]
   end
   App -- HTTPS / SSE --> Nginx
