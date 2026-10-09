@@ -1,0 +1,11 @@
+[Unit]
+Description=MURF: noVNC page + view-only websocket for /screen/
+After=agent-screen-view.service
+
+[Service]
+ExecStart=/usr/bin/websockify --web %h/agent-screen --unix-target=%h/.cache/agent-screen/view.sock 127.0.0.1:6081
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

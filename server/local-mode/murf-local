@@ -1,0 +1,195 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# murf-local — локальная среда MURF на телефоне (Termux + proot-distro Ubuntu).
+#   murf-local install|update     — установить/обновить (идемпотентно, можно перезапускать после обрыва)
+#   murf-local start [--fg]       — запустить службы (--fg: держать в этой сессии Termux)
+#   murf-local stop | restart
+#   murf-local status [--disk]    — JSON для приложения
+#   murf-local login [PROVIDER]   — вход в провайдера (xai-oauth: ссылка + код)
+#   murf-local login-status | netcheck | creds
+#   murf-local proxy URL|off      — прокси для провайдера (например socks5h://127.0.0.1:10808 от v2rayNG)
+#   murf-local import URL [--with-secrets] — перенос настроек с сервера
+#   murf-local logs [setup|gateway|webui|nginx|...]
+#   murf-local uninstall --yes    — удалить среду полностью
+MURF_LOCAL_VERSION=1.2.1
+D="$HOME/.murf-local"
+PD_DIR="$PREFIX/var/lib/proot-distro"
+DISTRO="${MURF_DISTRO:-$(cat "$HOME/.murf-local/distro" 2>/dev/null || echo murf-ubuntu)}"
+RAW_ROOT="$HOME/.murf-local/rootfs"   # запасной режим без proot-distro (чистый proot)
+raw_mode() { [ "$(cat "$HOME/.murf-local/mode" 2>/dev/null)" = raw ]; }
+rootfs_dir() { local d; raw_mode && { echo "$RAW_ROOT"; return; }
+  for d in "$PD_DIR/containers/$DISTRO/rootfs" "$PD_DIR/installed-rootfs/$DISTRO"; do [ -d "$d/usr" ] && { echo "$d"; return; }; done; echo "$PD_DIR/containers/$DISTRO/rootfs"; }
+ROOTFS="$(rootfs_dir)"
+INNER_HOME="$ROOTFS/root/.murf"
+UBUNTU_BASE="${MURF_UBUNTU_BASE:-https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release}"
+HERMES_COMMIT="${HERMES_COMMIT:-0240fa4a84123406a0e5e6e7262e5b772b43f0bd}"
+PAYLOAD_URL="${MURF_PAYLOAD_URL:-}"
+PORT="${MURF_PORT:-18080}"
+mkdir -p "$D/logs"
+
+tprogress() { # state pct step msg
+  printf '{"phase":"termux","state":"%s","pct":%s,"step":"%s","msg":"%s","ts":%s}\n' "$1" "$2" "$3" "${4//\"/\'}" "$(date +%s)" > "$D/progress.json.tmp" \
+    && mv -f "$D/progress.json.tmp" "$D/progress.json"
+  echo "[$(date '+%F %T')] [$1 $2%] $3: $4"
+}
+raw_proot() { # как proot-distro login: /dev,/proc,/sys, /dev/shm, подмена закрытых Android файлов /proc
+  local fp="$HOME/.murf-local/fakeproc" b=() f
+  mkdir -p "$fp" "$ROOTFS/tmp" "$ROOTFS/dev/shm"; chmod 1777 "$ROOTFS/tmp" 2>/dev/null
+  for f in loadavg stat uptime version vmstat; do
+    if ! cat "/proc/$f" >/dev/null 2>&1; then
+      case $f in
+        loadavg) echo "0.12 0.07 0.02 2/165 765" ;;
+        uptime) echo "124.08 932.80" ;;
+        version) echo "Linux version $(uname -r) (proot@murf) #1 SMP PREEMPT" ;;
+        stat) printf 'cpu  1957 0 2877 93280 262 342 254 87 0 0\ncpu0 31 0 226 12027 82 10 4 9 0 0\nintr 0\nctxt 0\nbtime 0\nprocesses 0\nprocs_running 1\nprocs_blocked 0\n' ;;
+        vmstat) printf 'nr_free_pages 136757\nnr_inactive_anon 0\nnr_active_anon 0\n' ;;
+      esac > "$fp/$f"; b+=(-b "$fp/$f:/proc/$f")
+    fi
+  done
+  unset LD_PRELOAD; [ -f "$HOME/.murf-local/noseccomp" ] && export PROOT_NO_SECCOMP=1
+  proot --link2symlink --kill-on-exit -0 -r "$ROOTFS" -b /dev -b /proc -b /sys -b "$ROOTFS/tmp:/dev/shm" "${b[@]}" -w /root "$@"
+}
+inner() {
+  local envv=(/usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" LANG=C.UTF-8
+    PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    MURF_PORT="$PORT" HERMES_COMMIT="$HERMES_COMMIT" MURF_PAYLOAD_URL="$PAYLOAD_URL")
+  if raw_mode; then raw_proot "${envv[@]}" "$@"; else proot-distro login "$DISTRO" -- "${envv[@]}" "$@"; fi
+}
+installed() { [ -x "$ROOTFS/root/.hermes/hermes-agent/.hermes/bin/hermes" ] && [ -f "$ROOTFS/root/.murf/steps/config.done" ]; }
+pid_alive() { [ -f "$1" ] && kill -0 "$(cat "$1" 2>/dev/null)" 2>/dev/null; }
+svc_running() { pid_alive "$INNER_HOME/run/svc.pid" || pid_alive "$D/svc.pid"; }
+
+cmd_install() {
+  if pid_alive "$D/install.pid"; then echo "установка уже идёт (pid $(cat "$D/install.pid"))"; return 0; fi
+  echo $$ > "$D/install.pid"; trap 'rm -f "$D/install.pid"' EXIT
+  exec > >(tee -a "$D/logs/install.log") 2>&1
+  echo "=== MURF local $MURF_LOCAL_VERSION: установка $(date) ==="
+  termux-wake-lock 2>/dev/null || true
+  local free_mb; free_mb=$(df -Pk "$HOME" | awk 'NR==2{print int($4/1024)}')
+  echo "свободно: ${free_mb} МБ"
+  if [ "${free_mb:-0}" -lt 4500 ]; then tprogress error 0 space "Мало места: ${free_mb} МБ, нужно ≥ 4,5 ГБ"; return 1; fi
+  if ! command -v proot-distro >/dev/null || ! command -v curl >/dev/null || [ ! -d "$ROOTFS/usr" ]; then
+    tprogress running 1 termux "Termux: установка proot-distro и curl"
+    # в Termux частичное обновление ломает библиотеки (curl ↔ openssl) — сначала полное обновление
+    export DEBIAN_FRONTEND=noninteractive
+    local AO="-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+    (apt-get update -y || pkg update -y) && apt-get $AO full-upgrade && apt-get $AO install proot-distro curl \
+      || { tprogress error 1 termux "pkg install proot-distro не прошёл (смените зеркало: termux-change-repo)"; return 1; }
+  fi
+  if ! curl --version >/dev/null 2>&1; then
+    tprogress running 1 termux "Termux: починка curl (полное обновление пакетов)"
+    DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold full-upgrade
+    curl --version >/dev/null 2>&1 || { tprogress error 1 termux "curl в Termux не работает: выполните pkg upgrade"; return 1; }
+  fi
+  if [ ! -d "$ROOTFS/usr" ]; then
+    # версия пакета (у 5.x нет «--version»); запасной признак 5.x — команда search в справке
+    local pdv; pdv=$(dpkg-query -W -f='${Version}' proot-distro 2>/dev/null | grep -oE '^[0-9]+')
+    [ -z "$pdv" ] && proot-distro --help 2>&1 | grep -qiE '^\s*search|oci|docker' && pdv=5
+    if [ "${pdv:-0}" -ge 5 ]; then
+      # 5.x: ставим из официального ubuntu-base (cdimage.ubuntu.com), без Docker Hub (из Ирана часто 403)
+      tprogress running 2 rootfs "Загрузка Ubuntu 24.04 base (~30 МБ, cdimage.ubuntu.com)"
+      mkdir -p "$D/cache"; local sums name sha f arch
+      case "$(uname -m)" in aarch64|arm64) arch=arm64 ;; x86_64) arch=amd64 ;; armv7l|armv8l) arch=armhf ;; *) arch=arm64 ;; esac
+      sums=$(curl -fsSL --retry 5 "$UBUNTU_BASE/SHA256SUMS") || { tprogress error 2 rootfs "cdimage.ubuntu.com недоступен (нет интернета/VPN?)"; return 1; }
+      name=$(echo "$sums" | grep -oE "ubuntu-base-[0-9.]+-base-$arch\\.tar\\.gz" | sort -V | tail -1); sha=$(echo "$sums" | grep " \*\?$name\$" | cut -d' ' -f1)
+      [ -n "$name" ] || { tprogress error 2 rootfs "не найден ubuntu-base $arch в SHA256SUMS"; return 1; }
+      f="$D/cache/$name"
+      curl -fL --retry 5 -C - -o "$f" "$UBUNTU_BASE/$name" || { tprogress error 2 rootfs "не скачать $name"; return 1; }
+      if [ -n "$sha" ] && [ "$(sha256sum "$f" | cut -d' ' -f1)" != "$sha" ]; then rm -f "$f"; tprogress error 2 rootfs "контрольная сумма $name не совпала, повторите"; return 1; fi
+      tprogress running 3 rootfs "Распаковка Ubuntu в proot-distro (контейнер $DISTRO)"
+      if ! proot-distro install --name "$DISTRO" "$f"; then
+        # запасной путь: распаковать самим и работать через чистый proot (старые ядра/seccomp, сбой proot-distro)
+        tprogress running 3 rootfs "proot-distro не справился — распаковка Ubuntu напрямую (proot)"
+        command -v proot >/dev/null || apt-get -y install proot
+        rm -rf "$RAW_ROOT"; mkdir -p "$RAW_ROOT"
+        rm -f "$D/noseccomp"
+        if ! proot --link2symlink -0 tar -xzf "$f" -C "$RAW_ROOT" --exclude='dev/*' || [ ! -x "$RAW_ROOT/usr/bin/bash" ]; then
+          echo "повтор с PROOT_NO_SECCOMP=1 (старое ядро)"; chmod -R u+rwx "$RAW_ROOT" 2>/dev/null; rm -rf "$RAW_ROOT"; mkdir -p "$RAW_ROOT"
+          PROOT_NO_SECCOMP=1 proot --link2symlink -0 tar -xzf "$f" -C "$RAW_ROOT" --exclude='dev/*' && touch "$D/noseccomp"
+        fi
+        [ -x "$RAW_ROOT/usr/bin/bash" ] || { tprogress error 3 rootfs "не удалось распаковать Ubuntu"; return 1; }
+        echo raw > "$D/mode"; printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$RAW_ROOT/etc/resolv.conf"
+      fi
+    else
+      # 4.x: только встроенный alias ubuntu (rootfs с GitHub)
+      DISTRO=ubuntu; tprogress running 3 rootfs "proot-distro $pdv: установка ubuntu с GitHub"
+      [ -d "$PD_DIR/installed-rootfs/ubuntu/usr" ] || proot-distro install ubuntu \
+        || { tprogress error 3 rootfs "proot-distro install ubuntu не прошёл (GitHub недоступен? включите VPN)"; return 1; }
+    fi
+    raw_mode || echo "$DISTRO" > "$D/distro"; ROOTFS="$(rootfs_dir)"; INNER_HOME="$ROOTFS/root/.murf"
+  fi
+  grep -q localhost "$ROOTFS/etc/hosts" 2>/dev/null || printf '127.0.0.1 localhost\n::1 localhost\n' >> "$ROOTFS/etc/hosts"
+  tprogress running 5 copy "Копирование скриптов MURF в Ubuntu"
+  mkdir -p "$ROOTFS/opt/murf" && cp -f "$D/inner/"* "$ROOTFS/opt/murf/" && chmod 755 "$ROOTFS/opt/murf/"*.sh
+  # resolv.conf: proot-distro пишет свой, но на всякий случай
+  [ -s "$ROOTFS/etc/resolv.conf" ] || printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$ROOTFS/etc/resolv.conf"
+  tprogress done 5 inner "Установка внутри Ubuntu"
+  inner bash /opt/murf/setup.sh
+  local rc=$?
+  [ $rc = 0 ] && echo "=== Готово. Запуск: murf-local start ===" || echo "=== Ошибка установки (код $rc), лог: $D/logs/install.log; повторный запуск продолжит с места остановки ==="
+  return $rc
+}
+cmd_start() {
+  installed || { echo "среда не установлена: murf-local install"; return 2; }
+  termux-wake-lock 2>/dev/null || true
+  if svc_running; then echo "уже запущено"; else
+    if [ "${1:-}" = "--fg" ]; then
+      echo "MURF local: запуск (окно Termux можно свернуть; остановка — Ctrl+C или murf-local stop)"
+      echo $$ > "$D/svc.pid"; inner /usr/local/bin/murf-svc run; rm -f "$D/svc.pid"; return
+    fi
+    nohup bash -c "echo \$\$ > '$D/svc.pid'; exec '$0' _inner /usr/local/bin/murf-svc run" >> "$D/logs/svc.log" 2>&1 &
+  fi
+  for i in $(seq 1 45); do curl -fsS -m 2 "http://127.0.0.1:$PORT/murf/health" >/dev/null 2>&1 && { echo "запущено: http://127.0.0.1:$PORT/"; return 0; }; sleep 2; done
+  echo "службы стартуют (WebUI может подниматься 1–3 мин): murf-local status"
+}
+cmd_stop() {
+  if [ -d "$ROOTFS/usr" ]; then inner /usr/local/bin/murf-svc stop; fi
+  pkill -f "murf-svc run" 2>/dev/null
+  pid_alive "$D/svc.pid" && kill "$(cat "$D/svc.pid")" 2>/dev/null
+  rm -f "$D/svc.pid"; termux-wake-unlock 2>/dev/null || true
+}
+json_or_null() { [ -s "$1" ] && cat "$1" || echo null; }
+cmd_status() {
+  local health; health=$(curl -fsS -m 3 "http://127.0.0.1:$PORT/murf/health" 2>/dev/null || echo null)
+  local inst=false run=false installing=false pd=false rootfs=false
+  installed && inst=true; svc_running && run=true; pid_alive "$D/install.pid" && installing=true
+  command -v proot-distro >/dev/null && pd=true; [ -d "$ROOTFS/usr" ] && rootfs=true
+  # размер среды считаем в фоне (du по 4 ГБ на телефоне — десятки секунд), отдаём последнее значение
+  if [ "${1:-}" = "--disk" ] || [ ! -s "$D/disk.txt" ] || [ -n "$(find "$D/disk.txt" -mmin +60 2>/dev/null)" ]; then
+    [ -s "$D/disk.txt" ] || echo -1 > "$D/disk.txt"
+    ( [ -d "$ROOTFS" ] && v=$(du -sm "$ROOTFS" 2>/dev/null | cut -f1) && echo "${v:-0}" > "$D/disk.txt" ) >/dev/null 2>&1 &
+  fi
+  local free_mb; free_mb=$(df -Pk "$HOME" | awk 'NR==2{print int($4/1024)}')
+  local inner_p="$INNER_HOME/progress.json"
+  printf '{"version":"%s","installed":%s,"running":%s,"installing":%s,"proot_distro":%s,"rootfs":%s,"port":%s,"disk_mb":%s,"free_mb":%s,"termux_progress":%s,"progress":%s,"health":%s}\n' \
+    "$MURF_LOCAL_VERSION" "$inst" "$run" "$installing" "$pd" "$rootfs" "$PORT" "$(cat "$D/disk.txt" 2>/dev/null || echo 0)" "${free_mb:-0}" \
+    "$(json_or_null "$D/progress.json")" "$(json_or_null "$inner_p")" "$health"
+}
+cmd_logs() {
+  local n=${1:-setup} f
+  case "$n" in install|svc) f="$D/logs/$n.log" ;; *) f="$INNER_HOME/logs/$n.log" ;; esac
+  tail -n "${2:-80}" "$f" 2>/dev/null || echo "нет журнала $f"
+}
+cmd_uninstall() {
+  [ "${1:-}" = "--yes" ] || { echo "подтвердите: murf-local uninstall --yes"; return 2; }
+  cmd_stop >/dev/null 2>&1
+  if raw_mode; then chmod -R u+rwx "$RAW_ROOT" 2>/dev/null; rm -rf "$RAW_ROOT"; else proot-distro remove "$DISTRO" 2>/dev/null || rm -rf "$ROOTFS"; fi
+  rm -f "$D/distro" "$D/mode" "$D/noseccomp"; rm -rf "$D/cache" "$D/fakeproc"
+  rm -rf "$D/progress.json" "$D/disk.txt" "$D/logs"
+  echo "локальная среда удалена (скрипты остались в $D; удалить полностью: rm -rf $D \$PREFIX/bin/murf-local)"
+}
+
+case "${1:-status}" in
+  install|update) cmd_install ;;
+  start) shift; cmd_start "$@" ;;
+  stop) cmd_stop ;;
+  restart) cmd_stop; sleep 2; cmd_start ;;
+  status) shift; cmd_status "$@" ;;
+  login) shift; installed || { echo "сначала установка"; exit 2; }; inner /usr/local/bin/murf-svc login "$@" ;;
+  login-status|netcheck|creds) installed && inner /usr/local/bin/murf-svc "$1" || echo '{"error":"not installed"}' ;;
+  proxy|import) installed || { echo "сначала установка"; exit 2; }; inner /usr/local/bin/murf-svc "$@" ;;
+  logs) shift; cmd_logs "$@" ;;
+  uninstall) shift; cmd_uninstall "$@" ;;
+  version) echo "$MURF_LOCAL_VERSION" ;;
+  _inner) shift; inner "$@" ;;
+  *) sed -n '2,13p' "$0"; exit 2 ;;
+esac

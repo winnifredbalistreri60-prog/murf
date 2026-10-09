@@ -1,0 +1,11 @@
+[Unit]
+Description=MURF: websockify FULL CONTROL for /screen/control/websockify (WebUI auth on VDS nginx)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/websockify --unix-target=%h/.hermes/bot-desktop/rfb.sock 127.0.0.1:6082
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Agent phone bridge relay (127.0.0.1:8790 phone, 127.0.0.1:8791 agent)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 -u %h/agent-phone/phone_relay.py
+Environment=PHONE_PORT=8790 AGENT_PORT=8791 PUBLIC_BASE=https://your-server.example
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
