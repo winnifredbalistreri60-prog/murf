@@ -87,7 +87,7 @@ cd android
 4. «Запустить» → «Войти в провайдера» → откройте ссылку и подтвердите код.
 5. Переключите профиль на «Телефон (локально)».
 
-Вручную: `curl -fsSL https://github.com/__OWNER__/murf/releases/latest/download/install.sh | bash`, затем `murf-local install && murf-local start`.
+Вручную: `curl -fsSL https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download/install.sh | bash`, затем `murf-local install && murf-local start`.
 
 Ограничения: проверено в x86_64 proot; на реальном arm64-телефоне требуется проверка; на Android 9 и старых ядрах Ubuntu 24.04 в proot не работает. Docker и systemd недоступны.
 

@@ -1,8 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Ручная установка локальной среды MURF в Termux:
-#   curl -fsSL https://github.com/__OWNER__/murf/releases/latest/download/install.sh | bash
+#   curl -fsSL https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download/install.sh | bash
 set -e
-BASE="${MURF_BASE:-https://github.com/__OWNER__/murf/releases/latest/download}"
+BASE="${MURF_BASE:-https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download}"
 command -v curl >/dev/null || pkg install -y curl
 mkdir -p ~/.murf-local
 curl -fsSL "$BASE/murf-local.tgz" -o ~/.murf-local/bundle.tgz
