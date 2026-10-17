@@ -17,4 +17,13 @@ class MurfWaterMascotsTest {
             assertTrue("${clip.name} too big", clip.length() < 300_000)
         }
     }
+
+    @Test fun onlyFirstThreeRequestsPlay() {
+        val t = List(5) { Any() }
+        t.forEach(MurfWaterMascots::request)
+        assertEquals(listOf(true, true, true, false, false), t.map(MurfWaterMascots::granted))
+        MurfWaterMascots.drop(t[0])
+        assertTrue(MurfWaterMascots.granted(t[3]))
+        t.forEach(MurfWaterMascots::drop)
+    }
 }

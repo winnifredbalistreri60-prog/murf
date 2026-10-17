@@ -14,18 +14,32 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 
 /**
- * «Водяные» коротышки 1.9.0: квадратные 288×288 клипы (H.264 без звука, бесшовная петля ~6 с, ~150–220 КБ)
- * и статичный кадр WebP в assets/mascots. Имена файлов совпадают с порядком [MurfHat].
+ * «Водяные» коротышки: квадратные 256×256 клипы (H.264 без звука, бесшовная петля 7 с: первый и последний кадр
+ * совпадают, один ключевой кадр) и статичный кадр WebP = ровно первый кадр клипа, в assets/mascots.
+ * Имена файлов совпадают с порядком [MurfHat].
  */
 object MurfWaterMascots {
+    /** Не больше стольких видео одновременно; остальные значки показывают статичный кадр. */
+    const val MAX_PLAYING = 3
+    private val requests = mutableStateListOf<Any>()
+    internal fun request(token: Any) { if (token !in requests) requests.add(token) }
+    internal fun drop(token: Any) { requests.remove(token) }
+    /** Первые [MAX_PLAYING] запросивших (в порядке появления на экране) играют. */
+    internal fun granted(token: Any): Boolean = requests.indexOf(token).let { it in 0 until MAX_PLAYING }
+
     val ids = listOf("putnik", "master", "zvezdochet", "hudozhnik", "romashka", "mehanik", "frant", "lyzhnik", "povaryonok", "rybak")
     fun id(hat: MurfHat): String = ids[hat.ordinal]
     fun stillAsset(hat: MurfHat) = "mascots/murf_water_${id(hat)}.webp"
@@ -44,9 +58,17 @@ object MurfWaterMascots {
 fun MurfWaterMascot(hat: MurfHat, play: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val still = remember(hat) { MurfWaterMascots.still(context, hat) }
+    // Видео только пока экран виден (RESUMED); при уходе в фон / с экрана плеер освобождается.
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val wants = play && lifecycle.isAtLeast(Lifecycle.State.RESUMED)
+    val token = remember { Any() }
+    DisposableEffect(wants) {
+        if (wants) MurfWaterMascots.request(token) else MurfWaterMascots.drop(token)
+        onDispose { MurfWaterMascots.drop(token) }
+    }
     Box(modifier) {
         still?.let { Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-        if (play) MurfWaterClip(MurfWaterMascots.clipAsset(hat), Modifier.fillMaxSize())
+        if (wants && MurfWaterMascots.granted(token)) MurfWaterClip(MurfWaterMascots.clipAsset(hat), Modifier.fillMaxSize())
     }
 }
 
