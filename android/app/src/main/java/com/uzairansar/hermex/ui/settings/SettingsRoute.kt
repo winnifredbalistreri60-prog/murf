@@ -323,6 +323,16 @@ fun SettingsRoute(
                     )
                     SettingsFootnote(tr("Плавное появление сообщений, индикатор работы агента и переходы между экранами. Если в Android включено «Удалить анимацию», анимаций не будет.", "Smooth message appearance, the agent working indicator and screen transitions. If Android “Remove animations” is on, animations stay off."))
                     SettingsDivider()
+                    val waterOn by com.uzairansar.hermex.agent.UiPrefs.waterMascots.collectAsState()
+                    SettingsToggleRow(
+                        label = tr("Водяные коротышки у ботов", "Water mascots for bots"),
+                        iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_move_horizontal,
+                        value = waterOn,
+                        switchTestTag = "water_mascots_toggle",
+                        onValueChange = com.uzairansar.hermex.agent.UiPrefs::setWaterMascots,
+                    )
+                    SettingsFootnote(tr("Объёмные прозрачные человечки из воды. Двигаются, только пока бот работает или ждёт подтверждения, и только если анимации включены. Выключено: простые нарисованные значки.", "Glossy see-through water characters. They move only while a bot is working or waiting for approval, and only with animations on. Off: simple drawn icons."))
+                    SettingsDivider()
                     SettingsToggleRow(
                         label = localizedString("Haptic Feedback"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_haptic_phone,

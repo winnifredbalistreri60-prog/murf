@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -220,6 +221,7 @@ fun MurfBotAvatar(
 ) {
     val reduce = rememberReduceMotion()
     val animate = !reduce && (status == MurfBotStatus.Working || status == MurfBotStatus.AwaitingConfirm)
+    val water by UiPrefs.waterMascots.collectAsState()
     var spin = 0f; var bob = 0f; var blink = 0f; var pulse = 1f
     if (animate) {
         val t = rememberInfiniteTransition(label = "murf-avatar")
@@ -241,7 +243,14 @@ fun MurfBotAvatar(
                 }
             }
         }
-        Box(
+        if (water) {
+            val shape = RoundedCornerShape(size * 0.3f)
+            MurfWaterMascot(
+                spec.hat, play = animate,
+                modifier = Modifier.padding(pad).size(size).clip(shape).background(spec.color)
+                    .border((size * 0.05f).coerceAtLeast(1.5.dp), spec.color, shape),
+            )
+        } else Box(
             Modifier.padding(pad).size(size).clip(RoundedCornerShape(size * 0.3f)).background(spec.color),
         ) {
             Canvas(Modifier.fillMaxSize()) {

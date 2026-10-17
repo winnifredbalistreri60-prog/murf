@@ -24,4 +24,11 @@ class MurfAvatarPreviewTest {
         val dir = InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null)!!
         File(dir, "murf-avatars.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
+
+    /** Живая галерея водяных коротышек (кольцо «работает» крутит видео) — для adb screencap. */
+    @Test fun holdWaterGallery() {
+        rule.mainClock.autoAdvance = false
+        rule.setContent { MurfAvatarGallery(Modifier.testTag("gallery")) }
+        repeat(90) { rule.mainClock.advanceTimeBy(100); Thread.sleep(100) }
+    }
 }

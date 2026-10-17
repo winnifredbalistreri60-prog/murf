@@ -67,6 +67,13 @@ object UiPrefs {
     private val _swipes = MutableStateFlow(true)
     private val _miniPreview = MutableStateFlow(false)
     private val _animations = MutableStateFlow(true)
+    private val _waterMascots = MutableStateFlow(true)
+    /** Объёмные «водяные» коротышки вместо простых нарисованных (по умолчанию вкл.). */
+    val waterMascots: StateFlow<Boolean> = _waterMascots
+    fun setWaterMascots(v: Boolean) {
+        _waterMascots.value = v
+        sp?.edit()?.putBoolean("water_mascots", v)?.apply()
+    }
     /** Анимации интерфейса MURF (по умолчанию вкл.; системное «Удалить анимацию» всё равно их выключает). */
     val animations: StateFlow<Boolean> = _animations
     fun setAnimations(v: Boolean) {
@@ -97,6 +104,7 @@ object UiPrefs {
         _swipes.value = prefs.getBoolean("swipes", true)
         _miniPreview.value = prefs.getBoolean("mini_preview", false)
         _animations.value = prefs.getBoolean("animations", true)
+        _waterMascots.value = prefs.getBoolean("water_mascots", true)
     }
 
     fun clamp(v: Float): Float = ((v.coerceIn(MIN_SCALE, MAX_SCALE) * 20f).roundToInt() / 20f)
