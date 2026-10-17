@@ -569,6 +569,68 @@ fun HermexApp(
                         )
                     }
                 }
+                composable(route = "bots") {
+                    val server = (authState as? AuthState.LoggedIn)?.server
+                    if (server != null) {
+                        com.uzairansar.hermex.agent.MurfBotsRoute(
+                            server = server,
+                            api = container.botsApi,
+                            onOpenBot = { navController.navigate("bot/$it") },
+                            onOpenClis = { navController.navigate("clis") },
+                            onOpenTasks = { navController.navigate("bottasks") },
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(route = "bot/{botId}") { entry ->
+                    val server = (authState as? AuthState.LoggedIn)?.server
+                    val botId = entry.arguments?.getString("botId").orEmpty()
+                    if (server != null && botId.isNotBlank()) {
+                        com.uzairansar.hermex.agent.MurfBotChatsRoute(
+                            server = server,
+                            api = container.botsApi,
+                            botId = botId,
+                            onOpenChat = { navController.navigate("botchat/$it") },
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(route = "botchat/{chatId}") { entry ->
+                    val server = (authState as? AuthState.LoggedIn)?.server
+                    val chatId = entry.arguments?.getString("chatId").orEmpty()
+                    if (server != null && chatId.isNotBlank()) {
+                        androidx.compose.runtime.key(chatId) {
+                            com.uzairansar.hermex.agent.MurfBotChatRoute(
+                                server = server,
+                                api = container.botsApi,
+                                chatId = chatId,
+                                onOpenChat = { navController.navigate("botchat/$it") },
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                    }
+                }
+                composable(route = "clis") {
+                    val server = (authState as? AuthState.LoggedIn)?.server
+                    if (server != null) {
+                        com.uzairansar.hermex.agent.MurfClisRoute(
+                            server = server,
+                            api = container.botsApi,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(route = "bottasks") {
+                    val server = (authState as? AuthState.LoggedIn)?.server
+                    if (server != null) {
+                        com.uzairansar.hermex.agent.MurfAgentTasksRoute(
+                            server = server,
+                            api = container.botsApi,
+                            onOpenChat = { navController.navigate("botchat/$it") },
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
                 composable(route = "deploy") {
                     com.uzairansar.hermex.agent.VdsDeployRoute(
                         auth = container.authRepository,

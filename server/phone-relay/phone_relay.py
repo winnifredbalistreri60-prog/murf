@@ -16,6 +16,7 @@ from urllib.parse import urlparse, parse_qs, quote
 HOME = os.path.expanduser("~")
 PHONE_PORT = int(os.environ.get("PHONE_PORT", "8790"))
 AGENT_PORT = int(os.environ.get("AGENT_PORT", "8791"))
+BOTS_PORT = int(os.environ.get("MURF_BOTS_PORT", "8792"))  # служба MURF bots (murf_bots.py)
 PUBLIC_BASE = os.environ.get("PUBLIC_BASE", "https://your-server.example")
 FILES_DIR = os.environ.get("PHONE_FILES_DIR", os.path.join(HOME, "phone-files"))
 MAX_UPLOAD = int(os.environ.get("PHONE_MAX_UPLOAD", str(50 * 1024 * 1024)))
@@ -397,11 +398,53 @@ class Base(BaseHTTPRequestHandler):
         self.wfile.write(b)
 
 
+    def proxy_bots(self, method):
+        """/phone/api/bots/* → служба MURF bots на 127.0.0.1:BOTS_PORT (включая поток SSE)."""
+        import http.client
+        if self.headers.get("X-Agent-App") != "1":
+            return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+        try:
+            body = self.body(limit=256 * 1024) if method == "POST" else None
+        except ValueError:
+            return self.send_json(413, {"ok": False, "error": "слишком большой запрос"})
+        stream = "/stream" in urlparse(self.path).path
+        conn = http.client.HTTPConnection("127.0.0.1", BOTS_PORT, timeout=60 if stream else 180)
+        try:
+            conn.request(method, self.path, body=body,
+                         headers={"X-Agent-App": "1", "Content-Type": "application/json"})
+            resp = conn.getresponse()
+        except OSError:
+            conn.close()
+            return self.send_json(503, {"ok": False, "error": "служба MURF bots не запущена на сервере"})
+        try:
+            self.send_response(resp.status)
+            for h in ("Content-Type", "Content-Length", "Cache-Control", "X-Accel-Buffering"):
+                v = resp.getheader(h)
+                if v:
+                    self.send_header(h, v)
+            self.end_headers()
+            if (resp.getheader("Content-Type") or "").startswith("text/event-stream"):
+                while True:
+                    chunk = resp.read1(8192)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+            else:
+                self.wfile.write(resp.read())
+        except (OSError, http.client.HTTPException):
+            pass
+        finally:
+            conn.close()
+
+
 class PhoneHandler(Base):
     def do_GET(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
         p = u.path
+        if p == "/phone/api/bots" or p.startswith("/phone/api/bots/"):
+            return self.proxy_bots("GET")
         if p == "/phone/api/poll":
             dev = (q.get("device") or ["phone"])[0][:64]
             wait = min(int((q.get("wait") or ["25"])[0]), 50)
@@ -473,6 +516,8 @@ class PhoneHandler(Base):
     def do_POST(self):
         u = urlparse(self.path)
         p = u.path
+        if p == "/phone/api/bots" or p.startswith("/phone/api/bots/"):
+            return self.proxy_bots("POST")
         if p == "/phone/api/hello":
             j = self.jbody()
             dev = str(j.get("device") or "phone")[:64]

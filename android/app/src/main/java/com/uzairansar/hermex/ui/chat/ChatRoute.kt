@@ -550,6 +550,10 @@ fun ChatRoute(
     var composerHeightPx by remember(sessionId) { mutableIntStateOf(0) }
     // Экран агента поверх чата (кнопка-монитор в шапке / тап по мини-превью).
     var showsScreenOverlay by rememberSaveable(sessionId) { mutableStateOf(false) }
+    var showsTasksSheet by rememberSaveable(sessionId) { mutableStateOf(false) }
+    val chatTasksForPanel = remember(state.chatTasks, state.completedToolCallGroups) {
+        ChatTaskTracker.merged(state.chatTasks, state.completedToolCallGroups.flatMap { it.tools })
+    }
     val screenWebViewHolder = com.uzairansar.hermex.ui.screen.rememberScreenWebViewHolder()
     LaunchedEffect(showsScreenOverlay) {
         if (!showsScreenOverlay) {
@@ -1003,6 +1007,7 @@ fun ChatRoute(
                                     CompletedToolActivityCard(
                                         group = group,
                                         startsExpanded = chatDisplaySettings.toolCardsStartExpanded,
+                                        liveTasks = state.chatTasks,
                                     )
                                 }
                             }
@@ -1086,8 +1091,23 @@ fun ChatRoute(
                             )
                         }
                     }
+                    val runningSubtasks = state.chatTasks.filter { it.status.isActive }
+                    if (chatDisplaySettings.showThinkingAndToolCards && runningSubtasks.isNotEmpty()) {
+                        items(runningSubtasks, key = { "live-subtask-${it.id}" }) { task ->
+                            SubtaskCard(
+                                title = task.title,
+                                status = task.status,
+                                startedAtMs = task.startedAtMs,
+                                subtitle = com.uzairansar.hermex.agent.tr("подагент работает", "subagent running"),
+                                stateKey = "live-${task.id}",
+                                body = if (task.goals.size > 1) {
+                                    { task.goals.forEachIndexed { n, g -> SubtaskDetailText("${n + 1}. $g") } }
+                                } else null,
+                            )
+                        }
+                    }
                     state.liveToolActivity
-                        ?.takeIf { chatDisplaySettings.showThinkingAndToolCards && it.isNotBlank() }
+                        ?.takeIf { chatDisplaySettings.showThinkingAndToolCards && it.isNotBlank() && !SubtaskPolicy.isSubtaskTool(it) }
                         ?.let { toolActivity ->
                             item("live-tool-activity") {
                                 LiveToolActivityCard(
@@ -1292,7 +1312,13 @@ fun ChatRoute(
             showsScreenButton = screenServer != null,
             screenLive = state.isStreaming,
             onOpenScreen = { showsScreenOverlay = true },
+            tasksCount = chatTasksForPanel.size,
+            tasksRunning = chatTasksForPanel.count { it.status.isActive },
+            onOpenTasks = { showsTasksSheet = true },
         )
+        if (showsTasksSheet) {
+            ChatTasksSheet(tasks = chatTasksForPanel, onDismiss = { showsTasksSheet = false })
+        }
         if (showsScreenOverlay && screenServer != null && screenPaneMode == com.uzairansar.hermex.ui.screen.ScreenPaneMode.Compact) {
             com.uzairansar.hermex.ui.screen.AgentScreenOverlay(
                 server = screenServer,
@@ -1816,6 +1842,9 @@ private fun ChatTopBar(
     showsScreenButton: Boolean = false,
     screenLive: Boolean = false,
     onOpenScreen: () -> Unit = {},
+    tasksCount: Int = 0,
+    tasksRunning: Int = 0,
+    onOpenTasks: () -> Unit = {},
 ) {
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
     var showsFontSizeDialog by rememberSaveable { mutableStateOf(false) }
@@ -1967,6 +1996,26 @@ private fun ChatTopBar(
                             },
                         )
                     }
+                }
+            }
+        }
+        if (tasksCount > 0) {
+            Box {
+                HermexIconButton(
+                    label = tr("Задачи чата", "Chat tasks"),
+                    symbol = "\u2442",
+                    iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_lightning_bolt,
+                    onClick = onOpenTasks,
+                    modifier = Modifier.testTag("chat_tasks_button"),
+                )
+                if (tasksRunning > 0) {
+                    com.uzairansar.hermex.ui.screen.LiveDot(
+                        active = true,
+                        size = 10.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 2.dp, end = 2.dp),
+                    )
                 }
             }
         }
@@ -5587,11 +5636,41 @@ private fun AssistantTypingIndicator() {
 private fun CompletedToolActivityCard(
     group: ToolCallGroup,
     startsExpanded: Boolean = false,
+    liveTasks: List<ChatSubtask> = emptyList(),
 ) {
-    ToolActivityCard(
-        tools = group.tools,
-        startsExpanded = startsExpanded,
-    )
+    // MURF: подагенты (delegate_task) — отдельными свёрнутыми карточками со своей прокруткой.
+    val (subtasks, regular) = group.tools.partition {
+        SubtaskPolicy.isSubtaskTool(it.name) || SubtaskPolicy.isSubtaskTool(it.function?.name)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        subtasks.forEachIndexed { i, tool ->
+            val title = SubtaskPolicy.title(tool.name ?: tool.function?.name, tool.args, tool.preview)
+            val live = liveTasks.firstOrNull { (tool.id != null && it.id == tool.id) || it.title == title }
+            val goals = SubtaskPolicy.goals(tool.args)
+            val result = ChatTaskTracker.toolResultText(tool)
+            SubtaskCard(
+                title = title,
+                status = if (tool.isError == true) TaskStatus.Failed else TaskStatus.Done,
+                startedAtMs = live?.startedAtMs,
+                endedAtMs = live?.endedAtMs,
+                durationSec = live?.durationSec,
+                subtitle = com.uzairansar.hermex.agent.tr("подагент", "subagent"),
+                stateKey = "sub-${group.afterMessageIndex}-$i-${tool.id}",
+                body = if (goals.size > 1 || result != null) {
+                    {
+                        if (goals.size > 1) goals.forEachIndexed { n, g -> SubtaskDetailText("${n + 1}. $g") }
+                        result?.let { SubtaskDetailText(it) }
+                    }
+                } else null,
+            )
+        }
+        if (regular.isNotEmpty()) {
+            ToolActivityCard(
+                tools = regular,
+                startsExpanded = startsExpanded,
+            )
+        }
+    }
 }
 
 @Composable

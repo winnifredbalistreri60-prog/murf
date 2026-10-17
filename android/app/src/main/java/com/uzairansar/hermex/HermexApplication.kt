@@ -76,6 +76,7 @@ class AppContainer(private val application: Application) {
 
     val deviceTokenStore = com.uzairansar.hermex.agent.DeviceTokenStore(secretStore)
     val pairingApi = com.uzairansar.hermex.agent.MurfPairingApi(okHttpClient, cookieJar)
+    val botsApi = com.uzairansar.hermex.agent.MurfBotsApi(okHttpClient, cookieJar)
     val authRepository = AuthRepository(
         registry = registry,
         clientFactory = ::apiClient,

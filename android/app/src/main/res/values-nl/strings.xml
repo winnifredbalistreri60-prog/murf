@@ -30,5 +30,8 @@
     <string name="nav_local">Local mode (phone)</string>
     <string name="nav_devices">Devices (QR)</string>
     <string name="nav_deploy">Own VDS</string>
+    <string name="nav_bots">Bots</string>
+    <string name="nav_clis">Server CLIs</string>
+    <string name="nav_bot_tasks">Bot tasks</string>
     <string name="nav_drive">Google Drive</string>
 </resources>

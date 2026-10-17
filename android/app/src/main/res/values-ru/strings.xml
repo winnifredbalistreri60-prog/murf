@@ -30,5 +30,8 @@
     <string name="nav_local">Локальная среда</string>
     <string name="nav_devices">Устройства (QR)</string>
     <string name="nav_deploy">Свой VDS</string>
+    <string name="nav_bots">Боты</string>
+    <string name="nav_clis">CLI на сервере</string>
+    <string name="nav_bot_tasks">Задачи ботов</string>
     <string name="nav_drive">Google Диск</string>
 </resources>

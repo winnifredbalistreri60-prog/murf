@@ -1,0 +1,14 @@
+[Unit]
+Description=MURF bots (several named agents over Hermes ACP / installed CLIs, 127.0.0.1:8792)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 -u %h/agent-phone/murf_bots.py
+Environment=MURF_BOTS_PORT=8792
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=default.target

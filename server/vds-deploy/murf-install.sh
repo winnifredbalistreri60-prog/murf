@@ -165,7 +165,7 @@ PAYLOAD_LINE=$(awk '/^__MURF_PAYLOAD_BELOW__$/ {print NR + 1; exit 0}' "$0" || t
 if [ -n "$PAYLOAD_LINE" ]; then
   tail -n +"$PAYLOAD_LINE" "$0" | base64 -d | tar -xz -C "$HOME_DIR/agent-phone" --no-same-owner
 elif [ -n "${MURF_RELAY_SRC:-}" ] && [ -d "$MURF_RELAY_SRC" ]; then
-  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
+  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
 else
   die "в установщике нет файлов relay (соберите его через build-installer.sh)"
 fi
@@ -219,12 +219,16 @@ for kv in $RELAY_ENV; do RELAY_ENV_LINES="${RELAY_ENV_LINES}Environment=$kv
 "; done
 write_unit murf-relay "MURF: relay (QR-привязка, 127.0.0.1:$PHONE_PORT/$AGENT_PORT)" "$HOME_DIR/agent-phone" \
   "/usr/bin/python3 $HOME_DIR/agent-phone/phone_relay.py" "$RELAY_ENV_LINES"
+# боты MURF: отдельная служба, доступна только через relay (127.0.0.1:8792)
+write_unit murf-bots "MURF: боты (Hermes ACP и установленные CLI, 127.0.0.1:8792)" "$HOME_DIR" \
+  "/usr/bin/python3 -u $HOME_DIR/agent-phone/murf_bots.py" "Environment=MURF_BOTS_PORT=8792
+UMask=0077"
 if has_systemd; then
   systemctl daemon-reload
-  systemctl enable murf-webui murf-relay >/dev/null 2>&1
-  systemctl restart murf-relay
+  systemctl enable murf-webui murf-relay murf-bots >/dev/null 2>&1
+  systemctl restart murf-relay murf-bots
   if [ "$UPDATE" -eq 1 ] || ! systemctl is-active --quiet murf-webui; then systemctl restart murf-webui; fi
-  echo "murf-webui: $(systemctl is-active murf-webui || true), murf-relay: $(systemctl is-active murf-relay || true)"
+  echo "murf-webui: $(systemctl is-active murf-webui || true), murf-relay: $(systemctl is-active murf-relay || true), murf-bots: $(systemctl is-active murf-bots || true)"
 else
   warn "systemd не запущен (контейнер?) — запускаю службы в фоне без автозапуска"
   pkill -u "$SVC_USER" -f 'phone_relay.py' 2>/dev/null || true
@@ -233,6 +237,8 @@ else
       >"$HOME_DIR/.hermes/murf-webui.log" 2>&1 & )
   fi
   ( as_user env $RELAY_ENV nohup /usr/bin/python3 "$HOME_DIR/agent-phone/phone_relay.py" >"$HOME_DIR/agent-phone/relay.log" 2>&1 & )
+  pkill -u "$SVC_USER" -f 'murf_bots.py' 2>/dev/null || true
+  ( as_user env MURF_BOTS_PORT=8792 nohup /usr/bin/python3 -u "$HOME_DIR/agent-phone/murf_bots.py" >"$HOME_DIR/agent-phone/bots.log" 2>&1 & )
 fi
 
 # ---------------------------------------------------------------- 9. nginx + HTTPS

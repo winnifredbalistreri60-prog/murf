@@ -330,6 +330,8 @@ data class ChatUiState(
     val isViewingCachedData: Boolean = false,
     val liveReasoning: String = "",
     val liveToolActivity: String? = null,
+    /** MURF: подзадачи (delegate_task) этого чата — карточки и панель «Задачи». */
+    val chatTasks: List<ChatSubtask> = emptyList(),
     val openSessionId: String? = null,
     val notice: String? = null,
     val error: String? = null,
@@ -3388,11 +3390,21 @@ class ChatViewModel internal constructor(
                     is SseEvent.ToolStarted -> {
                         markStreamProgress()
                         flushPendingReasoning()
-                        _state.update { it.copy(liveToolActivity = event.event.name ?: "Tool running") }
+                        _state.update {
+                            it.copy(
+                                liveToolActivity = event.event.name ?: "Tool running",
+                                chatTasks = ChatTaskTracker.started(it.chatTasks, event.event, System.currentTimeMillis()),
+                            )
+                        }
                     }
                     is SseEvent.ToolCompleted -> {
                         markStreamProgress()
-                        _state.update { it.copy(liveToolActivity = null) }
+                        _state.update {
+                            it.copy(
+                                liveToolActivity = null,
+                                chatTasks = ChatTaskTracker.completed(it.chatTasks, event.event, System.currentTimeMillis()),
+                            )
+                        }
                     }
                     is SseEvent.Title -> {
                         if (event.sessionId.isNullOrBlank() || event.sessionId == sessionId) {
@@ -3405,6 +3417,7 @@ class ChatViewModel internal constructor(
                     }
                     is SseEvent.Done -> {
                         flushPendingStreamingAssistant()
+                        _state.update { it.copy(chatTasks = ChatTaskTracker.finishAll(it.chatTasks, TaskStatus.Done, System.currentTimeMillis())) }
                         completeStream(streamId, event)
                     }
                     SseEvent.StreamEnd -> {
@@ -3419,6 +3432,7 @@ class ChatViewModel internal constructor(
                     }
                     is SseEvent.Cancelled -> {
                         flushPendingStreamingAssistant()
+                        _state.update { it.copy(chatTasks = ChatTaskTracker.finishAll(it.chatTasks, TaskStatus.Stopped, System.currentTimeMillis())) }
                         reconcileTerminalStream(
                             streamId = streamId,
                             session = event.session,
@@ -3428,6 +3442,7 @@ class ChatViewModel internal constructor(
                     }
                     is SseEvent.Error -> {
                         flushPendingStreamingAssistant()
+                        _state.update { it.copy(chatTasks = ChatTaskTracker.finishAll(it.chatTasks, TaskStatus.Failed, System.currentTimeMillis())) }
                         reconcileTerminalStream(
                             streamId = streamId,
                             session = event.session,
