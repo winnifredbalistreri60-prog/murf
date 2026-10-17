@@ -294,6 +294,13 @@ class SessionListViewModel(
                 _state.update { it.copy(tintPrimaryActionsWithThemeColor = enabled) }
             }
         }
+        viewModelScope.launch {
+            // MURF: after the network returns the open chat reconnects first; the list follows later.
+            com.uzairansar.hermex.agent.NetworkMonitor.regained.collectLatest {
+                kotlinx.coroutines.delay(SESSION_LIST_RECONNECT_DELAY_MILLIS)
+                refresh(clearNotice = false)
+            }
+        }
         refresh()
         refreshProfiles()
     }
@@ -992,3 +999,5 @@ private val SessionSummary.isCronSession: Boolean
             .map(String::trim)
             .any { source -> source.contains("cron", ignoreCase = true) }
     }
+
+private const val SESSION_LIST_RECONNECT_DELAY_MILLIS = 1_500L

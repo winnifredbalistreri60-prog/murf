@@ -77,7 +77,7 @@ It is a fork of [Hermex](https://github.com/uzairansaruzi/hermex) (a native herm
 - **Language picker** — system default or any bundled language; MURF screens in English and Russian, English fallback.
 - Everything from Hermex: sessions, projects, tasks, kanban, skills, memory, stats, multiple servers and profiles.
 
-What's new in 1.2.x:
+What's new in 1.2.x–1.3:
 
 | Version | What's new |
 |---|---|
@@ -87,6 +87,7 @@ What's new in 1.2.x:
 | 1.2.3 | Agent screen opens 2–3× faster (parallel noVNC loading, cache) |
 | 1.2.4 | Local screen: fixed endless “Connecting…”; local-environment **Diagnostics** with a report; “Restart screen” and “Show log” right on the screen |
 | 1.2.5 | Agent screen in chat opens **on demand** from the monitor button in the header; optional mini-preview (Settings → Interaction, off by default; draggable, dismiss with ×) |
+| 1.3.0 | **No more chat freezes** on slow links / long agent output (throttled streaming, background Markdown, long code collapsed after 40 lines); **gentle reconnect** (instant on network return, 5 s without banner, only missed events replayed); **offline outbox** (queued messages sent automatically, long-press to edit/cancel); clear message for read-only Telegram sessions |
 
 From 1.1.x: app-wide **font size**, **swipe** navigation between sections and to the agent screen (can be turned off), Control mode, screen over the chat.
 

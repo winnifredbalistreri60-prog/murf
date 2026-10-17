@@ -11,7 +11,7 @@ internal data class StreamingMarkdownBlockSegments(
 )
 
 internal object StreamingMarkdownBlockSplitter {
-    const val STABLE_CHUNK_TARGET_CHARACTER_COUNT = 6_000
+    const val STABLE_CHUNK_TARGET_CHARACTER_COUNT = 2_000
 
     fun split(text: String): StreamingMarkdownBlockSegments {
         var lineStart = 0

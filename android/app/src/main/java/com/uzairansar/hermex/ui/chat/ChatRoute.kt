@@ -105,6 +105,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -261,6 +262,7 @@ fun ChatRoute(
                 sessionId,
                 repository,
                 ChatPendingStateStore(context.applicationContext, "$serverId\u0000$sessionId"),
+                OfflineOutboxStore(File(context.applicationContext.filesDir, "murf-outbox"), "$serverId\u0000$sessionId"),
             ) as T
         }
     })
@@ -652,7 +654,8 @@ fun ChatRoute(
     LaunchedEffect(
         state.messages.size,
         state.messages.lastOrNull()?.displayText?.length,
-        state.liveReasoning,
+        state.outboxItems.size,
+        state.liveReasoning.length / 400,
         state.liveToolActivity,
         state.responseCompletionTrigger,
         state.isLoading,
@@ -679,6 +682,19 @@ fun ChatRoute(
         }
         val lastItem = transcriptListState.layoutInfo.totalItemsCount - 1
         if (lastItem >= 0) transcriptListState.animateScrollToItem(lastItem)
+    }
+
+    // MURF: keep following the bottom while the live streaming row grows (cheap, non-animated).
+    LaunchedEffect(viewModel, transcriptListState) {
+        viewModel.liveStreaming.collect { live ->
+            if (live == null) return@collect
+            if (!followsTranscriptBottom || transcriptListState.isScrollInProgress || transcriptScrollCooldownActive) return@collect
+            withFrameNanos { }
+            if (followsTranscriptBottom && !transcriptListState.isScrollInProgress && !transcriptScrollCooldownActive) {
+                val lastItem = transcriptListState.layoutInfo.totalItemsCount - 1
+                if (lastItem >= 0) transcriptListState.scrollToItem(lastItem, Int.MAX_VALUE)
+            }
+        }
     }
 
     LaunchedEffect(isTranscriptAtBottom, followsTranscriptBottom, transcriptScrollCooldownActive) {
@@ -895,7 +911,7 @@ fun ChatRoute(
                     errorMessage = state.error.orEmpty(),
                     onRetry = viewModel::load,
                 )
-            } else if (state.messages.isEmpty() && state.compressionReferenceCard == null && state.pendingClarification == null && state.error == null) {
+            } else if (state.messages.isEmpty() && state.outboxItems.isEmpty() && state.compressionReferenceCard == null && state.pendingClarification == null && state.error == null) {
                 ChatTranscriptEmptyState()
             } else {
                 val renderedMessages = remember(
@@ -952,7 +968,15 @@ fun ChatRoute(
                         },
                     ) { item ->
                         val index = item.index
-                        val message = item.value
+                        // MURF: the streaming row reads its text from a separate throttled flow, so
+                        // only this item recomposes on each chunk (not the whole chat screen).
+                        val isLiveRow = state.isStreaming && item.value.id == "streaming"
+                        val live = if (isLiveRow) viewModel.liveStreaming.collectAsState().value else null
+                        val message = if (live != null && live.text.length > (item.value.content?.length ?: 0)) {
+                            item.value.copy(content = live.text)
+                        } else {
+                            item.value
+                        }
                         val visibleText = message.visibleDisplayText(chatDisplaySettings.hidesAttachmentPaths)
                         val completedToolGroups = state.completedToolCallGroups.filter { it.afterMessageIndex == index }
                         val actionContext = MessageActionContextResolver.contextFor(
@@ -1032,6 +1056,14 @@ fun ChatRoute(
                                 )
                             }
                         }
+                    }
+                    items(state.outboxItems, key = { "outbox-${it.id}" }) { outboxItem ->
+                        OutboxMessageRow(
+                            item = outboxItem,
+                            onEdit = { viewModel.editOutboxItem(outboxItem.id) },
+                            onCancel = { viewModel.cancelOutboxItem(outboxItem.id) },
+                            onRetry = viewModel::retryOutboxNow,
+                        )
                     }
                     if (chatDisplaySettings.showThinkingAndToolCards && state.liveReasoning.isNotBlank()) {
                         item("live-reasoning") {
@@ -1941,8 +1973,25 @@ private fun ChatStatusStack(
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         if (state.isViewingCachedData) InlineNotice("Offline cache")
-        state.activeStreamRecoveryLabel?.let { recoveryLabel ->
-            StreamRecoveryStatusPill(recoveryLabel)
+        // MURF: 5 s grace — short network blips reconnect silently, no «Подключение…» banner.
+        val showsRecovery = rememberGraceVisibility(state.isRecoveringStream, RECONNECT_BANNER_GRACE_MILLIS)
+        if (showsRecovery) {
+            state.activeStreamRecoveryLabel?.let {
+                StreamRecoveryStatusPill(com.uzairansar.hermex.agent.tr("Подключение…", "Reconnecting…"))
+            }
+        }
+        val online by com.uzairansar.hermex.agent.NetworkMonitor.online.collectAsState()
+        val showsOffline = rememberGraceVisibility(!online, RECONNECT_BANNER_GRACE_MILLIS)
+        if (showsOffline) {
+            InlineNotice(
+                com.uzairansar.hermex.agent.tr(
+                    "Нет сети. Сообщения отправятся при подключении.",
+                    "No network. Messages will be sent when the connection returns.",
+                ),
+            )
+        }
+        if (state.isReadOnlySession) {
+            InlineNotice(state.readOnlyMessage ?: ReadOnlySessionPolicy.message(null), isError = true)
         }
         if (!state.isRecoveringStream) {
             state.notice?.let { InlineNotice(it) }
@@ -2169,6 +2218,83 @@ private fun ChatTranscriptEmptyState() {
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.secondary,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+    }
+}
+
+private const val RECONNECT_BANNER_GRACE_MILLIS = 5_000L
+
+/** True only after [active] has stayed true for [graceMillis]; local state, no screen-wide recomposition. */
+@Composable
+private fun rememberGraceVisibility(active: Boolean, graceMillis: Long): Boolean {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(active) {
+        if (active) {
+            delay(graceMillis)
+            visible = true
+        } else {
+            visible = false
+        }
+    }
+    return visible && active
+}
+
+/** MURF: a message waiting in the offline outbox — faded, long-press to edit or cancel. */
+@Composable
+private fun OutboxMessageRow(
+    item: OutboxItem,
+    onEdit: () -> Unit,
+    onCancel: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    var showsMenu by remember(item.id) { mutableStateOf(false) }
+    val bubbleShape = RoundedCornerShape(20.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .testTag("outbox_message"),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 520.dp)
+                    .alpha(0.55f)
+                    .pointerInput(item.id) {
+                        detectTapGestures(onLongPress = { showsMenu = true }, onTap = { showsMenu = true })
+                    }
+                    .clip(bubbleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), bubbleShape)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    item.text.ifBlank { "(empty)" },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            DropdownMenu(expanded = showsMenu, onDismissRequest = { showsMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(com.uzairansar.hermex.agent.tr("Отправить сейчас", "Send now")) },
+                    onClick = { showsMenu = false; onRetry() },
+                )
+                DropdownMenuItem(
+                    text = { Text(com.uzairansar.hermex.agent.tr("Изменить", "Edit")) },
+                    onClick = { showsMenu = false; onEdit() },
+                )
+                DropdownMenuItem(
+                    text = { Text(com.uzairansar.hermex.agent.tr("Отменить отправку", "Cancel sending"), color = MaterialTheme.colorScheme.error) },
+                    onClick = { showsMenu = false; onCancel() },
+                )
+            }
+        }
+        Text(
+            com.uzairansar.hermex.agent.tr("⏳ отправится при подключении", "⏳ will be sent when connected"),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
         )
     }
 }

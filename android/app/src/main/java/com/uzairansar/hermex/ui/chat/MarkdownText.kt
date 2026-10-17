@@ -73,6 +73,8 @@ import io.noties.markwon.syntax.Prism4jThemeDarkula
 import io.noties.markwon.syntax.Prism4jThemeDefault
 import io.noties.markwon.syntax.SyntaxHighlightPlugin
 import io.noties.prism4j.Prism4j
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -138,16 +140,34 @@ private fun StructuredMarkdownText(
         return
     }
     var parsedSegments by remember { mutableStateOf<List<MarkdownSegment>?>(null) }
-    LaunchedEffect(markdown) {
-        parsedSegments = try {
-            withContext(Dispatchers.Default) { markdown.parseMarkdownSegments() }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Exception) {
-            listOf(MarkdownSegment.Markdown(markdown))
-        }
+    val latestMarkdown by rememberUpdatedState(markdown)
+    // MURF: single-flight background parse — intermediate versions are dropped (conflate), so
+    // parsing work cannot pile up on Dispatchers.Default while text streams in.
+    LaunchedEffect(Unit) {
+        snapshotFlow { latestMarkdown }
+            .conflate()
+            .collect { text ->
+                parsedSegments = try {
+                    withContext(Dispatchers.Default) { text.parseMarkdownSegments() }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    listOf(MarkdownSegment.Markdown(text))
+                }
+            }
     }
-    val segments = parsedSegments ?: listOf(MarkdownSegment.Markdown(markdown))
+    val pendingSegments = parsedSegments
+    if (pendingSegments == null && markdown.contains("```")) {
+        // Not parsed yet: show a cheap plain preview instead of running Markwon/Prism on the whole text.
+        Text(
+            text = CodeBlockPresentation.preview(markdown),
+            modifier = modifier,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        return
+    }
+    val segments = pendingSegments ?: listOf(MarkdownSegment.Markdown(markdown))
     if (segments.size == 1 && segments.single() is MarkdownSegment.Markdown) {
         MarkdownAndroidView(
             markdown = (segments.single() as MarkdownSegment.Markdown).text,
@@ -176,6 +196,7 @@ private fun StructuredMarkdownText(
                     language = segment.language,
                     content = segment.content,
                     startsWrapped = wrapsCodeBlockLines,
+                    isOpen = segment.isOpen && isStreaming,
                 )
             }
         }
@@ -287,18 +308,24 @@ private fun MarkdownAndroidView(
         }
     }
     var renderState by remember(markwon) { mutableStateOf<MarkdownRenderState>(MarkdownRenderState.Pending) }
-    LaunchedEffect(markwon, markdown) {
+    val latestMarkdown by rememberUpdatedState(markdown)
+    LaunchedEffect(markwon) {
         if (markwon == null) {
             renderState = MarkdownRenderState.Failed
             return@LaunchedEffect
         }
-        renderState = try {
-            MarkdownRenderState.Rendered(withContext(Dispatchers.Default) { markwon.toMarkdown(markdown) })
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Exception) {
-            MarkdownRenderState.Failed
-        }
+        // MURF: one Markwon parse at a time per view; stale intermediate texts are skipped.
+        snapshotFlow { latestMarkdown }
+            .conflate()
+            .collect { text ->
+                renderState = try {
+                    MarkdownRenderState.Rendered(withContext(Dispatchers.Default) { markwon.toMarkdown(text) })
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    MarkdownRenderState.Failed
+                }
+            }
     }
     val parsedMarkdown = (renderState as? MarkdownRenderState.Rendered)?.markdown
     if (parsedMarkdown == null) {
@@ -512,10 +539,15 @@ private fun ChatCodeBlock(
     language: String?,
     content: String,
     startsWrapped: Boolean,
+    isOpen: Boolean = false,
 ) {
     val context = LocalContext.current
-    var wraps by remember(content) { mutableStateOf(startsWrapped) }
+    var wraps by remember { mutableStateOf(startsWrapped) }
     var copied by remember(content) { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    val totalLines = remember(content) { CodeBlockPresentation.lineCount(content) }
+    val collapsible = totalLines > CodeBlockPresentation.COLLAPSED_LINES
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val shape = RoundedCornerShape(10.dp)
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Column(
@@ -532,8 +564,10 @@ private fun ChatCodeBlock(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val title = (language?.takeIf { it.isNotBlank() } ?: "code") +
+                    if (collapsible) " · " + com.uzairansar.hermex.agent.tr("$totalLines строк", "$totalLines lines") else ""
                 Text(
-                    language?.takeIf { it.isNotBlank() } ?: "code",
+                    title,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary,
@@ -558,13 +592,43 @@ private fun ChatCodeBlock(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp)
             val scrollState = rememberScrollState()
+            // Collapsed: first 40 lines (finished) or the last 40 lines while the agent is still writing.
+            val chunks: List<String> = when {
+                !collapsible -> listOf(content)
+                !expanded -> listOf(CodeBlockPresentation.preview(content, fromEnd = isOpen))
+                else -> remember(content) { CodeBlockPresentation.chunks(content) }
+            }
             SelectionContainer {
-                if (wraps) {
-                    CodeText(content = content, modifier = codeModifier)
-                } else {
-                    Row(Modifier.horizontalScroll(scrollState)) {
-                        CodeText(content = content, modifier = codeModifier)
+                val body: @Composable () -> Unit = {
+                    Column(codeModifier) {
+                        if (collapsible && !expanded && isOpen) {
+                            Text("…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                        }
+                        chunks.forEachIndexed { index, chunk ->
+                            key(index) {
+                                CodeText(content = chunk, language = language, highlight = !isOpen, isDark = isDark)
+                            }
+                        }
                     }
+                }
+                if (wraps) {
+                    body()
+                } else {
+                    Row(Modifier.horizontalScroll(scrollState)) { body() }
+                }
+            }
+            if (collapsible) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.padding(start = 6.dp, bottom = 4.dp),
+                ) {
+                    Text(
+                        if (expanded) {
+                            com.uzairansar.hermex.agent.tr("Свернуть", "Collapse")
+                        } else {
+                            com.uzairansar.hermex.agent.tr("Показать всё ($totalLines строк)", "Show all ($totalLines lines)")
+                        },
+                    )
                 }
             }
         }
@@ -574,25 +638,42 @@ private fun ChatCodeBlock(
 @Composable
 private fun CodeText(
     content: String,
+    language: String?,
+    highlight: Boolean,
+    isDark: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Text(
-        text = content.ifEmpty { " " },
-        modifier = modifier,
-        style = MaterialTheme.typography.bodySmall.copy(
-            fontFamily = FontFamily.Monospace,
-            lineHeight = 18.sp,
-        ),
-        color = MaterialTheme.colorScheme.onSurface,
+    // MURF: lazy highlighting — only for the lines actually shown, off the main thread,
+    // and never while the block is still streaming.
+    var highlighted by remember(content, language, isDark) { mutableStateOf<AnnotatedString?>(null) }
+    if (highlight) {
+        LaunchedEffect(content, language, isDark) {
+            highlighted = withContext(Dispatchers.Default) { CodeHighlighter.highlight(content, language, isDark) }
+        }
+    }
+    val style = MaterialTheme.typography.bodySmall.copy(
+        fontFamily = FontFamily.Monospace,
+        lineHeight = 18.sp,
     )
+    val annotated = highlighted
+    if (annotated != null && highlight) {
+        Text(text = annotated, modifier = modifier, style = style, color = MaterialTheme.colorScheme.onSurface)
+    } else {
+        Text(
+            text = content.ifEmpty { " " },
+            modifier = modifier,
+            style = style,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }
 
-private sealed interface MarkdownSegment {
+internal sealed interface MarkdownSegment {
     data class Markdown(val text: String) : MarkdownSegment
-    data class CodeBlock(val language: String?, val content: String) : MarkdownSegment
+    data class CodeBlock(val language: String?, val content: String, val isOpen: Boolean = false) : MarkdownSegment
 }
 
-private fun String.parseMarkdownSegments(): List<MarkdownSegment> {
+internal fun String.parseMarkdownSegments(): List<MarkdownSegment> {
     val normalized = replace("\r\n", "\n").replace('\r', '\n')
     val lines = normalized.split('\n')
     val segments = mutableListOf<MarkdownSegment>()
@@ -644,8 +725,11 @@ private fun String.parseMarkdownSegments(): List<MarkdownSegment> {
         }
     }
     if (inFence) {
-        appendLine(markdown, fenceOpening)
-        if (code.isNotEmpty()) appendLine(markdown, code.toString())
+        // MURF: an unclosed fence (agent is still writing code) becomes a plain, collapsible code
+        // block instead of being fed to Markwon + Prism4j on every streaming tick.
+        flushMarkdown()
+        segments += MarkdownSegment.CodeBlock(language = language, content = code.toString(), isOpen = true)
+        return segments
     }
     flushMarkdown()
     return segments.ifEmpty { listOf(MarkdownSegment.Markdown(normalized)) }

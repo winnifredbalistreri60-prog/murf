@@ -56,6 +56,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.currentCoroutineContext
@@ -332,6 +333,9 @@ data class ChatUiState(
     val openSessionId: String? = null,
     val notice: String? = null,
     val error: String? = null,
+    val isReadOnlySession: Boolean = false,
+    val readOnlyMessage: String? = null,
+    val outboxItems: List<OutboxItem> = emptyList(),
 ) {
     val isRecoveringStream: Boolean
         get() = activeStreamRecoveryState != ActiveStreamRecoveryState.Idle
@@ -356,14 +360,21 @@ class ChatViewModel internal constructor(
     private val sessionId: String,
     private val repository: ChatRepository,
     private val pendingStateStore: ChatPendingStateStore? = null,
+    private val outboxStore: OfflineOutboxStore? = null,
 ) : ViewModel() {
     private val registryKey = "${repository.serverUrl}\u0000$sessionId"
     private val _state = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = _state
     private var streamJob: Job? = null
     private var streamPacingJob: Job? = null
-    private var streamPacingOwnerId: String? = null
-    private var pendingStreamingAssistantText: String = ""
+    // MURF: streamed text buffer (O(1) append), UI publish throttled to ~80 ms, state commit ~1 s.
+    private val streamingBuffer = StreamingTextBuffer()
+    private val _liveStreaming = MutableStateFlow<LiveStreamingText?>(null)
+    val liveStreaming: StateFlow<LiveStreamingText?> = _liveStreaming
+    private val pendingReasoning = StringBuilder()
+    private var reasoningFlushJob: Job? = null
+    private var streamConnectionGeneration = 0L
+    private var isDrainingOutbox = false
     private var streamRecoveryJob: Job? = null
     private var streamRecoveryAttempt = 0
     private var streamLivenessJob: Job? = null
@@ -426,6 +437,12 @@ class ChatViewModel internal constructor(
         importedSharedDraftCreatedAtEpochMillis = persisted?.importedSharedDraftCreatedAtEpochMillis
         importedSharedDraftRemainder = persisted?.importedSharedDraftRemainder.orEmpty()
         currentBtwTask?.let { BtwTaskRegistry.save(registryKey, it) }
+        outboxStore?.load()?.takeIf { it.isNotEmpty() }?.let { items ->
+            _state.update { it.copy(outboxItems = items) }
+        }
+        viewModelScope.launch {
+            com.uzairansar.hermex.agent.NetworkMonitor.regained.collect { onNetworkRegained() }
+        }
         load()
         loadComposerConfig()
         refreshApprovalBypassState()
@@ -569,6 +586,12 @@ class ChatViewModel internal constructor(
                     isViewingCachedData = fromCache ?: current.isViewingCachedData,
                     activeStreamId = snapshot.activeStreamId,
                     isStreaming = snapshot.isStreaming,
+                    isReadOnlySession = snapshot.isReadOnly || current.isReadOnlySession,
+                    readOnlyMessage = if (snapshot.isReadOnly || current.isReadOnlySession) {
+                        current.readOnlyMessage ?: ReadOnlySessionPolicy.message(snapshot.sourceLabel)
+                    } else {
+                        null
+                    },
                     activeStreamRecoveryState = if (
                         current.isRecoveringStream &&
                         snapshot.isStreaming &&
@@ -1470,10 +1493,147 @@ class ChatViewModel internal constructor(
         if (text.isEmpty()) return
         val snapshot = _state.value
         if (handleSlashCommand(text, snapshot)) return
+        if (snapshot.isReadOnlySession) {
+            _state.update { it.copy(error = it.readOnlyMessage ?: ReadOnlySessionPolicy.message(null)) }
+            return
+        }
+        if (!com.uzairansar.hermex.agent.NetworkMonitor.isOnline || snapshot.outboxItems.isNotEmpty()) {
+            // MURF: offline (or older messages still waiting) — keep order, queue in the outbox.
+            enqueueOutbox(OutboxItem(text = text, attachments = snapshot.pendingAttachments), snapshot)
+            return
+        }
         if (_state.value.isStreaming) return
         viewModelScope.launch {
-            submitMessage(text, snapshot)
+            submitMessage(text, snapshot, queueOnConnectFailure = true)
         }
+    }
+
+    // ---- MURF: offline outbox -------------------------------------------------------------
+
+    private fun enqueueOutbox(item: OutboxItem, snapshot: ChatUiState, atFront: Boolean = false) {
+        _state.update {
+            it.copy(
+                outboxItems = if (atFront) listOf(item) + it.outboxItems.filterNot { o -> o.id == item.id } else it.outboxItems + item,
+                draft = draftAfterConsuming(it.draft, snapshot.draft),
+                pendingAttachments = it.pendingAttachments - snapshot.pendingAttachments.toSet(),
+                error = null,
+            )
+        }
+        persistOutbox()
+        persistPendingState()
+        drainOutboxIfReady()
+    }
+
+    fun cancelOutboxItem(id: String) {
+        _state.update { it.copy(outboxItems = it.outboxItems.filterNot { item -> item.id == id }) }
+        persistOutbox()
+    }
+
+    /** Long-press → «Изменить»: the text goes back into the composer and leaves the outbox. */
+    fun editOutboxItem(id: String) {
+        val item = _state.value.outboxItems.firstOrNull { it.id == id } ?: return
+        _state.update {
+            it.copy(
+                outboxItems = it.outboxItems.filterNot { o -> o.id == id },
+                draft = if (it.draft.isBlank()) item.text else "${item.text}\n\n${it.draft}",
+                pendingAttachments = (item.attachments + it.pendingAttachments).distinctBy { a -> a.path ?: a.filename },
+            )
+        }
+        persistOutbox()
+        persistPendingState()
+    }
+
+    fun retryOutboxNow() = drainOutboxIfReady()
+
+    private var outboxRetryJob: Job? = null
+
+    /** The phone may report a network while the server is still unreachable: retry quietly. */
+    private fun scheduleOutboxRetry() {
+        if (outboxRetryJob?.isActive == true) return
+        outboxRetryJob = viewModelScope.launch {
+            delay(OUTBOX_RETRY_DELAY_MS)
+            outboxRetryJob = null
+            drainOutboxIfReady()
+        }
+    }
+
+    private fun persistOutbox() {
+        outboxStore?.save(_state.value.outboxItems)
+    }
+
+    private fun drainOutboxIfReady() {
+        val current = _state.value
+        if (
+            isDrainingOutbox ||
+            current.outboxItems.isEmpty() ||
+            current.isStreaming ||
+            current.isReadOnlySession ||
+            current.isLoading ||
+            isDrainingQueuedSlashMessage ||
+            sendStartJob?.isActive == true ||
+            !com.uzairansar.hermex.agent.NetworkMonitor.isOnline
+        ) {
+            return
+        }
+        val next = current.outboxItems.first()
+        _state.update { it.copy(outboxItems = it.outboxItems.drop(1)) }
+        persistOutbox()
+        isDrainingOutbox = true
+        viewModelScope.launch {
+            try {
+                submitMessage(
+                    next.text,
+                    _state.value.copy(draft = next.text, pendingAttachments = next.attachments, isStreaming = false),
+                    queueOnConnectFailure = true,
+                    outboxItem = next,
+                )
+            } catch (error: CancellationException) {
+                if (_state.value.outboxItems.none { it.id == next.id }) {
+                    _state.update { it.copy(outboxItems = listOf(next) + it.outboxItems) }
+                    persistOutbox()
+                }
+                throw error
+            } finally {
+                isDrainingOutbox = false
+            }
+        }
+    }
+
+    // ---- MURF: gentle reconnect ------------------------------------------------------------
+
+    private fun onNetworkRegained() {
+        val current = _state.value
+        val streamId = current.activeStreamId
+        if (streamId != null && current.isStreaming) {
+            val transportQuietMillis = lastStreamTransportActivityAtMillis?.let { monotonicMillis() - it } ?: Long.MAX_VALUE
+            // Skip only when the current SSE connection is alive and just delivered data.
+            val connectionIsFresh = streamJob?.isActive == true &&
+                streamRecoveryJob?.isActive != true &&
+                transportQuietMillis <= NETWORK_SWITCH_QUIET_MILLIS
+            if (!connectionIsFresh) reconnectStreamNow(streamId)
+        } else if (current.messages.isEmpty() && current.error != null && !current.isLoading) {
+            load()
+        }
+        drainOutboxIfReady()
+    }
+
+    private fun reconnectStreamNow(streamId: String) {
+        streamRecoveryJob?.cancel()
+        streamRecoveryJob = null
+        streamRecoveryAttempt = 0
+        val replayAfterSeq = repository.replayAfterSeq(streamId)
+        if (replayAfterSeq == null) reconcileFinalTranscriptForStreamId = streamId
+        _state.update {
+            it.copy(
+                isStreaming = true,
+                activeStreamRecoveryState = ActiveStreamRecoveryState.Reconnecting,
+                activeStreamId = streamId,
+                notice = null,
+                error = null,
+            )
+        }
+        attachStream(streamId, replayAfterSeq = replayAfterSeq, cancelRecovery = false)
+        startPendingPromptPolling()
     }
 
     fun steerDraft() {
@@ -1798,6 +1958,8 @@ class ChatViewModel internal constructor(
         text: String,
         snapshot: ChatUiState,
         appendOptimisticUser: Boolean = true,
+        queueOnConnectFailure: Boolean = false,
+        outboxItem: OutboxItem? = null,
     ): Boolean {
         invalidatePendingLoad()
         val operationJob = currentCoroutineContext()[Job]
@@ -1914,14 +2076,43 @@ class ChatViewModel internal constructor(
             throw error
         } catch (error: Throwable) {
             if (generation == sendStartGeneration) {
-                restoreFailedSend(
-                    optimisticMessageId,
-                    text,
-                    snapshot.pendingAttachments,
-                    snapshot.hasPersistedConversation,
-                    error.message ?: "Send failed.",
-                )
-                drainQueuedSlashMessageIfIdle()
+                if (ReadOnlySessionPolicy.isReadOnlyRejection(error)) {
+                    val readOnlyMessage = ReadOnlySessionPolicy.message(null)
+                    _state.update { it.copy(isReadOnlySession = true, readOnlyMessage = readOnlyMessage) }
+                    restoreFailedSend(
+                        optimisticMessageId,
+                        text,
+                        snapshot.pendingAttachments,
+                        snapshot.hasPersistedConversation,
+                        readOnlyMessage,
+                    )
+                } else if (queueOnConnectFailure && OfflineOutboxPolicy.shouldQueue(error)) {
+                    // MURF: the request never reached the server — keep it in the outbox (faded,
+                    // «отправится при подключении») instead of throwing it back into the composer.
+                    _state.update { current ->
+                        current.copy(
+                            messages = optimisticMessageId?.let { id -> current.messages.filterNot { it.id == id } } ?: current.messages,
+                            hasPersistedConversation = snapshot.hasPersistedConversation,
+                            isStreaming = false,
+                            activeStreamId = null,
+                            error = null,
+                        )
+                    }
+                    val item = outboxItem ?: OutboxItem(text = text, attachments = snapshot.pendingAttachments)
+                    _state.update { it.copy(outboxItems = listOf(item) + it.outboxItems.filterNot { o -> o.id == item.id }) }
+                    persistOutbox()
+                    persistPendingState()
+                    scheduleOutboxRetry()
+                } else {
+                    restoreFailedSend(
+                        optimisticMessageId,
+                        text,
+                        snapshot.pendingAttachments,
+                        snapshot.hasPersistedConversation,
+                        error.message ?: "Send failed.",
+                    )
+                    drainQueuedSlashMessageIfIdle()
+                }
             }
             false
         } finally {
@@ -2452,7 +2643,11 @@ class ChatViewModel internal constructor(
     }
 
     private fun drainQueuedSlashMessageIfIdle() {
-        if (_state.value.isStreaming || isDrainingQueuedSlashMessage || queuedSlashMessages.isEmpty()) return
+        if (_state.value.isStreaming || isDrainingQueuedSlashMessage) return
+        if (queuedSlashMessages.isEmpty()) {
+            drainOutboxIfReady()
+            return
+        }
         val next = queuedSlashMessages.removeFirst()
         persistQueuedDrafts()
         isDrainingQueuedSlashMessage = true
@@ -3127,12 +3322,10 @@ class ChatViewModel internal constructor(
         }
         streamJob?.cancel()
         flushPendingStreamingAssistant()
-        streamPacingJob?.cancel()
-        streamPacingJob = null
-        streamPacingOwnerId = streamId
-        pendingStreamingAssistantText = ""
-        var assistantText = _state.value.streamingAssistantText()
-        val replayBaseText = assistantText
+        // MURF: exactly one SSE consumer — events from a superseded connection are ignored.
+        val connectionGeneration = ++streamConnectionGeneration
+        val assistantText = StringBuilder(_state.value.streamingAssistantText())
+        val replayBaseText = assistantText.toString()
         var replayMatchedPrefixLength = if (replayAfterSeq == 0) 0 else replayBaseText.length
         startStreamLivenessMonitoring(streamId, isReplayConnection = replayAfterSeq != null)
         streamJob = viewModelScope.launch {
@@ -3154,6 +3347,7 @@ class ChatViewModel internal constructor(
                     }
                 }
                 .collect { event ->
+                if (connectionGeneration != streamConnectionGeneration) return@collect
                 if (!ownsStreamTransport(streamId)) return@collect
                 if (event !is SseEvent.TransportError) {
                     recordStreamTransportActivity(demoteChecking = event == SseEvent.Heartbeat)
@@ -3169,7 +3363,7 @@ class ChatViewModel internal constructor(
                         }
                         if (tokenText.isNotEmpty()) {
                             markStreamProgress()
-                            assistantText += tokenText
+                            assistantText.append(tokenText)
                             enqueueStreamingAssistantText(streamId, tokenText)
                         }
                     }
@@ -3178,16 +3372,22 @@ class ChatViewModel internal constructor(
                         val interim = event.text.trim()
                         if (event.alreadyStreamed != true && interim.isNotBlank() && !assistantText.endsWith(interim)) {
                             markStreamProgress()
-                            assistantText = if (assistantText.isBlank()) interim else "$assistantText\n\n$interim"
-                            upsertStreamingAssistant(assistantText)
+                            if (assistantText.isBlank()) {
+                                assistantText.setLength(0)
+                                assistantText.append(interim)
+                            } else {
+                                assistantText.append("\n\n").append(interim)
+                            }
+                            upsertStreamingAssistant(assistantText.toString())
                         }
                     }
                     is SseEvent.Reasoning -> {
                         markStreamProgress()
-                        _state.update { it.copy(liveReasoning = it.liveReasoning + event.text) }
+                        enqueueReasoning(event.text)
                     }
                     is SseEvent.ToolStarted -> {
                         markStreamProgress()
+                        flushPendingReasoning()
                         _state.update { it.copy(liveToolActivity = event.event.name ?: "Tool running") }
                     }
                     is SseEvent.ToolCompleted -> {
@@ -3435,6 +3635,23 @@ class ChatViewModel internal constructor(
         if (!ChatStreamOwnershipPolicy.stillOwnsStream(streamId, _state.value.activeStreamId)) return
         stopStreamLivenessMonitoring()
         streamRecoveryJob?.cancel()
+        if (!com.uzairansar.hermex.agent.NetworkMonitor.isOnline) {
+            // MURF: no network — do not burn reconnect attempts; NetworkCallback reconnects at once.
+            streamRecoveryJob = viewModelScope.launch {
+                _state.update {
+                    it.copy(
+                        isStreaming = true,
+                        activeStreamRecoveryState = ActiveStreamRecoveryState.Checking,
+                        activeStreamId = streamId,
+                        liveToolActivity = null,
+                        error = null,
+                    )
+                }
+                com.uzairansar.hermex.agent.NetworkMonitor.online.first { it }
+                if (_state.value.activeStreamId == streamId) reconnectStreamNow(streamId)
+            }
+            return
+        }
         streamRecoveryAttempt += 1
         val attempt = streamRecoveryAttempt
         if (!StreamRecoveryBackoffPolicy.shouldRetry(attempt, MAXIMUM_STREAM_RECOVERY_ATTEMPTS)) {
@@ -3561,23 +3778,78 @@ class ChatViewModel internal constructor(
         }
     }
 
+    /**
+     * MURF: tokens go into [streamingBuffer]; the streaming row is refreshed through [liveStreaming]
+     * at most every ~80 ms, and the full [ChatUiState] (whole screen) only about once a second.
+     */
     private fun enqueueStreamingAssistantText(streamId: String, text: String) {
         if (text.isEmpty()) return
-        if (streamPacingOwnerId != streamId) {
+        if (streamingBuffer.ownerId != streamId) {
             flushPendingStreamingAssistant()
-            streamPacingOwnerId = streamId
+            streamingBuffer.reset(streamId, _state.value.streamingAssistantText(), monotonicMillis())
         }
-        pendingStreamingAssistantText += text
+        streamingBuffer.append(text)
+        if (_state.value.messages.lastOrNull()?.id != "streaming") {
+            // First chunk: create the row right away.
+            commitStreamingBuffer()
+            return
+        }
         if (streamPacingJob?.isActive == true) return
-
         streamPacingJob = viewModelScope.launch {
-            delay(STREAMING_INITIAL_REVEAL_DELAY_MS)
-            while (streamPacingOwnerId == streamId && pendingStreamingAssistantText.isNotEmpty()) {
-                drainPendingStreamingAssistant()
-                if (pendingStreamingAssistantText.isNotEmpty()) delay(STREAMING_WORD_REVEAL_CADENCE_MS)
-            }
-            if (streamPacingOwnerId == streamId) streamPacingJob = null
+            delay(streamingBuffer.delayUntilPublish(monotonicMillis()).coerceAtLeast(STREAMING_INITIAL_REVEAL_DELAY_MS))
+            if (streamingBuffer.ownerId != streamId) return@launch
+            publishStreamingBuffer(streamId)
+            streamPacingJob = null
         }
+    }
+
+    private fun publishStreamingBuffer(streamId: String) {
+        val now = monotonicMillis()
+        if (streamingBuffer.shouldCommit(now)) {
+            commitStreamingBuffer()
+        } else if (streamingBuffer.hasUnpublishedText) {
+            _liveStreaming.value = LiveStreamingText(streamId, streamingBuffer.text())
+            streamingBuffer.markPublished(now)
+        }
+    }
+
+    private fun commitStreamingBuffer() {
+        val text = streamingBuffer.text()
+        upsertStreamingAssistant(text)
+        streamingBuffer.markCommitted(monotonicMillis())
+        _liveStreaming.value = null
+    }
+
+    private fun flushPendingStreamingAssistant() {
+        streamPacingJob?.cancel()
+        streamPacingJob = null
+        if (streamingBuffer.ownerId != null && streamingBuffer.hasUncommittedText) {
+            commitStreamingBuffer()
+        }
+        streamingBuffer.clear()
+        _liveStreaming.value = null
+        flushPendingReasoning()
+    }
+
+    private fun enqueueReasoning(text: String) {
+        if (text.isEmpty()) return
+        pendingReasoning.append(text)
+        if (reasoningFlushJob?.isActive == true) return
+        reasoningFlushJob = viewModelScope.launch {
+            delay(REASONING_PUBLISH_INTERVAL_MS)
+            reasoningFlushJob = null
+            flushPendingReasoning()
+        }
+    }
+
+    private fun flushPendingReasoning() {
+        reasoningFlushJob?.cancel()
+        reasoningFlushJob = null
+        if (pendingReasoning.isEmpty()) return
+        val chunk = pendingReasoning.toString()
+        pendingReasoning.setLength(0)
+        if (!_state.value.isStreaming) return
+        _state.update { it.copy(liveReasoning = it.liveReasoning + chunk) }
     }
 
     private fun attachGoalKickoffStream(responseStreamId: String?) {
@@ -3606,31 +3878,6 @@ class ChatViewModel internal constructor(
             attachStream(streamId, replayAfterSeq = 0)
             startPendingPromptPolling()
         }
-    }
-
-    private fun drainPendingStreamingAssistant(maximumWordUnits: Int? = null): Boolean {
-        val pending = pendingStreamingAssistantText
-        if (pending.isEmpty()) return false
-        val quota = maximumWordUnits ?: StreamingWordDrainPolicy.drainQuota(
-            backlogUnitCount = StreamingWordDrainPolicy.unitCount(pending),
-            cadenceMillis = STREAMING_WORD_REVEAL_CADENCE_MS,
-            maximumLagMillis = STREAMING_MAX_REVEAL_LAG_MS,
-        )
-        val (head, tail) = StreamingWordDrainPolicy.splitAtUnitBoundary(pending, quota)
-        if (head.isEmpty()) return false
-        pendingStreamingAssistantText = tail
-        upsertStreamingAssistant(_state.value.streamingAssistantText() + head)
-        return true
-    }
-
-    private fun flushPendingStreamingAssistant() {
-        streamPacingJob?.cancel()
-        streamPacingJob = null
-        if (pendingStreamingAssistantText.isNotEmpty()) {
-            drainPendingStreamingAssistant(maximumWordUnits = Int.MAX_VALUE)
-        }
-        pendingStreamingAssistantText = ""
-        streamPacingOwnerId = null
     }
 
     private fun ChatUiState.streamingAssistantText(): String {
@@ -4123,8 +4370,9 @@ private fun File.isInside(directory: File): Boolean {
         const val COMPLETED_TRANSCRIPT_REFRESH_DELAY_MS = 500L
         const val COMPLETED_TRANSCRIPT_REFRESH_ATTEMPTS = 6
         const val STREAMING_INITIAL_REVEAL_DELAY_MS = 16L
-        const val STREAMING_WORD_REVEAL_CADENCE_MS = 48L
-        const val STREAMING_MAX_REVEAL_LAG_MS = 1_000L
+        const val REASONING_PUBLISH_INTERVAL_MS = 120L
+        const val NETWORK_SWITCH_QUIET_MILLIS = 2_000L
+        const val OUTBOX_RETRY_DELAY_MS = 15_000L
         const val MAXIMUM_MESSAGE_ATTACHMENTS = 10
         const val MAXIMUM_ATTACHMENT_BYTES = 20L * 1_024L * 1_024L
 

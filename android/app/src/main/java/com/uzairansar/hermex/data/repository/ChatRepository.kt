@@ -65,6 +65,8 @@ data class ChatSessionSnapshot(
     val profile: String? = null,
     val activeStreamId: String? = null,
     val isStreaming: Boolean = false,
+    val isReadOnly: Boolean = false,
+    val sourceLabel: String? = null,
 )
 
 data class ChatSessionConfiguration(
@@ -452,6 +454,9 @@ class ChatRepository(
             profile = session?.profile,
             activeStreamId = activeStreamId,
             isStreaming = session?.isStreaming == true || activeStreamId != null,
+            isReadOnly = session?.readOnly == true || session?.isReadOnly == true,
+            sourceLabel = listOfNotNull(session?.sourceLabel, session?.sessionSource, session?.sourceTag, session?.rawSource)
+                .firstOrNull { it.isNotBlank() },
         )
     }
 
@@ -467,6 +472,9 @@ class ChatRepository(
         profile = session?.profile,
         activeStreamId = session?.activeStreamId,
         isStreaming = session?.isStreaming == true || !session?.activeStreamId.isNullOrBlank(),
+        isReadOnly = session?.readOnly == true || session?.isReadOnly == true,
+        sourceLabel = listOfNotNull(session?.sourceLabel, session?.sessionSource, session?.sourceTag, session?.rawSource)
+            .firstOrNull { it.isNotBlank() },
     )
 }
 
