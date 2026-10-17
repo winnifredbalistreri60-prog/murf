@@ -24,6 +24,7 @@ RCLONE_CONF = os.environ.get("RCLONE_CONFIG", os.path.join(HOME, ".config/rclone
 os.makedirs(FILES_DIR, exist_ok=True)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import murf_pairing as pairing  # noqa: E402  (QR-привязка устройств)
+import murf_reports as reports  # noqa: E402  («Сообщить о проблеме»)
 
 lock = threading.Condition()
 pending = []            # запросы, ещё не забранные телефоном
@@ -266,6 +267,33 @@ def screen_type(text, enter=False):
     log("screen-type", len(text), "enter" if enter else "")
     return {"ok": True, "typed": len(text)}
 
+HERMES_AGENT_DIR = os.environ.get("HERMES_AGENT_DIR", os.path.join(HOME, ".hermes", "hermes-agent"))
+HANDOFF_STATE = os.path.join(HOME, "agent-phone", "screen-handoff.json")
+
+
+def screen_lease(cmd, viewer="", extra=()):
+    """«Взять экран» / «Я закончила»: аренда экрана Hermes через murf_screen_lease.py в venv агента."""
+    py = os.path.join(HERMES_AGENT_DIR, "venv", "bin", "python")
+    helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "murf_screen_lease.py")
+    if not os.path.isfile(py) or not os.path.isdir(os.path.join(HERMES_AGENT_DIR, "tools", "bot_desktop")):
+        return {"ok": True, "supported": False, "holder": "agent"}
+    args = [py, helper, cmd] + ([viewer] if viewer else []) + list(extra)
+    try:
+        r = subprocess.run(args, cwd=HERMES_AGENT_DIR, capture_output=True, text=True, timeout=20)
+        res = json.loads((r.stdout or "").strip().splitlines()[-1])
+    except Exception as e:
+        log("screen-lease error", type(e).__name__)
+        return {"ok": False, "error": "не удалось обратиться к экрану Hermes"}
+    if cmd in ("take", "release") and res.get("ok"):
+        try:
+            with open(HANDOFF_STATE, "w") as f:
+                json.dump({"holder": res.get("holder"), "since": res.get("since"), "by": viewer[:80]}, f)
+        except OSError:
+            pass
+        log("screen-lease", cmd, res.get("holder"))
+    return res
+
+
 EXPORT_DIR = os.path.join(HOME, ".cache", "agent-phone", "exports")
 EXPORT_TTL = 900
 ex_tokens = {}          # token -> {path, expires}  (одноразовые ссылки на архив настроек для локального режима)
@@ -499,6 +527,10 @@ class PhoneHandler(Base):
                                         "history": history[-20:], "drive": drive_status()})
         if p == "/phone/api/drive-status":
             return self.send_json(200, drive_status())
+        if p == "/phone/api/screen/handoff":
+            if self.headers.get("X-Agent-App") != "1":
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            return self.send_json(200, screen_lease("status", (q.get("viewer") or [""])[0][:80]))
         if p == "/phone/api/pair/devices":
             return self.pair_call(pairing.list_devices)
         if p == "/phone/api/ops/agent-update":
@@ -552,6 +584,28 @@ class PhoneHandler(Base):
                 return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
             j = self.jbody()
             return self.send_json(200, screen_type(str(j.get("text", "")), bool(j.get("enter", False))))
+        if p == "/phone/api/report":
+            if self.headers.get("X-Agent-App") != "1":
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            try:
+                j = json.loads(self.body(limit=1024 * 1024) or b"{}")
+                res = reports.save_report(j if isinstance(j, dict) else {}, self.client_ip())
+            except reports.ReportError as e:
+                return self.send_json(e.status, {"ok": False, "error": e.message})
+            except ValueError:
+                return self.send_json(413, {"ok": False, "error": "слишком большой отчёт"})
+            log("report", res.get("id"))
+            return self.send_json(200, res)
+        if p == "/phone/api/screen/handoff":
+            if self.headers.get("X-Agent-App") != "1":
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            j = self.jbody()
+            action, viewer = str(j.get("action", "")), str(j.get("viewer", ""))[:80]
+            if action == "take":
+                return self.send_json(200, screen_lease("take", viewer, [str(j.get("reason") or "MURF: управление с телефона")[:200]]))
+            if action == "release":
+                return self.send_json(200, screen_lease("release", viewer, ["--force"] if j.get("force") else []))
+            return self.send_json(400, {"ok": False, "error": "action: take|release"})
         if p.startswith("/phone/api/ops/"):
             # защита от CSRF: обязательный заголовок приложения (браузер без preflight его не пошлёт)
             if self.headers.get("X-Agent-App") != "1":

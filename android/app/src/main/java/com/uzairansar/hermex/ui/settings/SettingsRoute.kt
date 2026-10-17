@@ -313,6 +313,16 @@ fun SettingsRoute(
                     )
                     SettingsFootnote(tr("Выключено: экран агента открывается кнопкой с монитором в шапке чата (зелёная точка — агент работает). Включено: пока агент работает, в углу чата маленький экран — его можно перетащить или закрыть ×.", "Off: the agent screen opens with the monitor button in the chat header (green dot — the agent is working). On: while the agent works, a small screen sits in the chat corner — drag it or close it with ×."))
                     SettingsDivider()
+                    val animOn by com.uzairansar.hermex.agent.UiPrefs.animations.collectAsState()
+                    SettingsToggleRow(
+                        label = tr("Анимации", "Animations"),
+                        iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_move_horizontal,
+                        value = animOn,
+                        switchTestTag = "animations_toggle",
+                        onValueChange = com.uzairansar.hermex.agent.UiPrefs::setAnimations,
+                    )
+                    SettingsFootnote(tr("Плавное появление сообщений, индикатор работы агента и переходы между экранами. Если в Android включено «Удалить анимацию», анимаций не будет.", "Smooth message appearance, the agent working indicator and screen transitions. If Android “Remove animations” is on, animations stay off."))
+                    SettingsDivider()
                     SettingsToggleRow(
                         label = localizedString("Haptic Feedback"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_haptic_phone,
@@ -673,6 +683,27 @@ fun SettingsRoute(
                 SettingsSection(title = "App") {
                     SettingsInfoRow(localizedString("Version"), appInfo.version)
                     SettingsInfoRow(localizedString("Build"), appInfo.build)
+                    var showsProblemReport by remember { mutableStateOf(false) }
+                    SettingsActionRow(
+                        label = tr("Сообщить о проблеме", "Report a problem"),
+                        value = tr("журнал без секретов", "log without secrets"),
+                        onClick = { showsProblemReport = true },
+                    )
+                    if (showsProblemReport) {
+                        com.uzairansar.hermex.agent.ProblemReportDialog(
+                            server = (authState as? AuthState.LoggedIn)?.server,
+                            jar = cookieJar,
+                            onDismiss = { showsProblemReport = false },
+                        )
+                    }
+                    SettingsActionRow(
+                        label = tr("Проверить обновления", "Check for updates"),
+                        value = tr("Релизы GitHub", "GitHub Releases"),
+                        onClick = {
+                            com.uzairansar.hermex.agent.AppUpdates.openDialog()
+                            com.uzairansar.hermex.agent.AppUpdates.check(context, auto = false)
+                        },
+                    )
                     SettingsActionRow(
                         label = localizedString("Privacy Policy"),
                         value = "Open in browser",

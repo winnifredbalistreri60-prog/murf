@@ -947,6 +947,7 @@ fun ChatRoute(
                         if (shouldRender) IndexedValue(index, message) else null
                     }
                 }
+                val reduceMotion = com.uzairansar.hermex.agent.rememberReduceMotion()
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1001,7 +1002,14 @@ fun ChatRoute(
                             visibleIndex = index,
                             messagesOffset = state.messagesOffset,
                         )
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Column(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeIn(reduceMotion),
+                                placementSpec = com.uzairansar.hermex.agent.MurfMotion.itemPlacement(reduceMotion || isLiveRow),
+                                fadeOutSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeOut(reduceMotion),
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
                             if (chatDisplaySettings.showThinkingAndToolCards) {
                                 completedToolGroups.forEach { group ->
                                     CompletedToolActivityCard(
@@ -1077,10 +1085,31 @@ fun ChatRoute(
                     }
                     items(state.outboxItems, key = { "outbox-${it.id}" }) { outboxItem ->
                         OutboxMessageRow(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeIn(reduceMotion),
+                                placementSpec = com.uzairansar.hermex.agent.MurfMotion.itemPlacement(reduceMotion),
+                                fadeOutSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeOut(reduceMotion),
+                            ),
                             item = outboxItem,
                             onEdit = { viewModel.editOutboxItem(outboxItem.id) },
                             onCancel = { viewModel.cancelOutboxItem(outboxItem.id) },
                             onRetry = viewModel::retryOutboxNow,
+                        )
+                    }
+                    itemsIndexed(state.queuedMessages, key = { _, q -> "queued-${q.id}" }) { position, queued ->
+                        QueuedMessageRow(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeIn(reduceMotion),
+                                placementSpec = com.uzairansar.hermex.agent.MurfMotion.itemPlacement(reduceMotion),
+                                fadeOutSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeOut(reduceMotion),
+                            ),
+                            item = queued,
+                            position = position + 1,
+                            canSteer = state.isStreaming && queued.attachments.isEmpty() && !state.isRunningSessionAction,
+                            onSteer = { viewModel.steerQueued(queued.id) },
+                            onEdit = { viewModel.editQueued(queued.id) },
+                            onMoveFirst = if (position > 0) ({ viewModel.moveQueuedToFront(queued.id) }) else null,
+                            onDelete = { viewModel.removeQueued(queued.id) },
                         )
                     }
                     if (chatDisplaySettings.showThinkingAndToolCards && state.liveReasoning.isNotBlank()) {
@@ -1118,7 +1147,13 @@ fun ChatRoute(
                         }
                     if (state.showsAssistantTypingIndicator(chatDisplaySettings.showThinkingAndToolCards)) {
                         item("assistant-typing-indicator") {
-                            AssistantTypingIndicator()
+                            AssistantTypingIndicator(
+                                Modifier.animateItem(
+                                    fadeInSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeIn(reduceMotion),
+                                    placementSpec = null,
+                                    fadeOutSpec = com.uzairansar.hermex.agent.MurfMotion.itemFadeOut(reduceMotion),
+                                ),
+                            )
                         }
                     }
                     item("transcript-bottom-anchor") {
@@ -1189,6 +1224,30 @@ fun ChatRoute(
                                 },
                             )
                         }
+                        val handBackEvent by com.uzairansar.hermex.agent.ScreenHandoff.handBackEvents.collectAsState()
+                        LaunchedEffect(handBackEvent) {
+                            if (com.uzairansar.hermex.agent.ScreenHandoff.consumeHandBack()) {
+                                viewModel.sendHandBack(com.uzairansar.hermex.agent.ScreenHandoff.handBackText)
+                            }
+                        }
+                        com.uzairansar.hermex.agent.ScreenHandoffBanner()
+                        val workingSince = remember(state.activeStreamId, state.isStreaming) {
+                            if (state.isStreaming) System.currentTimeMillis() else null
+                        }
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = state.isStreaming && state.pendingApproval == null && state.pendingClarification == null,
+                            enter = if (com.uzairansar.hermex.agent.rememberReduceMotion()) androidx.compose.animation.EnterTransition.None
+                                else androidx.compose.animation.fadeIn(tween(200)) + androidx.compose.animation.expandVertically(tween(200)),
+                            exit = if (com.uzairansar.hermex.agent.rememberReduceMotion()) androidx.compose.animation.ExitTransition.None
+                                else androidx.compose.animation.fadeOut(tween(150)) + androidx.compose.animation.shrinkVertically(tween(180)),
+                        ) {
+                            com.uzairansar.hermex.agent.AgentWorkingStrip(
+                                startedAtMs = workingSince,
+                                activity = state.liveToolActivity?.takeIf { it.isNotBlank() },
+                                queued = state.queuedMessages.size,
+                                modifier = Modifier.testTag("agent_working_strip"),
+                            )
+                        }
                         ComposerSurface(
                             state = state,
                             isVoiceDictating = isVoiceDictating,
@@ -1210,6 +1269,8 @@ fun ChatRoute(
                                 isReadingOlderTranscript = false
                                 viewModel.submitStreamingDraft(streamingSendBehavior)
                             },
+                            onQueueDraft = viewModel::queueCurrentDraft,
+                            onSteerDraft = viewModel::steerDraft,
                             onCancel = viewModel::cancel,
                             onOpenModelPicker = { showsModelPicker = true },
                             onOpenProfilePicker = { showsProfilePicker = true },
@@ -2333,11 +2394,12 @@ private fun OutboxMessageRow(
     onEdit: () -> Unit,
     onCancel: () -> Unit,
     onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showsMenu by remember(item.id) { mutableStateOf(false) }
     val bubbleShape = RoundedCornerShape(20.dp)
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
             .testTag("outbox_message"),
@@ -2380,6 +2442,84 @@ private fun OutboxMessageRow(
         }
         Text(
             com.uzairansar.hermex.agent.tr("⏳ отправится при подключении", "⏳ will be sent when connected"),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+    }
+}
+
+/** MURF: сообщение в очереди — бледный пузырь с номером; тап — меню (Steer / Изменить / Первым / Удалить). */
+@Composable
+private fun QueuedMessageRow(
+    item: QueuedDraft,
+    position: Int,
+    canSteer: Boolean,
+    onSteer: () -> Unit,
+    onEdit: () -> Unit,
+    onMoveFirst: (() -> Unit)?,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showsMenu by remember(item.id) { mutableStateOf(false) }
+    val bubbleShape = RoundedCornerShape(20.dp)
+    Column(
+        modifier = modifier.fillMaxWidth().padding(vertical = 2.dp).testTag("queued_message"),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 520.dp)
+                    .alpha(0.6f)
+                    .pointerInput(item.id) {
+                        detectTapGestures(onLongPress = { showsMenu = true }, onTap = { showsMenu = true })
+                    }
+                    .clip(bubbleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), bubbleShape)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    item.text.ifBlank { "(empty)" },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 8,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (item.attachments.isNotEmpty()) {
+                    Text(
+                        com.uzairansar.hermex.agent.tr("📎 вложений: ${item.attachments.size}", "📎 attachments: ${item.attachments.size}"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            DropdownMenu(expanded = showsMenu, onDismissRequest = { showsMenu = false }) {
+                if (canSteer) {
+                    DropdownMenuItem(
+                        text = { Text(com.uzairansar.hermex.agent.tr("Steer — в текущий ответ", "Steer into current response")) },
+                        onClick = { showsMenu = false; onSteer() },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(com.uzairansar.hermex.agent.tr("Изменить", "Edit")) },
+                    onClick = { showsMenu = false; onEdit() },
+                )
+                if (onMoveFirst != null) {
+                    DropdownMenuItem(
+                        text = { Text(com.uzairansar.hermex.agent.tr("Отправить первым", "Send first")) },
+                        onClick = { showsMenu = false; onMoveFirst() },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(com.uzairansar.hermex.agent.tr("Удалить из очереди", "Remove from queue"), color = MaterialTheme.colorScheme.error) },
+                    onClick = { showsMenu = false; onDelete() },
+                )
+            }
+        }
+        Text(
+            com.uzairansar.hermex.agent.tr("🕓 в очереди #$position · отправится после ответа", "🕓 queued #$position · sent after the response"),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -2542,6 +2682,8 @@ private fun ComposerSurface(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onStreamingSend: () -> Unit,
+    onQueueDraft: () -> Unit,
+    onSteerDraft: () -> Unit,
     onCancel: () -> Unit,
     onOpenModelPicker: () -> Unit,
     onOpenProfilePicker: () -> Unit,
@@ -2736,15 +2878,36 @@ private fun ComposerSurface(
                         .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 ) {
-                    if (state.draft.trimStart().startsWith("/queue", ignoreCase = true)) {
-                        HermexPillButton(localizedString("Queue"), onSend, enabled = !state.isRunningSessionAction, filled = true)
+                    if (state.draft.trimStart().startsWith("/")) {
+                        if (state.draft.trimStart().startsWith("/queue", ignoreCase = true)) {
+                            HermexPillButton(localizedString("Queue"), onSend, enabled = !state.isRunningSessionAction, filled = true)
+                        }
+                        HermexPillButton(
+                            streamingSendBehavior.actionLabel,
+                            onStreamingSend,
+                            enabled = !state.isRunningSessionAction,
+                            filled = true,
+                        )
+                    } else {
+                        // MURF: оба действия всегда под рукой; основное — из настроек (заполненная кнопка).
+                        if (streamingSendBehavior == StreamingSendBehavior.Interrupt) {
+                            HermexPillButton(streamingSendBehavior.actionLabel, onStreamingSend, enabled = !state.isRunningSessionAction)
+                        }
+                        HermexPillButton(
+                            com.uzairansar.hermex.agent.tr("В очередь", "Queue"),
+                            onQueueDraft,
+                            enabled = !state.isRunningSessionAction,
+                            filled = streamingSendBehavior == StreamingSendBehavior.Queue,
+                            modifier = Modifier.testTag("composer_queue"),
+                        )
+                        HermexPillButton(
+                            "Steer",
+                            onSteerDraft,
+                            enabled = !state.isRunningSessionAction && state.pendingAttachments.isEmpty(),
+                            filled = streamingSendBehavior != StreamingSendBehavior.Queue,
+                            modifier = Modifier.testTag("composer_steer"),
+                        )
                     }
-                    HermexPillButton(
-                        streamingSendBehavior.actionLabel,
-                        onStreamingSend,
-                        enabled = !state.isRunningSessionAction,
-                        filled = true,
-                    )
                 }
             }
         }
@@ -5589,46 +5752,15 @@ private fun LiveToolActivityCard(
 }
 
 @Composable
-private fun AssistantTypingIndicator() {
+private fun AssistantTypingIndicator(modifier: Modifier = Modifier) {
     val typingDescription = localizedString("Hermex is preparing a response")
-    val transition = rememberInfiniteTransition(label = "assistant-typing")
-    val scale by transition.animateFloat(
-        initialValue = 0.86f,
-        targetValue = 1.16f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 850),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "assistant-typing-scale",
-    )
-    val opacity by transition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 850),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "assistant-typing-opacity",
-    )
-    val dotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .semantics { contentDescription = typingDescription },
         contentAlignment = Alignment.CenterStart,
     ) {
-        Box(
-            modifier = Modifier
-                .padding(start = 4.dp, top = 8.dp, bottom = 8.dp)
-                .size(16.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    alpha = opacity
-                }
-                .clip(CircleShape)
-                .background(dotColor),
-        )
+        com.uzairansar.hermex.agent.MurfTypingDots(Modifier.padding(start = 6.dp, top = 12.dp, bottom = 8.dp))
     }
 }
 

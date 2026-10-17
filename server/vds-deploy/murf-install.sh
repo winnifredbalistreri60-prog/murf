@@ -165,7 +165,7 @@ PAYLOAD_LINE=$(awk '/^__MURF_PAYLOAD_BELOW__$/ {print NR + 1; exit 0}' "$0" || t
 if [ -n "$PAYLOAD_LINE" ]; then
   tail -n +"$PAYLOAD_LINE" "$0" | base64 -d | tar -xz -C "$HOME_DIR/agent-phone" --no-same-owner
 elif [ -n "${MURF_RELAY_SRC:-}" ] && [ -d "$MURF_RELAY_SRC" ]; then
-  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
+  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf_screen_lease.py "$MURF_RELAY_SRC"/murf_reports.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
 else
   die "в установщике нет файлов relay (соберите его через build-installer.sh)"
 fi

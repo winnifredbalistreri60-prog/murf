@@ -76,10 +76,23 @@ private data class SessionActionResult(
 )
 
 @Serializable
-internal data class QueuedDraft(
+data class QueuedDraft(
     val text: String,
     val attachments: List<UploadResponse>,
+    /** MURF: стабильный id для списка очереди (изменить/удалить/Steer). */
+    val id: String = UUID.randomUUID().toString(),
 )
+
+/** MURF: чистые операции над очередью сообщений (для тестов). */
+internal object MurfQueueOps {
+    fun remove(queue: List<QueuedDraft>, id: String): List<QueuedDraft> = queue.filterNot { it.id == id }
+    fun moveToFront(queue: List<QueuedDraft>, id: String): List<QueuedDraft> {
+        val item = queue.firstOrNull { it.id == id } ?: return queue
+        return listOf(item) + queue.filterNot { it.id == id }
+    }
+    fun replaceText(queue: List<QueuedDraft>, id: String, text: String): List<QueuedDraft> =
+        queue.map { if (it.id == id) it.copy(text = text) else it }
+}
 
 internal object ChatProfileSwitchPolicy {
     fun requiresNewSessionConfirmation(hasPersistedConversation: Boolean): Boolean = hasPersistedConversation
@@ -273,6 +286,8 @@ enum class ActiveStreamRecoveryState(val label: String) {
 
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
+    /** MURF: сообщения в очереди (отправятся по порядку после текущего ответа). */
+    val queuedMessages: List<QueuedDraft> = emptyList(),
     val hasPersistedConversation: Boolean = false,
     val messagesOffset: Int = 0,
     val hasOlderMessages: Boolean = false,
@@ -431,6 +446,7 @@ class ChatViewModel internal constructor(
         pendingLocalUploads.putAll(persisted?.pendingLocalUploads.orEmpty().associateBy { it.id })
         _state.value = _state.value.copy(
             draft = persisted?.draft.orEmpty(),
+            queuedMessages = queuedSlashMessages.toList(),
             pendingAttachments = persisted?.pendingAttachments.orEmpty(),
             attachmentUploadsInFlight = pendingLocalUploads.size,
             pendingLocalUploadCount = pendingLocalUploads.size,
@@ -2357,7 +2373,7 @@ class ChatViewModel internal constructor(
         return true
     }
 
-    private fun steer(text: String) {
+    private fun steer(text: String, consumeDraft: Boolean = true, onRejected: (() -> Unit)? = null, onAccepted: (() -> Unit)? = null) {
         if (!_state.value.isStreaming) {
             _state.update { it.copy(error = "No active response to steer.") }
             return
@@ -2372,14 +2388,15 @@ class ChatViewModel internal constructor(
                         ?.trim()
                         ?.takeIf { it.isNotBlank() }
                         ?.replace('_', ' ')
+                    if (accepted) onAccepted?.invoke() else onRejected?.invoke()
                     _state.update {
                         it.copy(
-                            draft = if (accepted) draftAfterConsuming(it.draft, text) else it.draft,
+                            draft = if (accepted && consumeDraft) draftAfterConsuming(it.draft, text) else it.draft,
                             isRunningSessionAction = false,
-                            notice = if (accepted) "Steering sent." else null,
+                            notice = if (accepted) com.uzairansar.hermex.agent.tr("Steer: агент учтёт сообщение на следующем шаге.", "Steer sent: the agent will see it at the next step.") else null,
                             error = if (accepted) null else responseError ?: rejection?.let { reason ->
-                                "Steering was not accepted: $reason."
-                            } ?: "The active response could not be steered.",
+                                com.uzairansar.hermex.agent.tr("Steer не принят: $reason. Сообщение можно оставить в очереди.", "Steering was not accepted: $reason.")
+                            } ?: com.uzairansar.hermex.agent.tr("Сервер не поддерживает Steer для этого ответа. Сообщение можно оставить в очереди.", "The active response could not be steered."),
                         )
                     }
                 }
@@ -2680,7 +2697,78 @@ class ChatViewModel internal constructor(
 
     private fun persistQueuedDrafts() {
         QueuedDraftRegistry.save(registryKey, queuedSlashMessages)
+        _state.update { it.copy(queuedMessages = queuedSlashMessages.toList()) }
         persistPendingState()
+    }
+
+    // ---- MURF: очередь сообщений и Steer ---------------------------------------------------
+
+    private fun setQueue(items: List<QueuedDraft>) {
+        queuedSlashMessages.clear()
+        queuedSlashMessages.addAll(items)
+        persistQueuedDrafts()
+    }
+
+    /** Поставить текущий черновик в очередь (агент занят) или отправить сразу (агент свободен). */
+    fun queueCurrentDraft() {
+        val snapshot = _state.value
+        val text = snapshot.draft.trim()
+        if (text.isEmpty()) return
+        if (!snapshot.isStreaming) { send(); return }
+        queueDraft(text, snapshot)
+        _state.update { it.copy(notice = com.uzairansar.hermex.agent.tr("В очереди: ${queuedSlashMessages.size}. Отправится после ответа.", "Queued (#${queuedSlashMessages.size}). Will be sent after the response.")) }
+    }
+
+    fun removeQueued(id: String) {
+        setQueue(MurfQueueOps.remove(queuedSlashMessages.toList(), id))
+    }
+
+    /** Убрать из очереди и вернуть в поле ввода для правки (текущий черновик не затирается). */
+    fun editQueued(id: String) {
+        val item = queuedSlashMessages.firstOrNull { it.id == id } ?: return
+        setQueue(MurfQueueOps.remove(queuedSlashMessages.toList(), id))
+        _state.update {
+            it.copy(
+                draft = if (it.draft.isBlank()) item.text else it.draft.trimEnd() + "\n" + item.text,
+                pendingAttachments = (it.pendingAttachments + item.attachments).distinct(),
+            )
+        }
+    }
+
+    fun moveQueuedToFront(id: String) {
+        setQueue(MurfQueueOps.moveToFront(queuedSlashMessages.toList(), id))
+    }
+
+    /** «Я закончила» на живом экране: сказать агенту продолжать (Steer в текущий ответ, иначе — новое сообщение). */
+    fun sendHandBack(text: String) {
+        val s = _state.value
+        if (s.isReadOnlySession) return
+        if (s.isStreaming) {
+            steer(text, consumeDraft = false, onRejected = {
+                queuedSlashMessages.addFirst(QueuedDraft(text, emptyList()))
+                persistQueuedDrafts()
+                _state.update { it.copy(error = null, notice = com.uzairansar.hermex.agent.tr("«Продолжай» поставлено в очередь.", "“Continue” was queued.")) }
+            })
+            return
+        }
+        viewModelScope.launch {
+            submitMessage(text, _state.value.copy(draft = text, pendingAttachments = emptyList(), isStreaming = false))
+        }
+    }
+
+    /** Steer: вставить сообщение из очереди в текущий ответ агента (на ближайшей границе шага). */
+    fun steerQueued(id: String) {
+        val item = queuedSlashMessages.firstOrNull { it.id == id } ?: return
+        if (!_state.value.isStreaming) {
+            _state.update { it.copy(error = com.uzairansar.hermex.agent.tr("Агент сейчас не работает — сообщение уйдёт обычным порядком.", "The agent is idle; the message will be sent normally.")) }
+            drainQueuedSlashMessageIfIdle()
+            return
+        }
+        if (item.attachments.isNotEmpty()) {
+            _state.update { it.copy(error = com.uzairansar.hermex.agent.tr("Steer передаёт только текст. Вложения останутся в очереди.", "Steer sends text only. Attachments stay queued.")) }
+            return
+        }
+        steer(item.text, consumeDraft = false) { setQueue(MurfQueueOps.remove(queuedSlashMessages.toList(), id)) }
     }
 
     private fun updateLocalAssistant(id: String, content: String) {

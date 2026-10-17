@@ -114,6 +114,7 @@ fun HermexApp(
     // Значок «есть обновление Hermes Agent»: проверка не чаще раза в 3 часа (сервер тоже кэширует на 3 ч).
     LaunchedEffect(authState) {
         val server = (authState as? AuthState.LoggedIn)?.server ?: return@LaunchedEffect
+        com.uzairansar.hermex.agent.ScreenHandoff.bind(server, container.cookieJar)
         while (true) {
             com.uzairansar.hermex.agent.AgentUpdateBadge.refresh(server, container.cookieJar)
             kotlinx.coroutines.delay(3 * 3600_000L)
@@ -233,10 +234,16 @@ fun HermexApp(
     HermexTheme(themeMode = themeMode) {
         CompositionLocalProvider(LocalHermexHapticsEnabled provides hapticsEnabled) {
             LocalFallbackOffer(container, authState)
+            com.uzairansar.hermex.agent.AppUpdateDialog()
+            val reduceMotion = com.uzairansar.hermex.agent.rememberReduceMotion()
             NavHost(
                 navController = navController,
                 startDestination = if (authState is AuthState.LoggedIn) "sessions" else "onboarding",
                 modifier = Modifier.fillMaxSize(),
+                enterTransition = com.uzairansar.hermex.agent.MurfMotion.enter(reduceMotion),
+                exitTransition = com.uzairansar.hermex.agent.MurfMotion.exit(reduceMotion),
+                popEnterTransition = com.uzairansar.hermex.agent.MurfMotion.popEnter(reduceMotion),
+                popExitTransition = com.uzairansar.hermex.agent.MurfMotion.popExit(reduceMotion),
             ) {
                 composable("onboarding") {
                     OnboardingRoute(

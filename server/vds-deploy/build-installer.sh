@@ -10,7 +10,7 @@ TMP=$(mktemp)
 cp "$HERE/murf-install.sh" "$TMP"
 printf '\n__MURF_PAYLOAD_BELOW__\n' >> "$TMP"
 tar -C "$ROOT/server/phone-relay" --owner=0 --group=0 --mtime='2026-01-01 00:00Z' --sort=name \
-    -cz phone_relay.py murf_pairing.py murf_bots.py murf | base64 -w 76 >> "$TMP"
+    -cz phone_relay.py murf_pairing.py murf_bots.py murf_screen_lease.py murf_reports.py murf | base64 -w 76 >> "$TMP"
 mv "$TMP" "$OUT"
 chmod 644 "$OUT"
 echo "$OUT ($(wc -c < "$OUT") байт, sha256 $(sha256sum "$OUT" | cut -c1-16))"

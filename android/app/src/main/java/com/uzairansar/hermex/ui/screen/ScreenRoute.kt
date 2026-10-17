@@ -233,6 +233,7 @@ fun ScreenRoute(
                     modifier = Modifier.weight(1f),
                 )
             }
+            com.uzairansar.hermex.agent.ScreenHandoffBanner()
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // «Смотреть»: noVNC только показывает картинку — свайпы разделов работают и поверх него.
                 // «Управлять»: касания уходят на экран агента, свайпы приложения над экраном отключены.
@@ -505,6 +506,7 @@ fun AgentScreenOverlay(
                 onDismiss = { askControl = false },
             )
         }
+        com.uzairansar.hermex.agent.ScreenHandoffBanner()
         Box(
             Modifier
                 .weight(1f)
@@ -590,6 +592,7 @@ private fun ScreenPaneHeader(holder: ScreenWebViewHolder, isLive: Boolean, onClo
             onDismiss = { askControl = false },
         )
     }
+    com.uzairansar.hermex.agent.ScreenHandoffBanner()
 }
 
 /** Сам экран: тот же WebView из [holder] (одно VNC-соединение при смене раскладки). */

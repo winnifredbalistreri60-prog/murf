@@ -53,15 +53,11 @@ Compared with the Codex and Claude desktop apps — see [below](#how-murf-compar
 **MURF** is an Android client for your own AI agent built on [Hermes Agent](https://github.com/NousResearch/hermes-agent) and [hermes-webui](https://github.com/nesquena/hermes-webui).
 It is a fork of [Hermex](https://github.com/uzairansaruzi/hermex) (a native hermes-webui client) focused on the phone: a live agent screen, a phone bridge via Termux, and a local mode that runs the whole agent on the phone.
 
-| Home | Agent screen | Chat export | Local mode |
-|---|---|---|---|
-| ![](docs/screenshots/ru/home.png) | ![](docs/screenshots/ru/live-screen.png) | ![](docs/screenshots/ru/chat-export.png) | ![](docs/screenshots/ru/local-mode.png) |
+| Connect | Home | Chat | Settings | Report a problem |
+|---|---|---|---|---|
+| ![](docs/screenshots/en/connect.png) | ![](docs/screenshots/en/home.png) | ![](docs/screenshots/en/chat.png) | ![](docs/screenshots/en/settings-animations.png) | ![](docs/screenshots/en/report-problem.png) |
 
-| Phone & Termux | Google Drive | Font size | Language |
-|---|---|---|---|
-| ![](docs/screenshots/ru/phone-bridge.png) | ![](docs/screenshots/ru/google-drive.png) | ![](docs/screenshots/ru/font-size.png) | ![](docs/screenshots/ru/language.png) |
-
-<sub>Screenshots currently show the Russian UI; the app itself is fully available in English (Settings → Appearance → Language). English screenshots: [#2](https://github.com/winnifredbalistreri60-prog/murf/issues/2).</sub>
+<sub>English UI on a demo server (Android emulator). More screens (agent screen, local mode, phone bridge, Google Drive) are in the [Russian README](README.ru.md#readme) for now — [#2](https://github.com/winnifredbalistreri60-prog/murf/issues/2).</sub>
 
 ## Features
 
@@ -90,6 +86,9 @@ What's new in 1.2.x–1.4:
 | 1.3.0 | **No more chat freezes** on slow links / long agent output (throttled streaming, background Markdown, long code collapsed after 40 lines); **gentle reconnect** (instant on network return, 5 s without banner, only missed events replayed); **offline outbox** (queued messages sent automatically, long-press to edit/cancel); clear message for read-only Telegram sessions |
 | 1.4.0 | **QR login without a password** (`murf pair` on the server → scan in MURF; per-device token in Android Keystore, silent re-login); **Devices** screen with revoke; **Own VDS**: enter SSH details and MURF installs Hermes Agent, hermes-webui, nginx + HTTPS and systemd units with step-by-step progress, then pairs automatically; **tablet layout** (chat and agent screen side by side with a draggable divider; bottom sheet on medium width) |
 | 1.5.0 | **Bots**: several named agents (name, emoji, instructions, working folder, Hermes profile or an installed CLI, model), each with its own chats, can hand a task to another bot; **installed CLIs** on the server (Codex, Grok, Claude Code, Gemini, opencode, Hermes) with version and login status — run with your existing login, never reads tokens, approvals in MURF over ACP, enabling a CLI needs confirmation, safe sandbox modes by default, every run logged; **subtasks** (delegate_task, Task) as collapsible cards with status and elapsed time, plus a Tasks panel |
+| 1.6.0 | **Animations** (messages fade/slide in, three-dot typing wave, “Agent working · 0:42 · step · queued: N” strip, screen transitions; off in Settings → Interaction or with Android “Remove animations”); **message queue with Steer** (while the agent answers: queue a message or steer it into the running answer; edit / send first / remove queued messages); **Take the screen** (uses the Hermes Bot Desktop lease — the agent pauses computer use while you control the screen, “I’m done” hands it back and tells the agent to continue) |
+| 1.7.0 | **In-app updates** (version manifest from GitHub Releases, sha256 + size + package + signing certificate checked before the system installer); **Report a problem** (Bug / Freeze / Idea, optional app log with passwords, tokens, keys, cookies, addresses, IPs and e-mails removed on the phone and again on the server; saved only on your server in `~/agent-phone/reports`, `murf reports`) |
+| 1.7.1 | Fixed the update signature check on Android 9 and some older firmware (“APK signature differs”) — 1.7.0 users there should install 1.7.1 manually once |
 
 From 1.1.x: app-wide **font size**, **swipe** navigation between sections and to the agent screen (can be turned off), Control mode, screen over the chat.
 
@@ -270,7 +269,7 @@ Common aarch64 TV-box chips include Amlogic S905X3 / S905X4 / S922X and Rockchip
 
 - ~~Tablet version (chat + agent screen side by side)~~ — done in 1.4.0.
 - TV box as the server — experimental.
-- More UI languages ([#4](https://github.com/winnifredbalistreri60-prog/murf/issues/4)), testing local mode on more phones ([#1](https://github.com/winnifredbalistreri60-prog/murf/issues/1)).
+- More UI languages ([#4](https://github.com/winnifredbalistreri60-prog/murf/issues/4)), English screenshots ([#2](https://github.com/winnifredbalistreri60-prog/murf/issues/2), first set done), testing local mode on more phones ([#1](https://github.com/winnifredbalistreri60-prog/murf/issues/1)).
 
 ## FAQ
 

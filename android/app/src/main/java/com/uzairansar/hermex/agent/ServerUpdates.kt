@@ -78,6 +78,13 @@ object ServerUpdatesApi {
             JSONObject(text.ifBlank { "{}" })
         }
 
+    fun get(url: HttpUrl, jar: CookieJar): JSONObject =
+        http(jar).newCall(Request.Builder().url(url).header("X-Agent-App", "1").get().build()).execute().use { r ->
+            val text = r.body?.string().orEmpty()
+            if (!r.isSuccessful && text.isBlank()) error("HTTP ${r.code}")
+            JSONObject(text.ifBlank { "{}" })
+        }
+
     fun log(server: HttpUrl, jar: CookieJar): String =
         http(jar).newCall(Request.Builder().url(url(server, "/phone/api/ops/agent-update/log")).get().build()).execute().use { r ->
             if (!r.isSuccessful) error("HTTP ${r.code}")

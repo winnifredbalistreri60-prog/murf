@@ -23,8 +23,8 @@ android {
         applicationId = "ru.dredd20.agent"
         minSdk = 26
         targetSdk = 36
-        versionCode = 150
-        versionName = "1.5.0-murf"
+        versionCode = 171
+        versionName = "1.7.1-murf"
 
         // Адрес сервера по умолчанию для экрана подключения: ./gradlew -Pmurf.defaultServerUrl=https://your-server.example
         val defaultServerUrl = (project.findProperty("murf.defaultServerUrl") as String?).orEmpty()
@@ -152,6 +152,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.turbine)
+    testImplementation("org.json:json:20250517") // real org.json for unit tests (android.jar has stubs)
 
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

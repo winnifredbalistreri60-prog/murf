@@ -66,11 +66,24 @@ object UiPrefs {
     private val _fontScale = MutableStateFlow(1f)
     private val _swipes = MutableStateFlow(true)
     private val _miniPreview = MutableStateFlow(false)
+    private val _animations = MutableStateFlow(true)
+    /** Анимации интерфейса MURF (по умолчанию вкл.; системное «Удалить анимацию» всё равно их выключает). */
+    val animations: StateFlow<Boolean> = _animations
+    fun setAnimations(v: Boolean) {
+        _animations.value = v
+        sp?.edit()?.putBoolean("animations", v)?.apply()
+    }
 
     /** Режим живого экрана: false — «Смотреть» (по умолчанию при каждом запуске), true — «Управлять». Не сохраняется. */
     private val _screenControl = MutableStateFlow(false)
     val screenControl: StateFlow<Boolean> = _screenControl
-    fun setScreenControl(v: Boolean) { _screenControl.value = v }
+    /** Переключение «Смотреть / Взять экран»: включение управления берёт аренду экрана у агента, выключение — возвращает. */
+    fun setScreenControl(v: Boolean) {
+        if (v == _screenControl.value) return
+        if (v) ScreenHandoff.take() else ScreenHandoff.release(notifyAgent = false)
+    }
+    /** Только локальный режим WebView (без обращения к серверу). */
+    internal fun setScreenControlRaw(v: Boolean) { _screenControl.value = v }
     val fontScale: StateFlow<Float> = _fontScale
     val swipesEnabled: StateFlow<Boolean> = _swipes
     /** Плавающее мини-превью экрана агента в чате во время работы агента (по умолчанию выключено — экран по кнопке). */
@@ -83,6 +96,7 @@ object UiPrefs {
         _fontScale.value = clamp(prefs.getFloat("font_scale", 1f))
         _swipes.value = prefs.getBoolean("swipes", true)
         _miniPreview.value = prefs.getBoolean("mini_preview", false)
+        _animations.value = prefs.getBoolean("animations", true)
     }
 
     fun clamp(v: Float): Float = ((v.coerceIn(MIN_SCALE, MAX_SCALE) * 20f).roundToInt() / 20f)
@@ -293,7 +307,7 @@ fun ScreenModeToggle(control: Boolean, onChange: (Boolean) -> Unit, modifier: Mo
             .testTag("screen_mode_toggle"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        listOf(false to tr("👁 Смотреть", "👁 View"), true to tr("🖱 Управлять", "🖱 Control")).forEach { (value, label) ->
+        listOf(false to tr("👁 Смотреть", "👁 View"), true to (if (control) tr("✋ Экран у вас", "✋ You have control") else tr("✋ Взять экран", "✋ Take over"))).forEach { (value, label) ->
             val selected = control == value
             Text(
                 label,
@@ -316,9 +330,9 @@ fun ScreenModeToggle(control: Boolean, onChange: (Boolean) -> Unit, modifier: Mo
 fun ScreenControlConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Агент сейчас работает", "The agent is working now")) },
-        text = { Text(tr("Ваши клики и ввод попадут на тот же экран и могут помешать агенту. Включить управление?", "Your clicks and typing go to the same screen and may disturb the agent. Enable control?")) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(tr("Управлять", "Control")) } },
+        title = { Text(tr("Взять экран?", "Take over the screen?")) },
+        text = { Text(tr("Агент сейчас работает. Пока экран у вас, агент не будет кликать и делать снимки экрана (он подождёт). Когда закончите, нажмите «Я закончила» — управление вернётся агенту.", "The agent is working. While you have the screen, it won't click or take screenshots (it waits). When done, tap “I'm done” to hand control back.")) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(tr("Взять экран", "Take over")) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
     )
 }

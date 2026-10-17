@@ -7,6 +7,8 @@
   murf revoke <device_id>      отозвать доступ устройства
   murf set-webui-password      сохранить пароль WebUI для выдачи сессий (читается из stdin, не печатается)
   murf status                  проверить, что relay запущен и пароль WebUI задан
+  murf reports [N]             последние отчёты «Сообщить о проблеме» (~/agent-phone/reports)
+  murf report <id>             показать отчёт целиком
 """
 import getpass, json, os, shutil, subprocess, sys, urllib.error, urllib.request
 
@@ -106,6 +108,26 @@ def main(argv):
             sys.exit("murf: пустой пароль")
         murf_pairing.set_webui_password(pw)
         print("Сохранено в", murf_pairing.SECRET_FILE, "(0600).")
+        return 0
+    if cmd == "reports":
+        sys.path.insert(0, HERE)
+        import murf_reports
+        rows = murf_reports.list_reports(int(args[0]) if args and args[0].isdigit() else 20)
+        if not rows:
+            print("Отчётов нет (" + murf_reports.REPORTS_DIR + ")")
+        for r in rows:
+            print(f"{r['id']}  {r.get('category','')}  {r.get('app_version') or ''}  {r.get('summary','')}")
+        return 0
+    if cmd == "report":
+        sys.path.insert(0, HERE)
+        import murf_reports
+        rid = (args or [""])[0]
+        if not rid or "/" in rid or ".." in rid:
+            sys.exit("murf report <id>")
+        path = os.path.join(murf_reports.REPORTS_DIR, rid + ".md")
+        if not os.path.exists(path):
+            sys.exit("нет такого отчёта")
+        print(open(path, encoding="utf-8").read())
         return 0
     if cmd == "status":
         res = call("GET", "/pair/devices")
