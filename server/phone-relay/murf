@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""murf — серверная утилита MURF.
+
+  murf pair [--ttl 180] [--label текст] [--json] [--public-base URL]
+        показать QR для привязки телефона (код одноразовый, живёт 1-5 минут)
+  murf devices                 список привязанных устройств
+  murf revoke <device_id>      отозвать доступ устройства
+  murf set-webui-password      сохранить пароль WebUI для выдачи сессий (читается из stdin, не печатается)
+  murf status                  проверить, что relay запущен и пароль WebUI задан
+"""
+import getpass, json, os, shutil, subprocess, sys, urllib.error, urllib.request
+
+AGENT_PORT = int(os.environ.get("AGENT_PORT", "8791"))
+BASE = f"http://127.0.0.1:{AGENT_PORT}"
+HERE = os.path.dirname(os.path.realpath(__file__))
+
+
+def call(method, path, body=None):
+    data = json.dumps(body or {}).encode() if method == "POST" else None
+    req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        try:
+            return json.loads(e.read() or b"{}")
+        except ValueError:
+            return {"ok": False, "error": f"HTTP {e.code}"}
+    except (urllib.error.URLError, OSError) as e:
+        sys.exit(f"murf: relay на 127.0.0.1:{AGENT_PORT} недоступен ({getattr(e, 'reason', e)}). "
+                 "Запустите: systemctl --user start agent-phone-relay")
+
+
+def print_qr(text):
+    if shutil.which("qrencode"):
+        subprocess.run(["qrencode", "-t", "ANSIUTF8", "-m", "2", text], check=False)
+        return True
+    try:
+        import qrcode  # type: ignore
+        q = qrcode.QRCode(border=2)
+        q.add_data(text)
+        q.make(fit=True)
+        q.print_ascii(invert=True)
+        return True
+    except ImportError:
+        return False
+
+
+def arg(args, name, default=None):
+    if name in args:
+        i = args.index(name)
+        if i + 1 < len(args):
+            return args[i + 1]
+    return default
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    cmd, args = argv[0], argv[1:]
+    if cmd == "pair":
+        body = {"label": arg(args, "--label", ""), "ttl": int(arg(args, "--ttl", "180"))}
+        if arg(args, "--public-base"):
+            body["public_base"] = arg(args, "--public-base")
+        res = call("POST", "/pair/new", body)
+        if not res.get("ok"):
+            sys.exit("murf: " + str(res.get("error")))
+        if "--json" in args:
+            print(json.dumps(res, ensure_ascii=False))
+            return 0
+        print(f"Сервер: {res['server']}")
+        print("Откройте MURF → «Подключить по QR» и наведите камеру:\n")
+        if not print_qr(res["payload"]):
+            print("(qrencode не установлен: sudo apt install qrencode)\n")
+        print(f"\nИли введите вручную код: {res['code']}")
+        print(f"Код одноразовый, действует {res['expires_in']} с.")
+        devs = call("GET", "/pair/devices")
+        if not devs.get("webui_secret_configured"):
+            print("\nВНИМАНИЕ: пароль WebUI для relay не задан — выполните `murf set-webui-password`.")
+        return 0
+    if cmd == "devices":
+        res = call("GET", "/pair/devices")
+        if "--json" in args:
+            print(json.dumps(res, ensure_ascii=False))
+            return 0
+        import time
+        ds = res.get("devices") or []
+        if not ds:
+            print("Привязанных устройств нет.")
+        for d in ds:
+            lu = time.strftime("%Y-%m-%d %H:%M", time.localtime(d.get("last_used") or 0))
+            print(f"{d['id']:<16} {d.get('name',''):<28} последний вход {lu}  {d.get('last_ip','')}")
+        return 0
+    if cmd == "revoke":
+        if not args:
+            sys.exit("murf revoke <device_id>")
+        res = call("POST", "/pair/revoke", {"device_id": args[0]})
+        print("Отозвано." if res.get("ok") else "murf: " + str(res.get("error")))
+        return 0 if res.get("ok") else 1
+    if cmd == "set-webui-password":
+        sys.path.insert(0, HERE)
+        import murf_pairing
+        pw = getpass.getpass("Пароль WebUI: ") if sys.stdin.isatty() else sys.stdin.readline()
+        if not pw.strip():
+            sys.exit("murf: пустой пароль")
+        murf_pairing.set_webui_password(pw)
+        print("Сохранено в", murf_pairing.SECRET_FILE, "(0600).")
+        return 0
+    if cmd == "status":
+        res = call("GET", "/pair/devices")
+        print(json.dumps({"relay": True, "webui_secret_configured": res.get("webui_secret_configured"),
+                          "devices": len(res.get("devices") or [])}, ensure_ascii=False))
+        return 0
+    sys.exit(f"murf: неизвестная команда {cmd!r}; murf --help")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

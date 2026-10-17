@@ -886,9 +886,22 @@ fun ChatRoute(
     }
 
     val swipesOn by com.uzairansar.hermex.agent.UiPrefs.swipesEnabled.collectAsState()
+    // Планшет: Expanded — чат слева, экран справа (разделитель тянется); Medium — экран в нижнем листе.
+    var chatSplitFraction by rememberSaveable { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
+    var splitRowWidthPx by remember { mutableIntStateOf(0) }
+    val chatAreaWidthDp = with(density) { splitRowWidthPx.toDp() }.value.toInt()
+    val screenPaneMode = com.uzairansar.hermex.ui.screen.effectiveScreenPaneMode(
+        com.uzairansar.hermex.ui.screen.rememberScreenPaneMode(),
+        chatAreaWidthDp,
+    )
+    val splitScreenPane = screenPaneMode == com.uzairansar.hermex.ui.screen.ScreenPaneMode.Expanded &&
+        showsScreenOverlay && screenServer != null
+    androidx.compose.foundation.layout.Row(
+        Modifier.fillMaxSize().onSizeChanged { splitRowWidthPx = it.width },
+    ) {
     Box(
         // Свайпы: вправо (начало в левой половине) — к списку чатов, влево — экран агента.
-        modifier = Modifier.fillMaxSize().then(
+        modifier = Modifier.weight(if (splitScreenPane) chatSplitFraction else 1f).fillMaxHeight().then(
             Modifier.horizontalSwipeNav(
                 enabled = swipesOn && !showsScreenOverlay,
                 onSwipeLeft = if (screenServer != null) ({ showsScreenOverlay = true }) else null,
@@ -1280,7 +1293,7 @@ fun ChatRoute(
             screenLive = state.isStreaming,
             onOpenScreen = { showsScreenOverlay = true },
         )
-        if (showsScreenOverlay && screenServer != null) {
+        if (showsScreenOverlay && screenServer != null && screenPaneMode == com.uzairansar.hermex.ui.screen.ScreenPaneMode.Compact) {
             com.uzairansar.hermex.ui.screen.AgentScreenOverlay(
                 server = screenServer,
                 cookies = remember(screenServer) { screenCookies() },
@@ -1290,6 +1303,31 @@ fun ChatRoute(
                 onClose = { showsScreenOverlay = false },
             )
         }
+    }
+    if (splitScreenPane && screenServer != null) {
+        com.uzairansar.hermex.ui.screen.SplitPaneDivider(onDrag = { delta ->
+            if (splitRowWidthPx > 0) {
+                chatSplitFraction = com.uzairansar.hermex.ui.screen.clampChatSplit(chatSplitFraction + delta / splitRowWidthPx)
+            }
+        })
+        com.uzairansar.hermex.ui.screen.AgentScreenPane(
+            server = screenServer,
+            cookies = remember(screenServer) { screenCookies() },
+            holder = screenWebViewHolder,
+            isLive = state.isStreaming,
+            onClose = { showsScreenOverlay = false },
+            modifier = Modifier.weight(1f - chatSplitFraction).fillMaxHeight(),
+        )
+    }
+    }
+    if (showsScreenOverlay && screenServer != null && screenPaneMode == com.uzairansar.hermex.ui.screen.ScreenPaneMode.Medium) {
+        com.uzairansar.hermex.ui.screen.AgentScreenSheet(
+            server = screenServer,
+            cookies = remember(screenServer) { screenCookies() },
+            holder = screenWebViewHolder,
+            isLive = state.isStreaming,
+            onClose = { showsScreenOverlay = false },
+        )
     }
 
     turnDiffPresentation?.let { presentation ->

@@ -74,6 +74,8 @@ class AppContainer(private val application: Application) {
     private val cacheOwnership = ServerCacheOwnership()
     val cacheMaintenanceRepository = CacheMaintenanceRepository(database.cacheDao(), cacheOwnership)
 
+    val deviceTokenStore = com.uzairansar.hermex.agent.DeviceTokenStore(secretStore)
+    val pairingApi = com.uzairansar.hermex.agent.MurfPairingApi(okHttpClient, cookieJar)
     val authRepository = AuthRepository(
         registry = registry,
         clientFactory = ::apiClient,
@@ -88,6 +90,9 @@ class AppContainer(private val application: Application) {
         clearCachedServer = { serverUrl ->
             StreamRecoveryService.clearServer(application, serverUrl)
             cacheOwnership.invalidateAndClear(serverUrl) { database.cacheDao().clearServer(serverUrl) }
+        },
+        deviceSessions = com.uzairansar.hermex.agent.MurfDeviceSessions(pairingApi, deviceTokenStore) {
+            listOf(android.os.Build.MANUFACTURER, android.os.Build.MODEL).filter { it.isNotBlank() }.distinct().joinToString(" ").ifBlank { "Android" }
         },
     )
 

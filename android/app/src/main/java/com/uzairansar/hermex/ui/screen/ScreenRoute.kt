@@ -54,6 +54,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -529,3 +531,146 @@ fun AgentScreenOverlay(
         }
     }
 }
+
+/** Как показывать экран агента рядом с чатом (по WindowSizeClass ширины окна). */
+enum class ScreenPaneMode { Compact, Medium, Expanded }
+
+internal fun screenPaneModeFor(widthClass: androidx.compose.material3.windowsizeclass.WindowWidthSizeClass): ScreenPaneMode = when (widthClass) {
+    androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Expanded -> ScreenPaneMode.Expanded
+    androidx.compose.material3.windowsizeclass.WindowWidthSizeClass.Medium -> ScreenPaneMode.Medium
+    else -> ScreenPaneMode.Compact
+}
+
+/** Доля ширины под чат в режиме «чат слева, экран справа»: не даём сжать ни одну панель меньше ~30%. */
+internal fun clampChatSplit(fraction: Float): Float = fraction.coerceIn(0.3f, 0.75f)
+
+@OptIn(androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class)
+@Composable
+fun rememberScreenPaneMode(): ScreenPaneMode {
+    val activity = androidx.compose.ui.platform.LocalContext.current.findActivity() ?: return ScreenPaneMode.Compact
+    val sizeClass = androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(activity)
+    return screenPaneModeFor(sizeClass.widthSizeClass)
+}
+
+private tailrec fun android.content.Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/** Заголовок панели/листа экрана: закрыть, статус, переподключить, режим «Смотреть/Управлять». */
+@Composable
+private fun ScreenPaneHeader(holder: ScreenWebViewHolder, isLive: Boolean, onClose: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OverlayRoundButton(R.drawable.ic_hermex_xmark, tr("Закрыть экран", "Close screen"), onClose, Modifier.testTag("screen_pane_close"))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tr("Экран агента", "Agent screen"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LiveDot(isLive, size = 8.dp)
+                Spacer(Modifier.width(6.dp))
+                Text(if (isLive) tr("Агент работает — в эфире", "Agent is working — live") else tr("Ожидание задачи", "Waiting for a task"), color = Color(0xFFB4B4BA), fontSize = 12.sp)
+            }
+        }
+        OverlayRoundButton(R.drawable.ic_hermex_refresh, tr("Переподключить", "Reconnect"), { holder.reload() })
+    }
+    val control by com.uzairansar.hermex.agent.UiPrefs.screenControl.collectAsState()
+    var askControl by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        com.uzairansar.hermex.agent.ScreenModeToggle(control, { want ->
+            if (want && isLive) askControl = true else com.uzairansar.hermex.agent.UiPrefs.setScreenControl(want)
+        })
+    }
+    if (askControl) {
+        com.uzairansar.hermex.agent.ScreenControlConfirmDialog(
+            onConfirm = { askControl = false; com.uzairansar.hermex.agent.UiPrefs.setScreenControl(true) },
+            onDismiss = { askControl = false },
+        )
+    }
+}
+
+/** Сам экран: тот же WebView из [holder] (одно VNC-соединение при смене раскладки). */
+@Composable
+private fun HeldScreenView(server: HttpUrl, holder: ScreenWebViewHolder, modifier: Modifier) {
+    val control by com.uzairansar.hermex.agent.UiPrefs.screenControl.collectAsState()
+    Box(modifier.background(Color.Black)) {
+        val url = remember(server, control) { screenUrl(server, control = control) }
+        AndroidView(
+            modifier = Modifier.fillMaxSize().then(if (control) Modifier.swipeBlockingInterop() else Modifier.swipeTransparentInterop()),
+            factory = { context -> holder.obtain(context, url) },
+            update = { holder.load(url) },
+        )
+        LocalScreenGuard(server, { holder.webView }, { holder.reload() }, Modifier.align(Alignment.BottomCenter), key = url)
+    }
+}
+
+/** Планшет (Expanded): правая панель с экраном агента. */
+@Composable
+fun AgentScreenPane(
+    server: HttpUrl,
+    cookies: List<Cookie>,
+    holder: ScreenWebViewHolder,
+    isLive: Boolean,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    remember(server, cookies) { syncScreenCookies(server, cookies); true }
+    Column(modifier.fillMaxSize().background(Color(0xFF0E0E11)).statusBarsPadding().testTag("screen_pane")) {
+        ScreenPaneHeader(holder, isLive, onClose)
+        HeldScreenView(server, holder, Modifier.weight(1f).fillMaxWidth().navigationBarsPadding())
+    }
+}
+
+/** Разделитель между чатом и экраном; тянется по горизонтали. */
+@Composable
+fun SplitPaneDivider(onDrag: (Float) -> Unit, modifier: Modifier = Modifier) {
+    val state = rememberDraggableState(onDrag)
+    Box(
+        modifier
+            .width(14.dp)
+            .fillMaxHeight()
+            .background(Color(0xFF161619))
+            .draggable(state, Orientation.Horizontal)
+            .semantics { contentDescription = tr("Перетащите, чтобы изменить ширину", "Drag to resize") }
+            .testTag("screen_split_divider"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(width = 4.dp, height = 44.dp).clip(CircleShape).background(Color(0x66FFFFFF)))
+    }
+}
+
+/** Планшет (Medium): экран агента в нижнем листе поверх чата. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AgentScreenSheet(
+    server: HttpUrl,
+    cookies: List<Cookie>,
+    holder: ScreenWebViewHolder,
+    isLive: Boolean,
+    onClose: () -> Unit,
+) {
+    remember(server, cookies) { syncScreenCookies(server, cookies); true }
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        containerColor = Color(0xFF0E0E11),
+        sheetGesturesEnabled = false,
+    ) {
+        val heightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+        Column(Modifier.fillMaxWidth().height((heightDp * 0.72f).dp).testTag("screen_sheet")) {
+            ScreenPaneHeader(holder, isLive, onClose)
+            HeldScreenView(server, holder, Modifier.weight(1f).fillMaxWidth())
+        }
+    }
+}
+
+/**
+ * Окно Expanded, но область чата узкая (например, рядом список чатов на планшете в портрете) —
+ * вместо двух тесных колонок показываем экран листом.
+ */
+internal fun effectiveScreenPaneMode(windowMode: ScreenPaneMode, chatAreaWidthDp: Int): ScreenPaneMode =
+    if (windowMode == ScreenPaneMode.Expanded && chatAreaWidthDp in 1 until 720) ScreenPaneMode.Medium else windowMode

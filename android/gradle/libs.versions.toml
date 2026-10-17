@@ -20,8 +20,13 @@ prism4j = "2.0.0"
 room = "2.8.4"
 security-crypto = "1.1.0"
 turbine = "1.2.1"
+zxing-embedded = "4.3.0"
+jsch = "2.28.8"
 
 [libraries]
+zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxing-embedded" }
+jsch = { module = "com.github.mwiede:jsch", version.ref = "jsch" }
+androidx-compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }

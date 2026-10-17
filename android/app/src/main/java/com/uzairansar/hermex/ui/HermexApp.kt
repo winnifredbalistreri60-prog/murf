@@ -240,6 +240,7 @@ fun HermexApp(
             ) {
                 composable("onboarding") {
                     OnboardingRoute(
+                        onOpenDeploy = { navController.navigate("deploy") },
                         authRepository = container.authRepository,
                         onConnected = {
                             val requestedServerId = pendingAuthenticatedServerId
@@ -554,6 +555,29 @@ fun HermexApp(
                         auth = container.authRepository,
                         cookieJar = container.cookieJar,
                         onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(route = "devices") {
+                    val server = (authState as? AuthState.LoggedIn)?.server
+                    if (server != null) {
+                        com.uzairansar.hermex.agent.MurfDevicesRoute(
+                            server = server,
+                            api = container.pairingApi,
+                            tokens = container.deviceTokenStore,
+                            auth = container.authRepository,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
+                composable(route = "deploy") {
+                    com.uzairansar.hermex.agent.VdsDeployRoute(
+                        auth = container.authRepository,
+                        onBack = { navController.popBackStack() },
+                        onConnected = {
+                            navController.navigate("sessions") {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        },
                     )
                 }
                 composable(route = "drive") {

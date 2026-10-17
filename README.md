@@ -77,7 +77,7 @@ It is a fork of [Hermex](https://github.com/uzairansaruzi/hermex) (a native herm
 - **Language picker** — system default or any bundled language; MURF screens in English and Russian, English fallback.
 - Everything from Hermex: sessions, projects, tasks, kanban, skills, memory, stats, multiple servers and profiles.
 
-What's new in 1.2.x–1.3:
+What's new in 1.2.x–1.4:
 
 | Version | What's new |
 |---|---|
@@ -88,6 +88,7 @@ What's new in 1.2.x–1.3:
 | 1.2.4 | Local screen: fixed endless “Connecting…”; local-environment **Diagnostics** with a report; “Restart screen” and “Show log” right on the screen |
 | 1.2.5 | Agent screen in chat opens **on demand** from the monitor button in the header; optional mini-preview (Settings → Interaction, off by default; draggable, dismiss with ×) |
 | 1.3.0 | **No more chat freezes** on slow links / long agent output (throttled streaming, background Markdown, long code collapsed after 40 lines); **gentle reconnect** (instant on network return, 5 s without banner, only missed events replayed); **offline outbox** (queued messages sent automatically, long-press to edit/cancel); clear message for read-only Telegram sessions |
+| 1.4.0 | **QR login without a password** (`murf pair` on the server → scan in MURF; per-device token in Android Keystore, silent re-login); **Devices** screen with revoke; **Own VDS**: enter SSH details and MURF installs Hermes Agent, hermes-webui, nginx + HTTPS and systemd units with step-by-step progress, then pairs automatically; **tablet layout** (chat and agent screen side by side with a draggable divider; bottom sheet on medium width) |
 
 From 1.1.x: app-wide **font size**, **swipe** navigation between sections and to the agent screen (can be turned off), Control mode, screen over the chat.
 
@@ -242,7 +243,7 @@ The differences:
 
 ## Tablets
 
-**Tablet version: in development.** Planned layout: chat and the live agent screen side by side, landscape. Discussion: [Tablet version issue](https://github.com/winnifredbalistreri60-prog/murf/issues/6).
+**Tablet layout (1.4.0).** On wide screens (WindowSizeClass Expanded) the live agent screen opens to the right of the chat with a draggable divider; on medium width it opens as a bottom sheet; on phones it stays a full-screen overlay. The VNC connection is kept when the layout changes or the device rotates. Feedback: [Tablet version issue](https://github.com/winnifredbalistreri60-prog/murf/issues/6).
 
 ## Use a TV box as the server (experimental)
 
@@ -266,7 +267,7 @@ Common aarch64 TV-box chips include Amlogic S905X3 / S905X4 / S922X and Rockchip
 
 ## Roadmap
 
-- Tablet version (chat + agent screen side by side, landscape) — in development.
+- ~~Tablet version (chat + agent screen side by side)~~ — done in 1.4.0.
 - TV box as the server — experimental.
 - More UI languages ([#4](https://github.com/winnifredbalistreri60-prog/murf/issues/4)), testing local mode on more phones ([#1](https://github.com/winnifredbalistreri60-prog/murf/issues/1)).
 
@@ -288,7 +289,7 @@ No — every action (Termux command, photo, files, location) needs your confirma
 APK from [Releases](https://github.com/winnifredbalistreri60-prog/murf/releases) only for now (signed; SHA-256 in the release notes).
 
 **Does it work on tablets?**
-Tablet version: in development.
+Yes, since 1.4.0: chat and the agent screen side by side on wide screens, a bottom sheet on medium ones.
 
 **How can I help?**
 Star the repo, send Diagnostics reports from other phones, translations, issues labeled `good first issue` / `help wanted`. See [CONTRIBUTING.md](CONTRIBUTING.md).

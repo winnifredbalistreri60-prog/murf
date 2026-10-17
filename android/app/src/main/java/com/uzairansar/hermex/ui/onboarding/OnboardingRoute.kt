@@ -108,10 +108,11 @@ private const val OnboardingBackdropKey = "onboarding-backdrop"
 @Composable
 fun OnboardingRoute(
     authRepository: AuthRepository,
+    onOpenDeploy: () -> Unit = {},
     onConnected: suspend () -> Unit,
 ) {
     HermexDarkContent {
-        OnboardingRouteContent(authRepository, onConnected)
+        OnboardingRouteContent(authRepository, onConnected, onOpenDeploy)
     }
 }
 
@@ -119,6 +120,7 @@ fun OnboardingRoute(
 private fun OnboardingRouteContent(
     authRepository: AuthRepository,
     onConnected: suspend () -> Unit,
+    onOpenDeploy: () -> Unit,
 ) {
     val factory = remember(authRepository) {
         object : ViewModelProvider.Factory {
@@ -136,6 +138,8 @@ private fun OnboardingRouteContent(
     val viewModel: OnboardingViewModel = viewModel(factory = factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val latestOnConnected by rememberUpdatedState(onConnected)
+    val openQrScanner = com.uzairansar.hermex.agent.rememberMurfQrScanner { viewModel.pairWithQr(it) }
+    var showManualPair by remember { mutableStateOf(false) }
     val initialPage = remember(authRepository, viewModel) {
         if (
             authRepository.state.value is AuthState.LoggedOut &&
@@ -242,8 +246,18 @@ private fun OnboardingRouteContent(
                 },
                 onTestConnection = viewModel::testConnection,
                 onConnect = viewModel::connect,
+                onScanQr = openQrScanner,
+                onManualPair = { showManualPair = true },
+                onOpenDeploy = onOpenDeploy,
             )
         }
+    }
+
+    if (showManualPair) {
+        com.uzairansar.hermex.agent.ManualPairDialog(
+            onDismiss = { showManualPair = false },
+            onSubmit = { text -> showManualPair = false; viewModel.pairWithQr(text) },
+        )
     }
 
     if (isShowingCopyReminder) {
@@ -1024,6 +1038,9 @@ private fun OnboardingBottomBar(
     onJumpToConnect: () -> Unit,
     onTestConnection: () -> Unit,
     onConnect: () -> Unit,
+    onScanQr: () -> Unit = {},
+    onManualPair: () -> Unit = {},
+    onOpenDeploy: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -1063,6 +1080,32 @@ private fun OnboardingBottomBar(
                     enabled = !isBusy && canSubmitConnection,
                     modifier = Modifier.weight(1f),
                     onClick = onConnect,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OnboardingActionButton(
+                    label = com.uzairansar.hermex.agent.tr("QR-код", "Scan QR"),
+                    primary = false,
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                    onClick = onScanQr,
+                )
+                OnboardingActionButton(
+                    label = com.uzairansar.hermex.agent.tr("Код вручную", "Enter code"),
+                    primary = false,
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                    onClick = onManualPair,
+                )
+                OnboardingActionButton(
+                    label = com.uzairansar.hermex.agent.tr("Свой VDS", "My VDS"),
+                    primary = false,
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenDeploy,
                 )
             }
         } else {

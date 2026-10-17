@@ -23,8 +23,8 @@ android {
         applicationId = "ru.dredd20.agent"
         minSdk = 26
         targetSdk = 36
-        versionCode = 130
-        versionName = "1.3.0-murf"
+        versionCode = 140
+        versionName = "1.4.0-murf"
 
         // Адрес сервера по умолчанию для экрана подключения: ./gradlew -Pmurf.defaultServerUrl=https://your-server.example
         val defaultServerUrl = (project.findProperty("murf.defaultServerUrl") as String?).orEmpty()
@@ -106,6 +106,9 @@ dependencies {
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.window.size)
+    implementation(libs.zxing.android.embedded)
+    implementation(libs.jsch)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)

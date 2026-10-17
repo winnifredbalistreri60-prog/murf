@@ -28,5 +28,7 @@
     <string name="settings_title">Настройки</string>
     <string name="nav_phone">Телефон и Termux</string>
     <string name="nav_local">Локальная среда</string>
+    <string name="nav_devices">Устройства (QR)</string>
+    <string name="nav_deploy">Свой VDS</string>
     <string name="nav_drive">Google Диск</string>
 </resources>

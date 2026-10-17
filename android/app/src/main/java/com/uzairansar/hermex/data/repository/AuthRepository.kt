@@ -29,12 +29,25 @@ sealed interface AuthState {
     data class LoggedIn(val server: okhttp3.HttpUrl, val account: ServerAccount) : AuthState
 }
 
+/** Привязка устройства по QR (MURF): токен устройства -> свежая cookie WebUI без пароля. */
+interface DeviceSessions {
+    fun hasToken(server: okhttp3.HttpUrl): Boolean
+    /** Обменять одноразовый код на токен устройства и сохранить его. */
+    suspend fun claim(server: okhttp3.HttpUrl, code: String)
+    /** Получить новую cookie WebUI по сохранённому токену. */
+    suspend fun refresh(server: okhttp3.HttpUrl): com.uzairansar.hermex.agent.DeviceSessionResult
+    /** Отозвать собственный токен на сервере (best effort) и забыть его. */
+    suspend fun selfRevoke(server: okhttp3.HttpUrl)
+    fun forget(server: okhttp3.HttpUrl)
+}
+
 class AuthRepository(
     private val registry: ServerRegistry,
     private val clientFactory: (okhttp3.HttpUrl) -> HermesApiClient,
     private val probeClientFactory: (okhttp3.HttpUrl, List<CustomHeader>) -> HermesApiClient = { url, _ -> clientFactory(url) },
     private val cookieJar: PersistentCookieJar,
     private val clearCachedServer: suspend (String) -> Unit = {},
+    private val deviceSessions: DeviceSessions? = null,
 ) {
     private val authGenerations = ConcurrentHashMap<String, AtomicLong>()
     private val accountSelectionGeneration = AtomicLong()
@@ -93,6 +106,44 @@ class AuthRepository(
             }
         }
     }
+
+    /**
+     * Вход по QR: одноразовый код -> токен устройства (в Keystore) -> cookie WebUI.
+     * Пароль не нужен и не хранится. Сервер становится активным.
+     */
+    suspend fun pairWithCode(serverUrlString: String, code: String) {
+        val sessions = deviceSessions ?: throw IllegalStateException("QR pairing is unavailable.")
+        val url = normalizeServerUrl(serverUrlString)
+        val generation = advanceAuthGeneration(url)
+        withAuthMutation(url) {
+            ensureCurrentAuthGeneration(url, generation)
+            val client = probeClientFactory(url, emptyList())
+            try {
+                testConnection(client)
+                sessions.claim(url, code)
+                when (val result = sessions.refresh(url)) {
+                    com.uzairansar.hermex.agent.DeviceSessionResult.Ok -> Unit
+                    com.uzairansar.hermex.agent.DeviceSessionResult.Revoked -> throw ApiError.Unauthorized
+                    is com.uzairansar.hermex.agent.DeviceSessionResult.Failed -> throw IllegalStateException(result.message)
+                }
+                val status = client.authStatus()
+                if (status.authEnabled == true && status.loggedIn != true) throw ApiError.Unauthorized
+                ensureCurrentAuthGeneration(url, generation)
+                clearCacheAfterAuthentication(url, client)
+                ensureCurrentAuthGeneration(url, generation)
+                accountSelectionGeneration.incrementAndGet()
+                val account = withSecureStorage {
+                    registry.activate(url, loggedOut = false)
+                }
+                _state.value = AuthState.LoggedIn(url, account)
+            } catch (error: Throwable) {
+                discardSupersededCookies(url, generation)
+                throw error
+            }
+        }
+    }
+
+    fun hasDeviceToken(server: okhttp3.HttpUrl): Boolean = deviceSessions?.hasToken(server) == true
 
     suspend fun addServer(
         serverUrlString: String,
@@ -191,6 +242,7 @@ class AuthRepository(
             val client = clientFactory(server)
             var cancellation: CancellationException? = null
             try {
+                deviceSessions?.let { sessions -> runCatching { sessions.selfRevoke(server) } }
                 client.logout()
             } catch (error: CancellationException) {
                 cancellation = error
@@ -219,6 +271,7 @@ class AuthRepository(
             }
             return
         }
+        deviceSessions?.forget(url)
         withContext(NonCancellable + Dispatchers.IO) {
             withAuthMutation(url) {
                 // Keep the configured account and its session intact if durable cache cleanup fails.
@@ -275,9 +328,34 @@ class AuthRepository(
     private suspend fun invalidateRestoredSession(server: okhttp3.HttpUrl, expectedGeneration: Long) {
         if (!authGeneration(server).compareAndSet(expectedGeneration, expectedGeneration + 1)) return
         withAuthMutation(server) {
+            if (trySilentDeviceRefresh(server)) return@withAuthMutation
             withContext(NonCancellable) {
                 markLoggedOut(server)
             }
+        }
+    }
+
+    /** Cookie WebUI истекла/сброшена: если устройство привязано по QR — тихо берём новую. */
+    private suspend fun trySilentDeviceRefresh(server: okhttp3.HttpUrl): Boolean {
+        val sessions = deviceSessions ?: return false
+        if (!sessions.hasToken(server)) return false
+        return try {
+            when (sessions.refresh(server)) {
+                com.uzairansar.hermex.agent.DeviceSessionResult.Ok -> {
+                    val headers = registry.customHeaders(ServerRegistry.normalizedId(server))
+                    val status = probeClientFactory(server, headers).authStatus()
+                    status.authEnabled != true || status.loggedIn == true
+                }
+                com.uzairansar.hermex.agent.DeviceSessionResult.Revoked -> {
+                    sessions.forget(server)
+                    false
+                }
+                is com.uzairansar.hermex.agent.DeviceSessionResult.Failed -> false
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            false
         }
     }
 

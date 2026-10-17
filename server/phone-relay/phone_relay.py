@@ -9,7 +9,7 @@
 
 Без внешних зависимостей (stdlib Python 3.10+).
 """
-import json, os, re, secrets, shutil, subprocess, threading, time, uuid
+import json, os, re, secrets, shutil, subprocess, sys, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, quote
 
@@ -21,6 +21,8 @@ FILES_DIR = os.environ.get("PHONE_FILES_DIR", os.path.join(HOME, "phone-files"))
 MAX_UPLOAD = int(os.environ.get("PHONE_MAX_UPLOAD", str(50 * 1024 * 1024)))
 RCLONE_CONF = os.environ.get("RCLONE_CONFIG", os.path.join(HOME, ".config/rclone/rclone.conf"))
 os.makedirs(FILES_DIR, exist_ok=True)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import murf_pairing as pairing  # noqa: E402  (QR-привязка устройств)
 
 lock = threading.Condition()
 pending = []            # запросы, ещё не забранные телефоном
@@ -369,6 +371,31 @@ class Base(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
+    def client_ip(self):
+        fwd = (self.headers.get("X-Real-IP") or self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+        return fwd or self.client_address[0]
+
+    def pair_call(self, fn, *args, set_cookie=False):
+        try:
+            res = fn(*args)
+        except pairing.PairError as e:
+            return self.send_json(e.status, {"ok": False, "error": e.message})
+        except Exception as e:
+            log("pair error", type(e).__name__)
+            return self.send_json(500, {"ok": False, "error": "внутренняя ошибка привязки"})
+        if not set_cookie:
+            return self.send_json(200, res)
+        cookie, obj = res
+        b = json.dumps(obj, ensure_ascii=False).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(b)))
+        self.send_header("Cache-Control", "no-store")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
+        self.end_headers()
+        self.wfile.write(b)
+
 
 class PhoneHandler(Base):
     def do_GET(self):
@@ -429,6 +456,8 @@ class PhoneHandler(Base):
                                         "history": history[-20:], "drive": drive_status()})
         if p == "/phone/api/drive-status":
             return self.send_json(200, drive_status())
+        if p == "/phone/api/pair/devices":
+            return self.pair_call(pairing.list_devices)
         if p == "/phone/api/ops/agent-update":
             return self.send_json(200, agent_update_status())
         if p == "/phone/api/ops/agent-update/log":
@@ -492,6 +521,24 @@ class PhoneHandler(Base):
                     return self.send_json(400, {"ok": False, "error": "нужно подтверждение"})
                 return self.send_json(200, start_agent_update(dry))
             return self.send_json(404, {"error": "not found"})
+        if p in ("/phone/up/pair/claim", "/phone/up/pair/session"):
+            j = self.jbody()
+            ip = self.client_ip()
+            if p.endswith("/claim"):
+                log("pair claim", ip)
+                return self.pair_call(pairing.claim, j.get("code"), j.get("device_id"), j.get("name"), ip)
+            return self.pair_call(pairing.session, j.get("device_token"), ip, set_cookie=True)
+        if p.startswith("/phone/api/pair/"):
+            if self.headers.get("X-Agent-App") != "1":
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            j = self.jbody()
+            if p == "/phone/api/pair/new":
+                log("pair new (app)")
+                return self.pair_call(pairing.new_code, PUBLIC_BASE, str(j.get("label", "")), j.get("ttl"))
+            if p == "/phone/api/pair/revoke":
+                log("pair revoke", str(j.get("device_id", ""))[:64])
+                return self.pair_call(pairing.revoke, j.get("device_id"))
+            return self.send_json(404, {"error": "not found"})
         if p == "/phone/api/drive-token":
             j = self.jbody()
             return self.send_json(200, drive_set_token(str(j.get("token", ""))))
@@ -525,9 +572,18 @@ class AgentHandler(Base):
         if urlparse(self.path).path == "/status":
             return self.send_json(200, {"devices": phone_online(), "pending": len(pending),
                                         "history": history[-20:], "drive": drive_status(), "files_dir": FILES_DIR})
+        if urlparse(self.path).path == "/pair/devices":
+            return self.pair_call(pairing.list_devices)
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self):
+        path = urlparse(self.path).path
+        if path == "/pair/new":   # для команды `murf pair` (только 127.0.0.1)
+            j = self.jbody()
+            log("pair new (cli)")
+            return self.pair_call(pairing.new_code, str(j.get("public_base") or PUBLIC_BASE), str(j.get("label", "")), j.get("ttl"))
+        if path == "/pair/revoke":
+            return self.pair_call(pairing.revoke, self.jbody().get("device_id"))
         if urlparse(self.path).path == "/call":
             j = self.jbody()
             timeout = max(10, min(int(j.get("timeout", 120)), 600))

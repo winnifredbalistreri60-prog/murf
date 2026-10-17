@@ -110,6 +110,38 @@ class OnboardingViewModel(
         }
     }
 
+    /** Вход по QR (MURF): одноразовый код из `murf pair` или с другого устройства. */
+    fun pairWithQr(raw: String) {
+        val payload = com.uzairansar.hermex.agent.PairPayloadParser.parse(raw)
+        if (payload == null) {
+            _state.update {
+                it.copy(
+                    message = com.uzairansar.hermex.agent.tr(
+                        "Это не QR привязки MURF (нужен QR из «murf pair» или из «Устройства» в MURF).",
+                        "This is not a MURF pairing QR (use the QR from `murf pair` or from MURF → Devices).",
+                    ),
+                    messageIsError = true,
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isBusy = true, serverUrl = payload.server.toString(), message = null, messageIsError = false) }
+            runSuspendCatching { authRepository.pairWithCode(payload.server.toString(), payload.code) }
+                .onSuccess { _state.update { it.copy(isBusy = false, isConnected = true) } }
+                .onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isBusy = false,
+                            message = com.uzairansar.hermex.agent.tr("Привязка не удалась: ", "Pairing failed: ") +
+                                (error.message ?: error.javaClass.simpleName),
+                            messageIsError = true,
+                        )
+                    }
+                }
+        }
+    }
+
     private fun parseHeadersOrShowMessage(text: String) =
         runCatching { parseCustomHeaderLines(text) }
             .onFailure {

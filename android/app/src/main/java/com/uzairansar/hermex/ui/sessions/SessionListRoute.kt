@@ -952,6 +952,8 @@ private fun UtilityRows(
             add(UtilityDestination(R.string.nav_phone, R.drawable.ic_lucide_smartphone) { onOpenAgentRoute("phone") })
             add(UtilityDestination(R.string.nav_drive, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("drive") })
             add(UtilityDestination(R.string.nav_local, R.drawable.ic_lucide_server) { onOpenAgentRoute("local") })
+            add(UtilityDestination(R.string.nav_devices, R.drawable.ic_lucide_smartphone) { onOpenAgentRoute("devices") })
+            add(UtilityDestination(R.string.nav_deploy, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("deploy") })
             if (settings.showTasks) add(UtilityDestination(R.string.nav_tasks, R.drawable.ic_lucide_calendar_clock) { onOpenPanel("tasks") })
             if (settings.showKanban) add(UtilityDestination(R.string.nav_kanban, R.drawable.ic_lucide_columns_3, onOpenKanban))
             if (settings.showSkills) add(UtilityDestination(R.string.nav_skills, R.drawable.ic_lucide_hammer) { onOpenPanel("skills") })

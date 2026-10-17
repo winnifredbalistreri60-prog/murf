@@ -28,5 +28,7 @@
     <string name="settings_title">Réglages</string>
     <string name="nav_phone">Phone &amp; Termux</string>
     <string name="nav_local">Local mode (phone)</string>
+    <string name="nav_devices">Devices (QR)</string>
+    <string name="nav_deploy">Own VDS</string>
     <string name="nav_drive">Google Drive</string>
 </resources>
