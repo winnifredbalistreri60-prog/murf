@@ -80,6 +80,18 @@ def do_prompt(rid, params):
     upd(sid, {"sessionUpdate": "tool_call_update", "toolCallId": "d1", "status": "completed"})
     for w in ["При", "вет", ", ", "мир"]:
         chunk(sid, w)
+    if "PROPOSE_MARK" in text:
+        chunk(sid, '\n@@propose_bot {"name": "Helper", "backend": "hermes", "hat": "beret", "color": 3, "access": "cli", "reason": "тесты"}\n')
+    if "PROPOSE_HTTP" in text:
+        import urllib.request
+        r = urllib.request.Request(os.environ["MURF_BOTS_URL"] + "/propose", method="POST",
+                                   data=json.dumps({"name": "Viahttp", "backend": "hermes"}).encode())
+        r.add_header("X-Murf-Bot-Token", os.environ["MURF_BOT_TOKEN"])
+        r.add_header("Content-Type", "application/json")
+        try:
+            urllib.request.urlopen(r, timeout=10).read()
+        except Exception as e:
+            chunk(sid, "ERR " + str(e))
     if "HANDOFF" in text:
         chunk(sid, "\n@@handoff Coder: напиши тест\n")
     send({"jsonrpc": "2.0", "id": rid, "result": {"stopReason": "end_turn"}})

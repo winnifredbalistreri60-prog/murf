@@ -74,9 +74,14 @@ import okhttp3.HttpUrl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BotsTopBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
+private fun BotsTopBar(title: String, onBack: () -> Unit, leading: (@Composable () -> Unit)? = null, actions: @Composable () -> Unit = {}) {
     TopAppBar(
-        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                leading?.invoke()
+                Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        },
         navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
         actions = { actions() },
     )
@@ -85,14 +90,6 @@ private fun BotsTopBar(title: String, onBack: () -> Unit, actions: @Composable (
 @Composable
 private fun ErrorLine(text: String?) {
     text?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-}
-
-@Composable
-private fun EmojiBadge(emoji: String?, size: Int = 40) {
-    Box(
-        Modifier.size(size.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) { Text(emoji?.takeIf { it.isNotBlank() } ?: "🤖", fontSize = (size * 0.5).sp) }
 }
 
 // ───────────────────────────── список ботов ─────────────────────────────
@@ -142,6 +139,7 @@ fun MurfBotsRoute(
                 )
                 ErrorLine(error)
             }
+            item { BotProposalsSection(server, api, refreshKey = refresh, onDecided = { refresh++ }) }
             val list = bots
             if (list == null && error == null) item { CircularProgressIndicator() }
             if (list != null && list.isEmpty()) {
@@ -150,7 +148,7 @@ fun MurfBotsRoute(
             items(list.orEmpty(), key = { it.id }) { bot ->
                 Card(Modifier.fillMaxWidth().clickable { onOpenBot(bot.id) }) {
                     Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        EmojiBadge(bot.emoji)
+                        MurfBotAvatar(bot)
                         Column(Modifier.weight(1f)) {
                             Text(bot.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text(
@@ -159,6 +157,10 @@ fun MurfBotsRoute(
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(tr("Чатов: ${bot.chats}", "Chats: ${bot.chats}"), style = MaterialTheme.typography.labelSmall)
+                            bot.createdByName?.let {
+                                Text(tr("создан ботом «$it»", "created by “$it”"), style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary)
+                            }
                         }
                         if (bot.running > 0) TaskStatusPill(TaskStatus.Running)
                         TextButton(onClick = { editing = bot }) { Text(tr("Изм.", "Edit")) }
@@ -178,8 +180,6 @@ fun MurfBotsRoute(
 }
 
 // ───────────────────────────── редактор бота ─────────────────────────────
-
-private val emojiChoices = listOf("🤖", "🦉", "🧠", "🛠️", "📚", "🔍", "✍️", "🧪", "📈", "🎨", "🛡️", "🚀")
 
 @Composable
 fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: () -> Unit, onSaved: () -> Unit) {
@@ -218,12 +218,13 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(draft.name, { draft = draft.copy(name = it.take(60)) }, label = { Text(tr("Имя", "Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(draft.emoji, { draft = draft.copy(emoji = it.take(8)) }, label = { Text(tr("Значок", "Avatar")) }, singleLine = true, modifier = Modifier.width(96.dp))
-                    Row(Modifier.weight(1f).horizontalScrollState()) {
-                        emojiChoices.forEach { e -> Text(e, fontSize = 22.sp, modifier = Modifier.clip(CircleShape).clickable { draft = draft.copy(emoji = e) }.padding(4.dp)) }
-                    }
-                }
+                Text(tr("Персонаж", "Character"), style = MaterialTheme.typography.labelLarge)
+                MurfAvatarPicker(
+                    current = MurfAvatarSpec.resolve(draft.emoji, draft.backend, draft.name),
+                    isDefault = MurfAvatarSpec.decode(draft.emoji) == null,
+                    backend = draft.backend,
+                    onPick = { spec -> draft = draft.copy(emoji = spec?.encode() ?: "🤖") },
+                )
                 OutlinedTextField(
                     draft.instructions, { draft = draft.copy(instructions = it.take(8000)) },
                     label = { Text(tr("Инструкции / характер", "Instructions / persona")) },
@@ -281,6 +282,16 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
                     Row(Modifier.fillMaxWidth().clickable { draft = draft.copy(access = id) }, verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = draft.access == id, onClick = { draft = draft.copy(access = id) })
                         Text(label, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (bot != null && bot.depth >= 1) {
+                    Row(Modifier.fillMaxWidth().clickable { draft = draft.copy(allowSpawn = !draft.allowSpawn) }, verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(checked = draft.allowSpawn, onCheckedChange = { draft = draft.copy(allowSpawn = it) })
+                        Text(
+                            if (bot.depth >= 2) tr("Создан ботом второго уровня — создавать ботов не может", "Second-level bot — cannot create bots")
+                            else tr("Разрешить этому боту предлагать новых ботов", "Allow this bot to propose new bots"),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
                 ErrorLine(error)
@@ -347,7 +358,7 @@ fun MurfBotChatsRoute(server: HttpUrl, api: MurfBotsApi, botId: String, onOpenCh
     LaunchedEffect(Unit) { while (true) { delay(5000); refresh++ } }
     Scaffold(
         topBar = {
-            BotsTopBar((bot?.emoji ?: "🤖") + " " + (bot?.name ?: tr("Бот", "Bot")), onBack) {
+            BotsTopBar(bot?.name ?: tr("Бот", "Bot"), onBack, leading = bot?.let { b -> { MurfBotAvatar(b, size = 32.dp) } }) {
                 TextButton(onClick = { editing = true }, enabled = bot != null) { Text(tr("Настроить", "Settings")) }
             }
         },
@@ -436,7 +447,16 @@ fun MurfBotChatRoute(server: HttpUrl, api: MurfBotsApi, chatId: String, onOpenCh
     val bot = detail?.bot
     Scaffold(
         topBar = {
-            BotsTopBar(((bot?.emoji ?: "🤖") + " " + (detail?.chat?.title ?: "")).trim(), onBack) {
+            BotsTopBar((detail?.chat?.title ?: "").ifBlank { bot?.name.orEmpty() }, onBack, leading = bot?.let { b ->
+                {
+                    MurfBotAvatar(b, size = 32.dp, status = when {
+                        transcript.pendingApprovals > 0 -> MurfBotStatus.AwaitingConfirm
+                        error != null -> MurfBotStatus.Error
+                        transcript.running -> MurfBotStatus.Working
+                        else -> MurfBotStatus.Idle
+                    })
+                }
+            }) {
                 TextButton(onClick = { handoffOpen = true }, enabled = bot != null) { Text(tr("Передать", "Hand off")) }
             }
         },
@@ -598,7 +618,9 @@ private fun HandoffDialog(server: HttpUrl, api: MurfBotsApi, chatId: String, bot
                 bots.forEach { b ->
                     Row(Modifier.fillMaxWidth().clickable { target = b }, verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = target?.id == b.id, onClick = { target = b })
-                        Text("${b.emoji ?: "🤖"} ${b.name}")
+                        MurfBotAvatar(b, size = 28.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(b.name)
                     }
                 }
                 OutlinedTextField(task, { task = it }, label = { Text(tr("Задача", "Task")) }, minLines = 3, modifier = Modifier.fillMaxWidth())
@@ -693,6 +715,7 @@ fun MurfAgentTasksRoute(server: HttpUrl, api: MurfBotsApi, onOpenChat: (String) 
     Scaffold(topBar = { BotsTopBar(tr("Задачи ботов", "Bot tasks"), onBack) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { ErrorLine(error) }
+            item { BotProposalsSection(server, api, refreshKey = (runs?.size ?: 0)) }
             val list = runs
             if (list == null && error == null) item { CircularProgressIndicator() }
             if (list?.isEmpty() == true) item { Text(tr("Запусков пока не было.", "No runs yet.")) }
@@ -710,7 +733,18 @@ private fun RunCard(r: BotRunDto, onOpenChat: (String) -> Unit) {
     val status = TaskStatus.from(r.status)
     val startedMs = r.started?.let { (it * 1000).toLong() }
     SubtaskCard(
-        title = "${r.emoji ?: "🤖"} ${r.botName ?: r.bot}: ${r.chatTitle ?: ""}".trim(),
+        title = "${r.botName ?: r.bot}: ${r.chatTitle ?: ""}".trim(),
+        leading = {
+            MurfBotAvatar(
+                MurfAvatarSpec.resolve(r.emoji, r.backend, r.botName ?: r.bot), r.backend, size = 28.dp,
+                status = when {
+                    status == TaskStatus.Waiting -> MurfBotStatus.AwaitingConfirm
+                    status == TaskStatus.Running -> MurfBotStatus.Working
+                    status == TaskStatus.Failed || r.error != null -> MurfBotStatus.Error
+                    else -> MurfBotStatus.Idle
+                },
+            )
+        },
         status = status,
         startedAtMs = startedMs,
         durationSec = r.duration.takeIf { !status.isActive },
@@ -731,4 +765,60 @@ private fun RunCard(r: BotRunDto, onOpenChat: (String) -> Unit) {
             }
         } else null,
     )
+}
+
+// ───────────────────────────── предложения новых ботов ─────────────────────────────
+
+/** Карточки «Бот предлагает создать бота»: создаётся только по кнопке «Создать». */
+@Composable
+fun BotProposalsSection(server: HttpUrl, api: MurfBotsApi, refreshKey: Int = 0, onDecided: () -> Unit = {}) {
+    val scope = rememberCoroutineScope()
+    var items by remember { mutableStateOf<List<BotProposalDto>>(emptyList()) }
+    var busy by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var tick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(refreshKey, tick) {
+        items = runCatching { api.proposals(server) }.getOrDefault(items).filter { it.status == "pending" }
+    }
+    LaunchedEffect(Unit) { while (true) { delay(8000); tick++ } }
+    if (items.isEmpty() && error == null) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(tr("Предложения новых ботов", "Proposed bots"), style = MaterialTheme.typography.titleSmall)
+        ErrorLine(error)
+        items.forEach { p ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        MurfBotAvatar(MurfAvatarSpec.resolve(p.emoji, p.backend, p.name), p.backend, size = 40.dp, status = MurfBotStatus.AwaitingConfirm)
+                        Column(Modifier.weight(1f)) {
+                            Text(p.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(tr("предлагает «${p.parentName}»", "proposed by “${p.parentName}”"), style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary)
+                        }
+                    }
+                    Text(listOf(MurfBotsApi.backendNames[p.backend] ?: p.backend, MurfBotsApi.accessLabel(p.access), p.workdir).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (p.reason.isNotBlank()) Text(tr("Зачем: ", "Why: ") + p.reason, style = MaterialTheme.typography.bodySmall)
+                    if (p.instructions.isNotBlank()) Text(p.instructions, style = MaterialTheme.typography.bodySmall, maxLines = 6, overflow = TextOverflow.Ellipsis)
+                    p.notice?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(true, false).forEach { approve ->
+                            val onClick = {
+                                busy = p.id; error = null
+                                scope.launch {
+                                    runCatching { api.decideProposal(server, p.id, approve) }
+                                        .onSuccess { items = items.filter { it.id != p.id }; onDecided() }
+                                        .onFailure { error = it.message }
+                                    busy = null
+                                }
+                                Unit
+                            }
+                            if (approve) Button(enabled = busy == null, onClick = onClick) { Text(tr("Создать", "Create")) }
+                            else OutlinedButton(enabled = busy == null, onClick = onClick) { Text(tr("Отклонить", "Reject")) }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

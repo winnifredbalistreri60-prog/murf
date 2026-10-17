@@ -200,6 +200,7 @@ fun SubtaskCard(
     startsExpanded: Boolean = false,
     maxBodyHeight: Dp = 260.dp,
     stateKey: String = title,
+    leading: (@Composable () -> Unit)? = null,
     body: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     var expanded by rememberSaveable(stateKey) { mutableStateOf(startsExpanded) }
@@ -221,7 +222,7 @@ fun SubtaskCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("\u2442", modifier = Modifier.width(18.dp), style = MaterialTheme.typography.labelMedium,
+            if (leading != null) leading() else Text("\u2442", modifier = Modifier.width(18.dp), style = MaterialTheme.typography.labelMedium,
                 color = accent, fontWeight = FontWeight.SemiBold)
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,

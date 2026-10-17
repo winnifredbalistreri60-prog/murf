@@ -48,7 +48,35 @@ data class BotDto(
     val chats: Int = 0,
     val running: Int = 0,
     @SerialName("last_active") val lastActive: Double? = null,
+    @SerialName("created_by") val createdBy: String? = null,
+    @SerialName("created_by_name") val createdByName: String? = null,
+    val depth: Int = 0,
+    @SerialName("allow_spawn") val allowSpawn: Boolean = false,
 )
+
+/** Предложение бота создать нового бота — создаётся только после «Создать» в приложении. */
+@Serializable
+data class BotProposalDto(
+    val id: String = "",
+    val status: String = "pending",
+    val created: Double? = null,
+    val parent: String = "",
+    @SerialName("parent_name") val parentName: String = "",
+    val chat: String = "",
+    val name: String = "",
+    val backend: String = "hermes",
+    val access: String = "safe",
+    val emoji: String? = null,
+    val instructions: String = "",
+    val workdir: String = "",
+    val reason: String = "",
+    val depth: Int = 1,
+    val notice: String? = null,
+    val bot: String? = null,
+)
+
+@Serializable
+data class BotProposalsResponse(val proposals: List<BotProposalDto> = emptyList())
 
 @Serializable
 data class BotsResponse(val bots: List<BotDto> = emptyList())
@@ -155,6 +183,7 @@ data class BotDraft(
     val model: String = "",
     val profile: String = "default",
     val access: String = "safe",
+    val allowSpawn: Boolean = false,
 ) {
     fun toJson(confirm: Boolean): JsonObject = buildJsonObject {
         put("name", name.trim())
@@ -165,6 +194,7 @@ data class BotDraft(
         put("model", model.trim())
         put("profile", profile)
         put("access", access)
+        put("allow_spawn", allowSpawn)
         if (confirm) put("confirm_cli", true)
     }
 
@@ -172,6 +202,7 @@ data class BotDraft(
         fun of(b: BotDto) = BotDraft(
             name = b.name, emoji = b.emoji ?: "🤖", instructions = b.instructions.orEmpty(), workdir = b.workdir.orEmpty(),
             backend = b.backend, model = b.model.orEmpty(), profile = b.profile ?: "default", access = b.access ?: "safe",
+            allowSpawn = b.allowSpawn,
         )
     }
 }
@@ -309,6 +340,9 @@ object BotTranscriptReducer {
                     if (i > lastUser && i >= 0) top[i] = BotItem.Plan(top[i].key, entries) else top += BotItem.Plan("pl-${e.seq}", entries)
                 }
                 "notice" -> top += BotItem.Notice("n-${e.seq}", e.str("text").orEmpty())
+                "bot_proposal" -> if (e.str("status") == "pending") top += BotItem.Notice("p-${e.seq}",
+                    tr("🧩 Бот предлагает создать бота «${e.str("name").orEmpty()}» — решение в «Боты» или ⚡ «Задачи».",
+                        "🧩 The bot proposes a new bot “${e.str("name").orEmpty()}” — decide in Bots or ⚡ Tasks."))
                 "handoff" -> {
                     val outgoing = e.str("to_bot") != null
                     top += BotItem.Handoff("h-${e.seq}", outgoing, (if (outgoing) e.str("to_name") else e.str("from_name")).orEmpty(),
@@ -414,6 +448,10 @@ class MurfBotsApi(baseClient: OkHttpClient, cookieJar: CookieJar) {
     }
 
     suspend fun runs(server: HttpUrl): List<BotRunDto> = io { json.decodeFromString<BotRunsResponse>(call(server, "GET", "/runs")).runs }
+    suspend fun proposals(server: HttpUrl): List<BotProposalDto> =
+        io { json.decodeFromString<BotProposalsResponse>(call(server, "GET", "/proposals")).proposals }
+    suspend fun decideProposal(server: HttpUrl, id: String, approve: Boolean) =
+        io { call(server, "POST", "/proposals/$id/" + if (approve) "approve" else "reject") }
 
     /** Поток событий чата (SSE) начиная после [after]; завершается, когда сервер закрывает поток. */
     fun stream(server: HttpUrl, chatId: String, after: Long): Flow<BotEvent> = callbackFlow {

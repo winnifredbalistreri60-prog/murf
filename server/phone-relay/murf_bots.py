@@ -23,11 +23,11 @@ CLI запускаются как текущий пользователь с е�
     «cli» — как настроено в конфиге самого CLI (может быть полный доступ) — только явным выбором;
   * каждый запуск пишется в ~/agent-phone/bots/runs.jsonl (без текста запроса).
 """
-import json, os, re, secrets, shutil, signal, subprocess, sys, threading, time
+import hashlib, hmac, json, os, re, secrets, shutil, signal, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "1.5.0"
+VERSION = "1.8.0"
 HOME = os.path.expanduser("~")
 PORT = int(os.environ.get("MURF_BOTS_PORT", "8792"))
 ROOT = os.environ.get("MURF_BOTS_DIR", os.path.join(HOME, "agent-phone", "bots"))
@@ -35,6 +35,13 @@ CHATS = os.path.join(ROOT, "chats")
 LOGS = os.path.join(ROOT, "logs")
 BOTS_FILE = os.path.join(ROOT, "bots.json")
 RUNS_FILE = os.path.join(ROOT, "runs.jsonl")
+PROPOSALS_FILE = os.path.join(ROOT, "proposals.json")
+SECRET_FILE = os.path.join(ROOT, "token-secret")
+MAX_PENDING_PROPOSALS = int(os.environ.get("MURF_BOTS_MAX_PROPOSALS", "5"))
+MAX_PENDING_PER_BOT = 3
+MAX_BOT_DEPTH = 2  # бот пользователя = 0, его «ребёнок» = 1, «внук» = 2 (только если пользователь разрешил ребёнку)
+ACCESS_RANK = {"readonly": 0, "safe": 1, "cli": 2}
+PROPOSE_RE = re.compile(r"^\s*@@propose_bot\s+(\{.*\})\s*$", re.M)
 WORK_ROOT = os.environ.get("MURF_BOTS_WORKROOT", os.path.join(HOME, "murf-bots"))
 PATH_EXTRA = [os.path.join(HOME, ".local", "bin"), os.path.join(HOME, ".opencode", "bin"),
               os.path.join(HOME, ".npm-global", "bin"), os.path.join(HOME, ".bun", "bin"), "/usr/local/bin"]
@@ -272,7 +279,8 @@ def validate_workdir(path, name):
 
 def bot_public(b):
     return {k: b.get(k) for k in ("id", "name", "emoji", "instructions", "workdir", "backend", "model",
-                                    "profile", "access", "cli_confirmed", "created", "updated")}
+                                    "profile", "access", "cli_confirmed", "created", "updated",
+                                    "created_by", "created_by_name", "depth", "allow_spawn")}
 
 
 def needs_confirm(backend, access):
@@ -337,7 +345,11 @@ def upsert_bot(data, bid=None):
             "workdir": workdir, "backend": backend, "model": model, "profile": profile,
             "access": access, "cli_confirmed": confirmed if needs else None,
             "created": b.get("created") or now(), "updated": now(),
+            "allow_spawn": bool(data.get("allow_spawn", b.get("allow_spawn", False))),
         })
+        for k in ("created_by", "created_by_name", "depth"):
+            if k in data and data.get("_internal") is True:
+                b[k] = data[k]
         save_bots([o for o in bots if o["id"] != b["id"]] + [b])
         log("bot saved", b["id"], backend, access)
         return {"ok": True, "bot": bot_public(b)}
@@ -621,7 +633,161 @@ def bot_instructions(bot):
     if others:
         parts.append("Если задачу лучше выполнит другой бот (" + ", ".join(others[:12]) + "), закончи ответ "
                      "отдельной строкой `@@handoff <имя бота>: <задача>` — MURF передаст ему задачу.")
+    if can_propose(bot):
+        parts.append(
+            "Ты можешь предложить создать нового бота-помощника (MURF сам ничего не создаёт: пользователь увидит "
+            "карточку и нажмёт «Создать» или «Отклонить»). Для этого закончи ответ отдельной строкой\n"
+            '`@@propose_bot {"name": "...", "backend": "hermes", "instructions": "...", "hat": "beret", '
+            '"color": 3, "workdir": "", "reason": "зачем он нужен"}`\n'
+            "или вызови `curl -s -X POST \"$MURF_BOTS_URL/propose\" -H \"X-Murf-Bot-Token: $MURF_BOT_TOKEN\" "
+            "-H 'Content-Type: application/json' -d '<тот же JSON>'`. backend: hermes или твой собственный ("
+            + bot["backend"] + "). Доступ у нового бота не больше твоего. hat: wide_brim, cap, wizard, beret, flower, "
+            "helmet, top_hat, beanie, chef, boater; color: 0–9. Предлагай, только если это действительно нужно.")
     return "\n\n".join(parts)
+
+
+# ───────────── боты создают ботов: предложения (только с согласия пользователя) ─────────────
+HATS = ("wide_brim", "cap", "wizard", "beret", "flower", "helmet", "top_hat", "beanie", "chef", "boater")
+
+
+def _secret():
+    try:
+        with open(SECRET_FILE, "rb") as f:
+            k = f.read()
+            if len(k) >= 32:
+                return k
+    except OSError:
+        pass
+    k = secrets.token_bytes(32)
+    fd = os.open(SECRET_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(k)
+    return k
+
+
+def chat_token(cid):
+    return hmac.new(_secret(), ("chat:" + cid).encode(), hashlib.sha256).hexdigest()[:40]
+
+
+def chat_by_token(token):
+    m = re.fullmatch(r"([0-9a-f]{40})\.(c[0-9a-f]{12})", token or "")
+    if not m or not hmac.compare_digest(chat_token(m.group(2)), m.group(1)):
+        raise ApiError(403, "неверный токен бота")
+    return Chat.get(m.group(2))
+
+
+def bot_env(chat):
+    return {"MURF_BOT_TOKEN": chat_token(chat.id) + "." + chat.id, "MURF_BOTS_URL": f"http://127.0.0.1:{PORT}"}
+
+
+def can_propose(bot):
+    d = int(bot.get("depth") or 0)
+    return d == 0 or (bool(bot.get("allow_spawn")) and d + 1 <= MAX_BOT_DEPTH)
+
+
+def load_proposals():
+    return read_json(PROPOSALS_FILE, {"proposals": []}).get("proposals", [])
+
+
+def save_proposals(ps):
+    write_json(PROPOSALS_FILE, {"version": 1, "proposals": ps[-200:]})
+
+
+def propose_bot(chat, data, via="marker"):
+    parent = get_bot(chat.meta["bot"])
+    if not can_propose(parent):
+        raise ApiError(403, "этому боту нельзя создавать ботов (глубина " + str(parent.get("depth") or 0) + ")")
+    name = str(data.get("name") or "").strip()[:60]
+    if not name:
+        raise ApiError(400, "нужно имя бота")
+    backend = str(data.get("backend") or "hermes")
+    if backend not in BACKENDS:
+        raise ApiError(400, "неизвестный бэкенд")
+    if backend != "hermes" and backend != parent["backend"]:
+        raise ApiError(403, "новый бот может быть только на Hermes или на бэкенде родителя")
+    req_access = str(data.get("access") or parent.get("access") or "safe")
+    if req_access not in ACCESS:
+        req_access = "safe"
+    pa = parent.get("access") or "safe"
+    access = req_access if ACCESS_RANK[req_access] <= ACCESS_RANK[pa] else pa
+    hat = str(data.get("hat") or "")
+    hat_i = HATS.index(hat) if hat in HATS else (int(hat) if hat.isdigit() and int(hat) < 10 else None)
+    try:
+        color = max(0, min(9, int(data.get("color"))))
+    except (TypeError, ValueError):
+        color = None
+    emoji = f"k{hat_i}-{color if color is not None else hat_i}" if hat_i is not None else "🤖"
+    wd = str(data.get("workdir") or "").strip()
+    workdir = validate_workdir(wd, name)
+    if not (workdir.startswith(os.path.realpath(WORK_ROOT) + os.sep) or workdir.startswith(parent["workdir"] + os.sep)):
+        raise ApiError(403, "папка нового бота должна быть внутри папки ботов или папки родителя")
+    with lock:
+        ps = load_proposals()
+        pend = [p for p in ps if p["status"] == "pending"]
+        if len(pend) >= MAX_PENDING_PROPOSALS:
+            raise ApiError(429, "слишком много предложений ждут решения пользователя")
+        if sum(1 for p in pend if p["parent"] == parent["id"]) >= MAX_PENDING_PER_BOT:
+            raise ApiError(429, "у этого бота уже есть предложения, которые ждут решения")
+        if any(b["name"].strip().lower() == name.lower() for b in load_bots()) or \
+                any(p["name"].strip().lower() == name.lower() for p in pend):
+            raise ApiError(409, "бот с таким именем уже есть")
+        pr = {"id": new_id("p"), "status": "pending", "created": now(), "parent": parent["id"],
+              "parent_name": parent["name"], "chat": chat.id, "run": chat.run.id if chat.run else None,
+              "name": name, "backend": backend, "access": access, "emoji": emoji,
+              "instructions": clip(str(data.get("instructions") or ""), 8000), "workdir": workdir,
+              "model": "", "profile": parent.get("profile") or "default" if backend == "hermes" else "default",
+              "reason": clip(str(data.get("reason") or ""), 400), "depth": int(parent.get("depth") or 0) + 1,
+              "via": via, "notice": cli_notice(backend, access) if needs_confirm(backend, access) else None}
+        if backend == "hermes" and parent["backend"] != "hermes":
+            pr["profile"] = "default"
+        ps.append(pr)
+        save_proposals(ps)
+        append_line(RUNS_FILE, {"event": "bot_proposal", "ts": now(), "proposal": pr["id"], "parent": parent["id"],
+                                "chat": chat.id, "name": name, "backend": backend, "access": access, "via": via})
+    chat.emit("bot_proposal", proposal=pr["id"], name=name, backend=backend, status="pending")
+    log("bot proposal", pr["id"], parent["id"], backend, access)
+    return {"ok": True, "proposal": pr}
+
+
+def decide_proposal(pid, approve):
+    with lock:
+        ps = load_proposals()
+        pr = next((p for p in ps if p["id"] == pid), None)
+        if not pr:
+            raise ApiError(404, "предложение не найдено")
+        if pr["status"] != "pending":
+            raise ApiError(409, "решение уже принято")
+        bot = None
+        if approve:
+            parent = get_bot(pr["parent"])  # родителя могли удалить
+            res = upsert_bot({"name": pr["name"], "backend": pr["backend"], "access": pr["access"],
+                              "emoji": pr["emoji"], "instructions": pr["instructions"], "workdir": pr["workdir"],
+                              "profile": pr["profile"], "model": "", "confirm_cli": True, "_internal": True,
+                              "created_by": parent["id"], "created_by_name": parent["name"], "depth": pr["depth"]})
+            bot = res["bot"]
+        pr.update({"status": "approved" if approve else "rejected", "decided": now(), "bot": bot["id"] if bot else None})
+        save_proposals(ps)
+        append_line(RUNS_FILE, {"event": "bot_proposal_" + pr["status"], "ts": now(), "proposal": pid,
+                                "parent": pr["parent"], "bot": pr.get("bot"), "name": pr["name"]})
+    try:
+        Chat.get(pr["chat"]).emit("bot_proposal", proposal=pid, name=pr["name"], backend=pr["backend"], status=pr["status"])
+        Chat.get(pr["chat"]).emit("notice", text=(f"Пользователь создал бота «{pr['name']}»." if approve
+                                                  else f"Пользователь отклонил бота «{pr['name']}»."))
+    except ApiError:
+        pass
+    return {"ok": True, "proposal": pr, "bot": bot}
+
+
+def maybe_propose(run):
+    for m in list(PROPOSE_RE.finditer("".join(run.assistant)))[-2:]:
+        try:
+            data = json.loads(m.group(1))
+            if isinstance(data, dict):
+                propose_bot(run.chat, data, via="marker")
+        except ValueError:
+            run.chat.emit("notice", text="Предложение бота не разобрано: неверный JSON.")
+        except ApiError as e:
+            run.chat.emit("notice", text="Предложение бота отклонено MURF: " + e.message)
 
 
 def recap(chat, limit=4000):
@@ -714,6 +880,10 @@ def _run_thread(run):
         chat.save_meta()
         log("run end", run.id, bot["backend"], run.status, rec["duration"])
         if run.status == "done":
+            try:
+                maybe_propose(run)
+            except Exception as e:  # noqa: BLE001
+                log("propose error", type(e).__name__, e)
             try:
                 maybe_handoff(run)
             except ApiError:
@@ -992,6 +1162,7 @@ def run_acp(run):
         argv, extra_env = acp_argv(bot)
         check_argv(argv)
         run.argv = argv
+        extra_env = dict(extra_env or {}, **bot_env(chat))
         conn = AcpConn(argv, bot["workdir"], env_for(extra_env), os.path.join(LOGS, chat.id + ".stderr"))
         conn_ref["c"] = conn
         chat.acp = conn
@@ -1113,6 +1284,7 @@ def _spawn(run, argv, stdin_text, extra_env=None):
     errp = os.path.join(LOGS, run.chat.id + ".stderr")
     errf = open(errp, "ab")
     os.chmod(errp, 0o600)
+    extra_env = dict(extra_env or {}, **bot_env(run.chat))
     p = subprocess.Popen(argv, cwd=run.bot["workdir"], env=env_for(extra_env), stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=errf, start_new_session=True)
     errf.close()
@@ -1391,6 +1563,9 @@ class Handler(BaseHTTPRequestHandler):
             p = u.path.rstrip("/") or "/"
             if p.startswith("/phone/api/bots"):
                 p = p[len("/phone/api/bots"):] or "/"
+            if p == "/propose" and method == "POST":
+                chat = chat_by_token(self.headers.get("X-Murf-Bot-Token"))
+                return self.send_json(200, propose_bot(chat, self.jbody(), via="http"))
             if p != "/health" and self.headers.get("X-Agent-App") != "1":
                 raise ApiError(403, "нужен заголовок X-Agent-App")
             body = self.jbody() if method == "POST" else {}
@@ -1452,6 +1627,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def route(method, p, q, body, h):
+    body.pop("_internal", None)  # только для внутренних вызовов (создание по одобренному предложению)
     if method == "GET" and p == "/health":
         return {"ok": True, "version": VERSION}
     if method == "GET" and p == "/clis":
@@ -1460,6 +1636,13 @@ def route(method, p, q, body, h):
                 "backends": list(BACKENDS), "access": list(ACCESS)}
     if method == "GET" and p == "/runs":
         return runs_view()
+    if method == "GET" and p == "/proposals":
+        ps = load_proposals()
+        return {"proposals": [x for x in ps if x["status"] == "pending"] +
+                [x for x in reversed(ps) if x["status"] != "pending"][:10]}
+    m = re.fullmatch(r"/proposals/(p[0-9a-f]{12})/(approve|reject)", p)
+    if m and method == "POST":
+        return decide_proposal(m.group(1), m.group(2) == "approve")
     if p == "/":
         if method == "GET":
             bots = [bot_public(b) for b in load_bots()]

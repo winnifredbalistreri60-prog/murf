@@ -228,6 +228,52 @@ class BotsTest(unittest.TestCase):
         self.assertEqual(u["text"], "напиши тест")
         self.assertEqual(u["from_bot"], "Boss")
 
+    def test_09_bot_proposes_bot(self):
+        boss = self.make_bot(name="Lead", backend="hermes", access="safe")
+        st, d = self.req("POST", f"/{boss['id']}/chats", {"text": "PROPOSE_MARK"})
+        cid = d["chat"]["id"]
+        self.wait_run(cid)
+        for _ in range(50):
+            ps = self.get("/proposals")[1]["proposals"]
+            if ps:
+                break
+            time.sleep(0.1)
+        pr = [p for p in ps if p["name"] == "Helper"][0]
+        self.assertEqual(pr["status"], "pending")
+        self.assertEqual(pr["access"], "safe")  # не больше, чем у родителя (просил cli)
+        self.assertEqual(pr["emoji"], "k3-3")
+        self.assertFalse(any(b["name"] == "Helper" for b in self.get("/")[1]["bots"]))  # без согласия не создан
+        # токен: без него / с поддельным — 403
+        r = urllib.request.Request(f"http://127.0.0.1:{self.port}/propose", data=b"{}", method="POST")
+        r.add_header("X-Murf-Bot-Token", "0" * 40 + "." + cid)
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            urllib.request.urlopen(r, timeout=5)
+        self.assertEqual(cm.exception.code, 403)
+        st, d = self.req("POST", f"/proposals/{pr['id']}/approve", {})
+        self.assertEqual(st, 200, d)
+        child = d["bot"]
+        self.assertEqual((child["created_by"], child["depth"], child["access"]), (boss["id"], 1, "safe"))
+        st, _ = self.req("POST", f"/proposals/{pr['id']}/reject", {})
+        self.assertEqual(st, 409)
+        # ребёнок без разрешения не может предлагать дальше
+        st, d = self.req("POST", f"/{child['id']}/chats", {"text": "PROPOSE_MARK"})
+        evs = self.wait_run(d["chat"]["id"])
+        time.sleep(0.5)
+        evs = self.get(f"/chats/{d['chat']['id']}")[1]["events"]
+        self.assertTrue(any("нельзя создавать" in (e.get("text") or "") for e in evs if e["type"] == "notice"))
+        # HTTP-путь с токеном из окружения
+        st, d = self.req("POST", f"/{boss['id']}/chats", {"text": "PROPOSE_HTTP"})
+        self.wait_run(d["chat"]["id"])
+        ps = self.get("/proposals")[1]["proposals"]
+        p2 = [p for p in ps if p["name"] == "Viahttp"][0]
+        self.assertEqual(p2["via"], "http")
+        st, d = self.req("POST", f"/proposals/{p2['id']}/reject", {})
+        self.assertEqual(d["proposal"]["status"], "rejected")
+        self.assertFalse(any(b["name"] == "Viahttp" for b in self.get("/")[1]["bots"]))
+        log = open(os.path.join(self.home, "agent-phone", "bots", "runs.jsonl")).read()
+        self.assertIn("bot_proposal_approved", log)
+        self.assertIn("bot_proposal_rejected", log)
+
     def test_07_stop_and_stream(self):
         bot = self.make_bot(name="Медленный", backend="grok")
         st, d = self.req("POST", f"/{bot['id']}/chats", {"text": "SLOW"})
