@@ -199,6 +199,13 @@ if ! is_done webui-deps; then
   done_step webui-deps
 fi
 
+# ---------- 7. DeepSeek Harness (необязательно, по выбору в MURF) ----------
+# Ставится только если включено в приложении (файл-флаг) или MURF_WITH_DSH=1; иначе — кнопкой «Установить» позже.
+if [ "${MURF_WITH_DSH:-0}" = 1 ] || [ -f "$MURF_HOME/want-dsh" ]; then
+  progress running 95 dsh "DeepSeek Harness: Node 22 + dsh (необязательный шаг)"
+  bash "$MURF_DIR/dsh-install.sh" || echo "DeepSeek Harness не установился — повтор: murf-local dsh-install"
+fi
+
 # кэш загрузок uv не нужен для работы (~300 МБ на телефоне)
 rm -rf /root/.hermes/cache/uv /root/.cache/pip 2>/dev/null || true
 progress done 100 done "Локальная среда установлена"

@@ -248,6 +248,7 @@ fun HermexApp(
                 composable("onboarding") {
                     OnboardingRoute(
                         onOpenDeploy = { navController.navigate("deploy") },
+                        onOpenDsh = { navController.navigate("dsh") },
                         authRepository = container.authRepository,
                         onConnected = {
                             val requestedServerId = pendingAuthenticatedServerId
@@ -563,6 +564,16 @@ fun HermexApp(
                         cookieJar = container.cookieJar,
                         onBack = { navController.popBackStack() },
                     )
+                }
+                composable(route = "dsh") {
+                    com.uzairansar.hermex.agent.DshRoute(
+                        cookieJar = container.cookieJar,
+                        onBack = { navController.popBackStack() },
+                        onProviders = { navController.navigate("providers") },
+                    )
+                }
+                composable(route = "providers") {
+                    com.uzairansar.hermex.agent.ProvidersRoute(onBack = { navController.popBackStack() })
                 }
                 composable(route = "devices") {
                     val server = (authState as? AuthState.LoggedIn)?.server

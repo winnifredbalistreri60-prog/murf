@@ -44,6 +44,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -64,11 +65,33 @@ enum class PhoneTool(val wire: String, private val titleRes: () -> String, val r
     ClipSet("clipboard_set", { tr("Запись в буфер обмена", "Write clipboard") }, false),
     Notify("notify", { tr("Уведомления", "Notifications") }, false),
     Battery("battery", { tr("Заряд батареи", "Battery level") }, false),
-    Sms("sms_list", { tr("Чтение SMS", "Read SMS") }, true);
+    Sms("sms_list", { tr("Чтение SMS", "Read SMS") }, true),
+    // 1.10.0: инструменты для локального агента (DeepSeek Harness на телефоне), см. MurfPhoneControl.kt
+    Network("network_info", { tr("Сеть", "Network") }, false),
+    ListApps("list_apps", { tr("Список приложений", "App list") }, false),
+    OpenApp("open_app", { tr("Открыть приложение", "Open app") }, false),
+    OpenUrl("open_url", { tr("Открыть ссылку", "Open link") }, true),
+    Share("share_text", { tr("Поделиться текстом", "Share text") }, false),
+    FileRead("file_read", { tr("Чтение файла", "Read file") }, false),
+    FileWrite("file_write", { tr("Запись файла", "Write file") }, false),
+    Notifications("notifications_list", { tr("Чтение уведомлений", "Read notifications") }, true),
+    Screenshot("screenshot", { tr("Снимок экрана", "Screenshot") }, true),
+    ScreenView("screen_view", { tr("Что на экране", "What is on screen") }, true),
+    Tap("tap", { tr("Нажатие на экране", "Tap on screen") }, true),
+    Swipe("swipe", { tr("Свайп", "Swipe") }, true),
+    TypeText("type_text", { tr("Ввод текста", "Type text") }, true),
+    PressKey("press_key", { tr("Системная кнопка", "System key") }, true);
+
+    /** Действие на экране/в другом приложении: «Всегда» не предлагается, подтверждение каждый раз. */
+    val screenControl: Boolean get() = this in setOf(Tap, Swipe, TypeText)
 
     val title: String get() = titleRes()
 
-    companion object { fun of(wire: String) = entries.firstOrNull { it.wire == wire } }
+    companion object {
+        fun of(wire: String) = entries.firstOrNull { it.wire == wire }
+        /** Безопасные без подтверждения (только чтение состояния/внутри папки MURF). */
+        val safeLocal = setOf(Battery, Network, ListApps, OpenApp, Share, FileRead, FileWrite, ListFiles, Notify, ClipSet, PushFile)
+    }
 }
 
 data class PhoneRequest(val id: String, val tool: String, val args: JsonObject, val raw: JsonObject) {
@@ -81,6 +104,13 @@ data class PhoneRequest(val id: String, val tool: String, val args: JsonObject, 
             "clipboard_set" -> arg("text").orEmpty().take(80)
             "notify" -> listOfNotNull(arg("title"), arg("text")).joinToString(": ")
             "take_photo" -> tr("камера: ", "camera: ") + (arg("camera") ?: "back")
+            "file_read", "file_write" -> arg("path").orEmpty() + (if (tool == "file_write") " (" + (arg("text")?.length ?: 0) + tr(" симв.)", " chars)") else "")
+            "open_app" -> arg("package").orEmpty()
+            "open_url" -> arg("url").orEmpty()
+            "share_text", "type_text" -> "«" + arg("text").orEmpty().take(120) + "»"
+            "tap" -> arg("text")?.let { "«$it»" } ?: "(${arg("x")}, ${arg("y")})"
+            "swipe" -> "(${arg("x1")},${arg("y1")}) → (${arg("x2")},${arg("y2")})"
+            "press_key" -> arg("key").orEmpty()
             else -> ""
         }
 }
@@ -90,6 +120,8 @@ data class PhoneLogEntry(val time: Long, val tool: String, val summary: String, 
 data class PhoneBridgeUi(
     val running: Boolean = false,
     val connected: Boolean = false,
+    /** Канал к локальной среде (127.0.0.1:18080) для агента на телефоне. */
+    val localConnected: Boolean = false,
     val lastError: String? = null,
     val pending: List<PhoneRequest> = emptyList(),
     val log: List<PhoneLogEntry> = emptyList(),
@@ -126,7 +158,7 @@ object PhoneBridge {
     fun stop(context: Context) {
         PhoneBridgeSettings.setEnabled(context, false)
         context.stopService(Intent(context, PhoneBridgeService::class.java))
-        state.update { it.copy(running = false, connected = false) }
+        state.update { it.copy(running = false, connected = false, localConnected = false) }
     }
 
     /** decision: allow | deny | always */
@@ -149,6 +181,7 @@ class PhoneDecisionReceiver : BroadcastReceiver() {
 class PhoneBridgeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var loop: Job? = null
+    private var localLoop: Job? = null
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -168,7 +201,14 @@ class PhoneBridgeService : Service() {
             .build()
         ServiceCompat.startForeground(this, 4401, n,
             if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)
-        if (loop?.isActive != true) loop = scope.launch { runLoop() }
+        if (loop?.isActive != true) loop = scope.launch { runLoop { server() } }
+        // 1.10.0: второй канал — локальная среда (DeepSeek Harness на телефоне), если вход сейчас на сервер
+        if (localLoop?.isActive != true) localLoop = scope.launch {
+            runLoop(local = true) {
+                // только 127.0.0.1; работает, если локальная среда запущена (проверка health ниже)
+                if (LocalEnv.isLocal(server())) null else LocalEnv.URL.toHttpUrlOrNull()
+            }
+        }
         PhoneBridge.state.update { it.copy(running = true) }
         return START_STICKY
     }
@@ -192,16 +232,17 @@ class PhoneBridgeService : Service() {
             .writeTimeout(120, TimeUnit.SECONDS)
             .build()
 
-    private suspend fun runLoop() {
+    private suspend fun runLoop(local: Boolean = false, target: () -> HttpUrl?) {
         val http = client()
         var backoff = 2_000L
         var helloDone = false
         while (scope.isActive) {
-            val base = server()
+            val base = target()
             if (base == null) {
-                PhoneBridge.state.update { it.copy(connected = false, lastError = tr("Не выполнен вход в приложение", "Not logged in to the app")) }
-                delay(10_000); continue
+                if (!local) PhoneBridge.state.update { st(it, local, false, tr("Не выполнен вход в приложение", "Not logged in to the app")) }
+                delay(if (local) 30_000 else 10_000); continue
             }
+            if (local && LocalEnv.health() == null) { delay(20_000); continue }
             try {
                 val device = PhoneBridgeSettings.deviceId(this)
                 if (!helloDone) {
@@ -220,12 +261,12 @@ class PhoneBridgeService : Service() {
                 http.newCall(Request.Builder().url(url).get().build()).execute().use { resp ->
                     when {
                         resp.code == 401 || resp.code == 403 -> {
-                            PhoneBridge.state.update { it.copy(connected = false, lastError = tr("Сессия истекла — войдите в приложение заново", "Session expired — log in again")) }
+                            PhoneBridge.state.update { st(it, local, false, tr("Сессия истекла — войдите в приложение заново", "Session expired — log in again")) }
                             delay(15_000)
                         }
-                        resp.code == 204 -> PhoneBridge.state.update { it.copy(connected = true, lastError = null) }
+                        resp.code == 204 -> PhoneBridge.state.update { st(it, local, true, null) }
                         resp.isSuccessful -> {
-                            PhoneBridge.state.update { it.copy(connected = true, lastError = null) }
+                            PhoneBridge.state.update { st(it, local, true, null) }
                             val obj = json.parseToJsonElement(resp.body!!.string()).jsonObject["request"]!!.jsonObject
                             val req = PhoneRequest(
                                 id = obj["id"]!!.jsonPrimitive.content,
@@ -236,7 +277,7 @@ class PhoneBridgeService : Service() {
                             scope.launch { handle(http, base, req) }
                         }
                         else -> {
-                            PhoneBridge.state.update { it.copy(connected = false, lastError = tr("Сервер ответил ${resp.code}", "Server responded ${resp.code}")) }
+                            PhoneBridge.state.update { st(it, local, false, tr("Сервер ответил ${resp.code}", "Server responded ${resp.code}")) }
                             delay(backoff)
                         }
                     }
@@ -246,11 +287,14 @@ class PhoneBridgeService : Service() {
                 throw e
             } catch (e: Exception) {
                 helloDone = false
-                PhoneBridge.state.update { it.copy(connected = false, lastError = e.message ?: e.javaClass.simpleName) }
+                PhoneBridge.state.update { st(it, local, false, e.message ?: e.javaClass.simpleName) }
                 delay(backoff); backoff = (backoff * 2).coerceAtMost(60_000)
             }
         }
     }
+
+    private fun st(u: PhoneBridgeUi, local: Boolean, ok: Boolean, err: String?) =
+        if (local) u.copy(localConnected = ok) else u.copy(connected = ok, lastError = err)
 
     private fun post(http: OkHttpClient, base: HttpUrl, path: String, body: String) {
         val url = base.newBuilder().addPathSegments(path).build()
@@ -266,7 +310,14 @@ class PhoneBridgeService : Service() {
         } else if (tool == PhoneTool.Sms && !PhoneBridgeSettings.smsEnabled(this)) {
             fail(tr("Чтение SMS выключено в приложении MURF (Телефон → SMS)", "SMS reading is disabled in MURF (Phone → SMS)"))
         } else {
-            val allowed = if (req.tool in PhoneBridgeSettings.autoAllowed(this)) "allow" else askUser(req, tool, timeoutSec)
+            val outside = (tool == PhoneTool.FileRead || tool == PhoneTool.FileWrite) && !PhoneControl.resolve(req.arg("path").orEmpty()).second
+            val needAsk = tool.screenControl || outside || (tool.risky && req.tool !in PhoneBridgeSettings.autoAllowed(this)) ||
+                (!tool.risky && req.tool !in PhoneBridgeSettings.autoAllowed(this) && tool !in PhoneTool.safeLocal)
+            val allowed = when {
+                tool.screenControl && MurfAccessibilityService.userHasControl -> "deny"
+                !needAsk -> "allow"
+                else -> askUser(req, tool, timeoutSec).let { if (it == "always" && (tool.screenControl || outside)) "allow" else it }
+            }
             when (allowed) {
                 "always" -> { PhoneBridgeSettings.setAutoAllowed(this, req.tool, true); execute(http, req, tool) }
                 "allow" -> execute(http, req, tool)
@@ -318,6 +369,11 @@ class PhoneBridgeService : Service() {
     private fun fail(error: String, output: String = "") = buildJsonObject {
         put("ok", false); put("error", error); if (output.isNotBlank()) put("output", output.take(50_000))
     }
+
+    private fun pair(r: Pair<Boolean, String>) = if (r.first) ok(r.second) else fail(r.second)
+
+    /** Кавычки для пути Termux с возможным префиксом $HOME. */
+    private fun tq(p: String) = if (p.startsWith("\$HOME/")) "\"\$HOME\"/" + Termux.shellQuote(p.removePrefix("\$HOME/")) else Termux.shellQuote(p)
 
     private fun fromTermux(r: TermuxResult) = buildJsonObject {
         put("ok", r.ok); put("output", r.combined().take(100_000)); r.exitCode?.let { put("exit_code", it) }
@@ -373,6 +429,29 @@ class PhoneBridgeService : Service() {
             PhoneTool.Battery -> {
                 val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
                 ok(tr("Заряд: ", "Battery: ") + "${bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)}%, " + tr("заряжается: ", "charging: ") + (if (bm.isCharging) tr("да", "yes") else tr("нет", "no")))
+            }
+            PhoneTool.Network -> ok(PhoneControl.network(this))
+            PhoneTool.ListApps -> ok(PhoneControl.listApps(this, req.arg("query")))
+            PhoneTool.OpenApp -> pair(kotlinx.coroutines.withContext(Dispatchers.Main) { PhoneControl.openApp(this@PhoneBridgeService, req.arg("package").orEmpty()) })
+            PhoneTool.OpenUrl -> pair(kotlinx.coroutines.withContext(Dispatchers.Main) { PhoneControl.openUrl(this@PhoneBridgeService, req.arg("url").orEmpty()) })
+            PhoneTool.Share -> pair(kotlinx.coroutines.withContext(Dispatchers.Main) { PhoneControl.share(this@PhoneBridgeService, req.arg("text").orEmpty()) })
+            PhoneTool.Notifications -> pair(PhoneControl.notifications(this, req.args["limit"]?.jsonPrimitive?.intOrNull ?: 20))
+            PhoneTool.ScreenView -> pair(PhoneControl.screenView(req.args["max"]?.jsonPrimitive?.intOrNull ?: 200))
+            PhoneTool.Screenshot -> pair(PhoneControl.screenshot(this))
+            PhoneTool.Tap -> pair(PhoneControl.tap(req.arg("x")?.toFloatOrNull(), req.arg("y")?.toFloatOrNull(), req.arg("text")))
+            PhoneTool.Swipe -> pair(PhoneControl.swipe(req.arg("x1")?.toFloatOrNull() ?: 0f, req.arg("y1")?.toFloatOrNull() ?: 0f,
+                req.arg("x2")?.toFloatOrNull() ?: 0f, req.arg("y2")?.toFloatOrNull() ?: 0f, req.arg("ms")?.toLongOrNull() ?: 300))
+            PhoneTool.TypeText -> pair(PhoneControl.type(req.arg("text").orEmpty()))
+            PhoneTool.PressKey -> pair(PhoneControl.key(req.arg("key").orEmpty()))
+            PhoneTool.FileRead -> {
+                val (path, _) = PhoneControl.resolve(req.arg("path").orEmpty())
+                fromTermux(Termux.run(this, "f=${tq(path)}; [ -f \"\$f\" ] || { echo \"нет файла\" >&2; exit 2; }; head -c 1048576 \"\$f\"", timeoutMs = 30_000))
+            }
+            PhoneTool.FileWrite -> {
+                val (path, _) = PhoneControl.resolve(req.arg("path").orEmpty())
+                val b64 = android.util.Base64.encodeToString(req.arg("text").orEmpty().toByteArray(), android.util.Base64.NO_WRAP)
+                val op = if (req.arg("append") == "true") ">>" else ">"
+                fromTermux(Termux.run(this, "f=${tq(path)}; mkdir -p \"\$(dirname \"\$f\")\" && printf '%s' '$b64' | base64 -d $op \"\$f\" && echo \"записано: \$f\"", timeoutMs = 30_000))
             }
             PhoneTool.Sms -> {
                 val limit = req.args["limit"]?.jsonPrimitive?.intOrNull ?: 10

@@ -953,6 +953,8 @@ private fun UtilityRows(
             add(UtilityDestination(R.string.nav_drive, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("drive") })
             add(UtilityDestination(R.string.nav_local, R.drawable.ic_lucide_server) { onOpenAgentRoute("local") })
             add(UtilityDestination(R.string.nav_bots, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("bots") })
+            add(UtilityDestination(R.string.nav_dsh, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("dsh") })
+            add(UtilityDestination(R.string.nav_providers, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("providers") })
             add(UtilityDestination(R.string.nav_bot_tasks, R.drawable.ic_hermex_lightning_bolt) { onOpenAgentRoute("bottasks") })
             add(UtilityDestination(R.string.nav_clis, R.drawable.ic_hermex_tools_wrench) { onOpenAgentRoute("clis") })
             add(UtilityDestination(R.string.nav_devices, R.drawable.ic_lucide_smartphone) { onOpenAgentRoute("devices") })

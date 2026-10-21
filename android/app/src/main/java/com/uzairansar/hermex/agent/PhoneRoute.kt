@@ -149,6 +149,26 @@ fun PhoneRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
                 )
             }
 
+            Section(tr("Агент на телефоне (DeepSeek Harness)", "On-phone agent (DeepSeek Harness)")) {
+                val a11y = remember(refresh) { MurfAccessibilityService.enabled(context) }
+                val notif = remember(refresh) { MurfNotificationListener.enabled(context) }
+                Text(if (ui.localConnected) tr("● Мост подключён к локальной среде (127.0.0.1)", "● Bridge connected to the local environment")
+                    else tr("○ Локальная среда: мост не подключён (запустите среду и включите мост)", "○ Local environment: bridge not connected"),
+                    style = MaterialTheme.typography.bodySmall)
+                Text((if (a11y) "✓" else "✗") + tr(" Управление экраном (спец. возможности): снимок, что на экране, нажатия, свайпы, ввод", " Screen control (accessibility): screenshot, screen contents, taps, swipes, typing"))
+                Text((if (notif) "✓" else "✗") + tr(" Доступ к уведомлениям (чтение для агента)", " Notification access (read for the agent)"))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { context.startActivity(MurfAccessibilityService.settingsIntent()) }) { Text(tr("Спец. возможности", "Accessibility")) }
+                    OutlinedButton(onClick = { context.startActivity(MurfNotificationListener.settingsIntent()) }) { Text(tr("Уведомления", "Notifications")) }
+                }
+                Text(tr("Нажатия, свайпы и ввод текста в других приложениях подтверждаются каждый раз (без «Всегда»). Чтение/запись файлов вне Download/MURF, ссылки, снимки экрана, буфер обмена, геопозиция и команды Termux — с подтверждением. SMS по умолчанию выключены. «Взять экран» или «Стоп» в чате сразу запрещают агенту действия на экране.",
+                    "Taps, swipes and typing in other apps are confirmed every time (no “Always”). Files outside Download/MURF, links, screenshots, clipboard, location and Termux commands need confirmation. SMS is off by default. “Take screen” or “Stop” in chat immediately blocks screen actions."),
+                    style = MaterialTheme.typography.labelSmall)
+                if (MurfAccessibilityService.userHasControl) TextButton(onClick = { MurfAccessibilityService.userHasControl = false; refresh++ }) {
+                    Text(tr("Вернуть агенту доступ к экрану", "Give the screen back to the agent"))
+                }
+            }
+
             if (ui.pending.isNotEmpty()) {
                 Section(tr("Ждут подтверждения", "Awaiting confirmation")) {
                     ui.pending.forEach { req ->
@@ -158,7 +178,7 @@ fun PhoneRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { PhoneBridge.decide(context, req.id, "allow") }) { Text(tr("Разрешить", "Allow")) }
                             OutlinedButton(onClick = { PhoneBridge.decide(context, req.id, "deny") }) { Text(tr("Отклонить", "Deny")) }
-                            TextButton(onClick = { PhoneBridge.decide(context, req.id, "always"); auto = PhoneBridgeSettings.autoAllowed(context) + req.tool }) { Text(tr("Всегда", "Always")) }
+                            if (tool?.screenControl != true) TextButton(onClick = { PhoneBridge.decide(context, req.id, "always"); auto = PhoneBridgeSettings.autoAllowed(context) + req.tool }) { Text(tr("Всегда", "Always")) }
                         }
                     }
                 }
@@ -201,7 +221,7 @@ fun PhoneRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
             }
 
             Section(tr("Что разрешено без вопроса", "Allowed without asking")) {
-                PhoneTool.entries.forEach { t ->
+                PhoneTool.entries.filterNot { it.screenControl }.forEach { t ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(t.title)

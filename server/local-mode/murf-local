@@ -12,7 +12,7 @@
 #   murf-local doctor            — проверка всех частей среды, короткий отчёт (для «Диагностика» в MURF)
 #   murf-local restart-screen    — перезапуск экрана агента (Xvnc + websockify)
 #   murf-local uninstall --yes    — удалить среду полностью
-MURF_LOCAL_VERSION=1.2.4
+MURF_LOCAL_VERSION=1.3.0
 D="$HOME/.murf-local"
 PD_DIR="$PREFIX/var/lib/proot-distro"
 DISTRO="${MURF_DISTRO:-$(cat "$HOME/.murf-local/distro" 2>/dev/null || echo murf-ubuntu)}"
@@ -265,6 +265,7 @@ case "${1:-status}" in
   restart-screen) cmd_restart_screen ;;
   uninstall) shift; cmd_uninstall "$@" ;;
   version) echo "$MURF_LOCAL_VERSION" ;;
+  dsh-install) installed || { echo "сначала установка"; exit 2; }; mkdir -p "$ROOTFS/opt/murf" && cp -f "$D/inner/"* "$ROOTFS/opt/murf/"; inner bash /opt/murf/dsh-install.sh ;;
   _inner) shift; inner "$@" ;;
   *) sed -n '2,15p' "$0"; exit 2 ;;
 esac

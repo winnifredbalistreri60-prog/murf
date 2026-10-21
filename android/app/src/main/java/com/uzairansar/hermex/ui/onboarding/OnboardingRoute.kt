@@ -109,10 +109,11 @@ private const val OnboardingBackdropKey = "onboarding-backdrop"
 fun OnboardingRoute(
     authRepository: AuthRepository,
     onOpenDeploy: () -> Unit = {},
+    onOpenDsh: () -> Unit = {},
     onConnected: suspend () -> Unit,
 ) {
     HermexDarkContent {
-        OnboardingRouteContent(authRepository, onConnected, onOpenDeploy)
+        OnboardingRouteContent(authRepository, onConnected, onOpenDeploy, onOpenDsh)
     }
 }
 
@@ -121,6 +122,7 @@ private fun OnboardingRouteContent(
     authRepository: AuthRepository,
     onConnected: suspend () -> Unit,
     onOpenDeploy: () -> Unit,
+    onOpenDsh: () -> Unit = {},
 ) {
     val factory = remember(authRepository) {
         object : ViewModelProvider.Factory {
@@ -249,6 +251,7 @@ private fun OnboardingRouteContent(
                 onScanQr = openQrScanner,
                 onManualPair = { showManualPair = true },
                 onOpenDeploy = onOpenDeploy,
+                onOpenDsh = onOpenDsh,
             )
         }
     }
@@ -1041,6 +1044,7 @@ private fun OnboardingBottomBar(
     onScanQr: () -> Unit = {},
     onManualPair: () -> Unit = {},
     onOpenDeploy: () -> Unit = {},
+    onOpenDsh: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -1123,6 +1127,17 @@ private fun OnboardingBottomBar(
                     modifier = Modifier
                         .clip(OnboardingShape)
                         .clickable(onClick = onJumpToConnect)
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                )
+                Text(
+                    text = com.uzairansar.hermex.agent.tr("Агент на телефоне (DeepSeek Harness, без сервера)", "On-phone agent (DeepSeek Harness, no server)"),
+                    color = Color.White.copy(alpha = 0.55f),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(OnboardingShape)
+                        .clickable(onClick = onOpenDsh)
                         .heightIn(min = 48.dp)
                         .padding(horizontal = 8.dp, vertical = 12.dp),
                 )

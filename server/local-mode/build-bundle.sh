@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 R=$(cd ../.. && pwd)
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/inner"
-cp murf-local "$T/"; cp inner/setup.sh inner/svc.sh inner/nginx.conf inner/murf_api.py inner/desktop.sh "$T/inner/"
+cp murf-local "$T/"; cp inner/setup.sh inner/svc.sh inner/nginx.conf inner/murf_api.py inner/murf_dsh.py inner/murf_phone_mcp.py inner/dsh-install.sh inner/desktop.sh "$T/inner/"
 cp novnc-1.6.0.tgz "$T/inner/"
 cp "$R/server/agent-screen/rfb_viewonly_proxy.py" "$R/server/agent-screen/index.html" "$T/inner/"
 sed -n 's/^MURF_LOCAL_VERSION=//p' murf-local > "$T/VERSION"

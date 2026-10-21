@@ -5,12 +5,14 @@ POST /phone/api/screen/type — ввод текста в экран бота (ч
 """
 import json, os, socket, subprocess, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
+import murf_dsh
 
 HOME = os.path.expanduser("~")
 HERMES = os.path.join(HOME, ".hermes")
 BD = os.path.join(HERMES, "bot-desktop")
 MURF = os.path.join(HOME, ".murf")
-VERSION = "murf-local/1.2.4"
+VERSION = "murf-local/1.3.0"
 
 
 def port_open(port, host="127.0.0.1"):
@@ -97,6 +99,7 @@ def health():
         "webui": port_open(8787), "api": port_open(8642), "screen_view": port_open(18081),
         "screen_control": port_open(18082), "desktop": bool(disp) and os.path.exists(os.path.join(BD, "rfb.sock")),
         "provider_logged_in": provider_logged_in(), "proxy": proxy_set(),
+        "dsh": {k: v for k, v in murf_dsh.status().items() if k in ("installed", "version", "phone_bridge")},
     }
 
 
@@ -122,6 +125,7 @@ def screen_type(text, enter=False):
 
 class H(BaseHTTPRequestHandler):
     server_version = "murf-local/1"
+    protocol_version = "HTTP/1.1"
 
     def log_message(self, *a):
         pass
@@ -135,7 +139,27 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b)
 
+    def read_json(self, limit=1024 * 1024):
+        n = min(int(self.headers.get("Content-Length") or 0), limit)
+        try:
+            return json.loads(self.rfile.read(n) or b"{}")
+        except ValueError:
+            return None
+
     def do_GET(self):
+        u = urlparse(self.path); q = parse_qs(u.query)
+        if u.path == "/phone/api/poll":
+            item = murf_dsh.phone_poll(int((q.get("wait") or ["25"])[0] or 25))
+            if item is None:
+                self.send_response(204); self.end_headers(); return
+            return self.send_json(200, {"request": item})
+        if u.path == "/phone/api/dsh/status":
+            return self.send_json(200, murf_dsh.status())
+        if u.path == "/phone/api/dsh/sessions":
+            return self.send_json(200, murf_dsh.sessions())
+        if u.path == "/phone/api/dsh/session":
+            ev = murf_dsh.session_log((q.get("id") or [""])[0])
+            return self.send_json(200 if ev is not None else 404, {"events": ev or []})
         if self.path.split("?")[0] == "/murf/health":
             h = health()
             if "full=1" in self.path:
@@ -146,6 +170,36 @@ class H(BaseHTTPRequestHandler):
         self.send_json(404, {"error": "not found"})
 
     def do_POST(self):
+        u = urlparse(self.path).path
+        if u == "/murf/phone/call":
+            j = self.read_json()
+            if j is None: return self.send_json(400, {"ok": False, "error": "bad json"})
+            code, r = murf_dsh.phone_call(j, self.headers.get("X-Murf-Phone-Token", ""))
+            return self.send_json(code, r)
+        if u.startswith("/phone/api/") and u not in ("/phone/api/screen/type", "/phone/api/screen/start"):
+            if self.headers.get("X-Agent-App") != "1" and u != "/phone/api/result" and u != "/phone/api/hello":
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            j = self.read_json(4 * 1024 * 1024)
+            if j is None: return self.send_json(400, {"ok": False, "error": "bad json"})
+            if u == "/phone/api/hello": return self.send_json(200, murf_dsh.phone_hello(j))
+            if u == "/phone/api/result": return self.send_json(200 if murf_dsh.phone_result(j) else 404, {"ok": True})
+            if u == "/phone/api/dsh/install": return self.send_json(200, murf_dsh.install_async())
+            if u == "/phone/api/dsh/stop": return self.send_json(200, murf_dsh.stop(j.get("run_id")))
+            if u == "/phone/api/dsh/run":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+                self.send_header("Cache-Control", "no-store"); self.send_header("X-Accel-Buffering", "no")
+                self.send_header("Transfer-Encoding", "chunked"); self.end_headers()
+                def write(o):
+                    b = (json.dumps(o, ensure_ascii=False) + "\n").encode()
+                    self.wfile.write(b"%x\r\n%s\r\n" % (len(b), b)); self.wfile.flush()
+                murf_dsh.run(j, write)
+                try:
+                    self.wfile.write(b"0\r\n\r\n"); self.wfile.flush()
+                except OSError:
+                    pass
+                return
+            return self.send_json(404, {"error": "not found"})
         if self.path.split("?")[0] == "/phone/api/screen/type":
             if self.headers.get("X-Agent-App") != "1":
                 return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
@@ -171,4 +225,5 @@ class H(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    murf_dsh.phone_token()
     ThreadingHTTPServer(("127.0.0.1", int(os.environ.get("MURF_API_PORT", "18083"))), H).serve_forever()

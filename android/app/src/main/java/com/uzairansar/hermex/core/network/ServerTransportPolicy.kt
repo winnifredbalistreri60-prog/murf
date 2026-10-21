@@ -18,7 +18,20 @@ internal class ServerTransportPolicyInterceptor : Interceptor {
         } catch (error: ApiError.InsecureTransport) {
             throw InsecureTransportIOException(error)
         }
-        return chain.proceed(chain.request())
+        val response = chain.proceed(chain.request())
+        // Проверяем цель редиректа ДО того, как OkHttp откроет к ней соединение.
+        if (response.isRedirect) {
+            val target = response.header("Location")?.let { chain.request().url.resolve(it) }
+            if (target != null) {
+                try {
+                    requireAllowedServerTransport(target)
+                } catch (error: ApiError.InsecureTransport) {
+                    response.close()
+                    throw InsecureTransportIOException(error)
+                }
+            }
+        }
+        return response
     }
 }
 
