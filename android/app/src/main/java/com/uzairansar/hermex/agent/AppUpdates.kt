@@ -38,6 +38,8 @@ import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+import okhttp3.CacheControl
 
 /**
  * MURF: обновления внутри приложения.
@@ -58,7 +60,7 @@ object AppUpdates {
     sealed interface Phase {
         data object Idle : Phase
         data object Checking : Phase
-        data object UpToDate : Phase
+        data class UpToDate(val remote: Info) : Phase
         data class Available(val info: Info) : Phase
         data class Downloading(val info: Info, val progress: Float) : Phase
         data class Installing(val info: Info) : Phase
@@ -99,28 +101,66 @@ object AppUpdates {
 
     private fun prefs(context: Context) = context.applicationContext.getSharedPreferences("murf_ui", Context.MODE_PRIVATE)
 
+    /** Cache-bust query so CDNs / sticky proxies cannot serve a stale murf-version.json. */
+    internal fun manifestRequestUrl(nowMs: Long = System.currentTimeMillis()): String =
+        "$MANIFEST_URL?t=$nowMs"
+
+    /** Human-readable local vs remote for UpToDate / Available (cannot silently lie). */
+    internal fun versionCompareLabel(remote: Info, localCode: Int = BuildConfig.VERSION_CODE, localName: String = BuildConfig.VERSION_NAME): String =
+        tr(
+            "Установлено: $localName (code $localCode)\nНа сервере: ${remote.versionName} (code ${remote.versionCode})",
+            "Installed: $localName (code $localCode)\nServer: ${remote.versionName} (code ${remote.versionCode})",
+        )
+
+    private val checkGeneration = AtomicLong(0)
+
+    private fun fetchManifestText(): String {
+        val req = Request.Builder()
+            .url(manifestRequestUrl())
+            .header("Cache-Control", "no-cache")
+            .header("Pragma", "no-cache")
+            .cacheControl(CacheControl.FORCE_NETWORK)
+            .build()
+        http.newCall(req).execute().use { r ->
+            // OkHttp follows redirects; log the final URL for diagnosis.
+            val finalUrl = r.request.url.toString()
+            if (!r.isSuccessful) error("HTTP ${r.code} @ $finalUrl")
+            val text = r.body!!.string()
+            android.util.Log.i("MURF-update", "manifest ok finalUrl=$finalUrl bytes=${text.length}")
+            return text
+        }
+    }
+
     /** Проверка: auto=true — не чаще раза в 6 ч и без повторного диалога для отложенной версии. */
     fun check(context: Context, auto: Boolean) {
         val p = prefs(context)
         val now = System.currentTimeMillis()
         if (auto && now - p.getLong("update_checked_at", 0) < CHECK_EVERY_MS) return
         if (_phase.value is Phase.Downloading || _phase.value is Phase.Installing) return
+        val gen = checkGeneration.incrementAndGet()
         _phase.value = Phase.Checking
         scope.launch {
-            val result = runCatching {
-                http.newCall(Request.Builder().url(MANIFEST_URL).header("Cache-Control", "no-cache").build()).execute().use { r ->
-                    if (!r.isSuccessful) error("HTTP ${r.code}")
-                    r.body!!.string()
-                }
-            }
-            p.edit().putLong("update_checked_at", now).apply()
+            val result = runCatching { fetchManifestText() }
+            if (gen != checkGeneration.get()) return@launch // superseded by a newer check
+            // Only stamp the throttle after a completed attempt for this generation.
+            p.edit().putLong("update_checked_at", System.currentTimeMillis()).apply()
             result.onFailure {
-                _phase.value = if (auto) Phase.Idle else Phase.Failed(tr("Не удалось проверить обновления: ${it.message}", "Could not check for updates: ${it.message}"))
+                android.util.Log.w("MURF-update", "manifest check failed: ${it.message}")
+                if (gen != checkGeneration.get()) return@launch
+                _phase.value = if (auto) Phase.Idle else Phase.Failed(
+                    tr(
+                        "Не удалось проверить обновления: ${it.message}",
+                        "Could not check for updates: ${it.message}",
+                    ),
+                )
             }.onSuccess { text ->
+                if (gen != checkGeneration.get()) return@launch
                 val info = parseManifest(text)
                 when {
-                    info == null -> _phase.value = if (auto) Phase.Idle else Phase.Failed(tr("Файл версии на сервере повреждён.", "The version file on the server is invalid."))
-                    !isNewer(info, BuildConfig.VERSION_CODE) -> _phase.value = Phase.UpToDate
+                    info == null -> _phase.value = if (auto) Phase.Idle else Phase.Failed(
+                        tr("Файл версии на сервере повреждён.", "The version file on the server is invalid."),
+                    )
+                    !isNewer(info, BuildConfig.VERSION_CODE) -> _phase.value = Phase.UpToDate(info)
                     else -> {
                         _phase.value = Phase.Available(info)
                         if (!auto || p.getInt("update_postponed_code", 0) < info.versionCode) _dialog.value = true
@@ -298,7 +338,10 @@ fun AppUpdateDialog() {
             Column(Modifier.fillMaxWidth()) {
                 when (val p = phase) {
                     is AppUpdates.Phase.Checking -> Text(tr("Проверяю…", "Checking…"))
-                    is AppUpdates.Phase.UpToDate -> Text(tr("У вас последняя версия (${BuildConfig.VERSION_NAME}).", "You have the latest version (${BuildConfig.VERSION_NAME})."))
+                    is AppUpdates.Phase.UpToDate -> Text(
+                        tr("У вас последняя версия.", "You have the latest version.") + "\n" +
+                            AppUpdates.versionCompareLabel(p.remote),
+                    )
                     is AppUpdates.Phase.Downloading -> {
                         Text(tr("Скачиваю… ${(p.progress * 100).toInt()}%", "Downloading… ${(p.progress * 100).toInt()}%"))
                         LinearProgressIndicator(progress = { p.progress }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
@@ -308,9 +351,10 @@ fun AppUpdateDialog() {
                     is AppUpdates.Phase.Failed -> Text(p.message)
                     else -> {}
                 }
-                if (info != null && info.notes.isNotBlank() && (phase is AppUpdates.Phase.Available || phase is AppUpdates.Phase.NeedsPermission)) {
+                if (info != null && (phase is AppUpdates.Phase.Available || phase is AppUpdates.Phase.NeedsPermission)) {
                     Text(
-                        tr("Сейчас: ${BuildConfig.VERSION_NAME}\n\n", "Current: ${BuildConfig.VERSION_NAME}\n\n") + info.notes,
+                        AppUpdates.versionCompareLabel(info) +
+                            (if (info.notes.isNotBlank()) "\n\n" + info.notes else ""),
                         modifier = Modifier.padding(top = 8.dp).heightIn(max = 280.dp).verticalScroll(rememberScrollState()),
                     )
                 }

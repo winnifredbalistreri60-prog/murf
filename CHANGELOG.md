@@ -11,6 +11,11 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.5 — 2026-10-24
+
+- **Fix updates for 1.10.3 clients:** `judge.dredd20.ru/downloads/murf-version.json` was stuck on 203 while GitHub already had 204 — in-app “Check for updates” said latest. Mirror synced to 1.10.4; 1.10.3→1.10.4 works again.
+- **AppUpdates harden:** cache-bust `?t=epoch` + `CacheControl.FORCE_NETWORK`; check generation so concurrent auto/manual cannot apply a stale result; UpToDate/Available always show installed vs server `versionCode`/`versionName`; Failed includes final URL / HTTP reason. APK URL still GitHub-only (`ALLOWED_PREFIX`).
+
 ## MURF 1.10.4 — 2026-10-24
 - **Auth → live models**: onboarding Connect and Harness (phone) get ProviderQuickSetup — encrypted API key → MurfProviders.fetchModels → model picker (honest 401 vs network errors).
 - **Вход → живые модели**: на Connect и в Harness на телефоне — ключ (Keystore) → список моделей с API → выбор модели; ошибки 401 и сети разделены.
