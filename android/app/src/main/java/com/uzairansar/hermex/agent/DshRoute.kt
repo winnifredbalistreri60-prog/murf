@@ -173,8 +173,30 @@ object DshLocal {
         }
 }
 
-/** Default public Harness URL hint when no paired remote session is remembered. */
-const val DSH_DEFAULT_REMOTE_HINT = "https://harness.193.176.78.248.sslip.io"
+
+/**
+ * Last successful DeepSeek Harness remote base URL (user's own server after pairing).
+ * Never ships a hardcoded owner IP — empty until this device pairs once.
+ */
+object DshRemotePrefs {
+    private const val PREFS = "murf_dsh_remote"
+    private const val KEY_BASE = "last_base"
+    private var sp: android.content.SharedPreferences? = null
+
+    fun init(context: Context) {
+        if (sp != null) return
+        sp = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    }
+
+    fun lastBase(): String? =
+        sp?.getString(KEY_BASE, null)?.trim()?.takeIf { it.isNotBlank() }
+
+    fun saveBase(url: String) {
+        val normalized = url.trim().trimEnd('/') + "/"
+        if (normalized == "https://" || normalized == "http://") return
+        sp?.edit()?.putString(KEY_BASE, normalized)?.apply()
+    }
+}
 
 fun findDshRemoteBase(cookieJar: CookieJar, serverUrls: List<String>): String? {
     for (raw in serverUrls) {
@@ -319,15 +341,66 @@ private fun DshRemotePanel(
     onProviders: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val servers by auth.servers.collectAsState()
-    val paired = remember(servers, cookieJar) {
-        findDshRemoteBase(cookieJar, servers.servers.map { it.urlString })
+    var remembered by remember { mutableStateOf(DshRemotePrefs.lastBase()) }
+    var refresh by remember { mutableIntStateOf(0) }
+    val candidateUrls = remember(servers, remembered, refresh) {
+        buildList {
+            remembered?.let { add(it) }
+            servers.servers.forEach { add(it.urlString) }
+        }.distinct()
     }
-    val hint = paired ?: DSH_DEFAULT_REMOTE_HINT
+    val paired = remember(candidateUrls, cookieJar, refresh) {
+        findDshRemoteBase(cookieJar, candidateUrls)
+    }
+    val openTarget = paired ?: remembered
+
+    var server by remember { mutableStateOf(remembered ?: "https://") }
+    var code by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var info by remember { mutableStateOf<String?>(null) }
+
+    val canSubmit = remember(server, code) {
+        val raw = if (server.contains("auth=", ignoreCase = true)) server else "$server $code"
+        val p = PairPayloadParser.parse(raw)
+        p != null && p.protocol == PairProtocol.DshRemote
+    }
 
     fun openUrl(url: String) {
         runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url.trimEnd('/') + "/")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
+    fun submitPair() {
+        val raw = if (server.contains("auth=", ignoreCase = true)) server.trim() else "${server.trim()} ${code.trim()}"
+        val payload = PairPayloadParser.parse(raw)
+        if (payload == null || payload.protocol != PairProtocol.DshRemote) {
+            error = tr("Нужна ссылка Harness с ?auth= или адрес + 8‑символьный код", "Need a Harness ?auth= link or address + 8-character code")
+            return
+        }
+        busy = true
+        error = null
+        info = null
+        scope.launch {
+            runCatching { auth.pairWithDshAuth(payload.server.toString(), payload.code) }
+                .onSuccess {
+                    DshRemotePrefs.saveBase(payload.server.toString())
+                    remembered = DshRemotePrefs.lastBase()
+                    server = remembered ?: payload.server.toString()
+                    code = ""
+                    info = tr(
+                        "Harness привязан. Дальше можно открывать без компа — cookie на телефоне. Для постоянного входа один раз сохраните «постоянный доступ» в Harness «Удалённый доступ».",
+                        "Harness paired. You can reopen from the phone — the cookie stays here. For lasting access, save the permanent code once from Harness Remote access.",
+                    )
+                    refresh++
+                }
+                .onFailure {
+                    error = it.message ?: it.javaClass.simpleName
+                }
+            busy = false
         }
     }
 
@@ -338,26 +411,57 @@ private fun DshRemotePanel(
                     Text(tr("Harness на Hermes", "Harness on Hermes"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         tr(
-                            "Удалённый DeepSeek Harness на сервере. Сопряжение: «Устройства» → «Ввести код» — ссылка с ?auth= или адрес + 8‑символьный код.",
-                            "Remote DeepSeek Harness on the server. Pair via Devices → Enter code — a ?auth= link or address + 8-character code.",
+                            "Удалённый DeepSeek Harness. Вставьте свою ссылку или адрес + код с экрана «Удалённый доступ» (временный 5 мин или постоянный). Чужой сервер по умолчанию не подставляется.",
+                            "Remote DeepSeek Harness. Paste your own link or address + code from Remote access (5‑min temporary or permanent). No third-party server is prefilled.",
                         ),
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    if (paired != null) {
+                    if (openTarget != null && paired != null) {
                         Text(tr("Сессия есть: ", "Session ready: ") + paired, style = MaterialTheme.typography.bodySmall)
                         Button(onClick = { openUrl(paired) }, modifier = Modifier.fillMaxWidth()) {
                             Text(tr("Открыть Harness", "Open Harness"))
                         }
-                    } else {
-                        Text(tr("Пока нет cookie dsh_remote_session. Сопрягитесь или вставьте ссылку на экране «Устройства».",
-                            "No dsh_remote_session cookie yet. Pair or paste the link on the Devices screen."),
-                            style = MaterialTheme.typography.bodySmall)
-                        Button(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
-                            Text(tr("Устройства — ввести код", "Devices — enter code"))
-                        }
-                        OutlinedButton(onClick = { openUrl(hint) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(tr("Открыть ", "Open ") + hint.removePrefix("https://").removePrefix("http://"))
-                        }
+                    } else if (remembered != null) {
+                        Text(tr("Запомнен адрес: ", "Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            tr("Сессии ещё нет — введите код ещё раз (лучше постоянный).", "No session yet — enter the code again (prefer the permanent one)."),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = server,
+                        onValueChange = { server = it },
+                        label = { Text(tr("Адрес или ссылка ?auth=", "Address or ?auth= link")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                    )
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it.trim().uppercase() },
+                        label = { Text(tr("Код (8 символов, если не в ссылке)", "Code (8 chars if not in the link)")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                    )
+                    Text(
+                        tr(
+                            "Один раз сохраните постоянный код в Harness «Удалённый доступ» — дальше без экрана на компе.",
+                            "Save the permanent code once in Harness Remote access — then no desktop screen needed.",
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Button(
+                        onClick = { submitPair() },
+                        enabled = canSubmit && !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (busy) tr("Подключение…", "Connecting…") else tr("Подключить Harness", "Connect Harness"))
+                    }
+                    if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    if (info != null) Text(info!!, style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
+                        Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
                     }
                 }
             }

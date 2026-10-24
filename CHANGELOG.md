@@ -7,6 +7,12 @@ Security sections per release.
 
 ## [Unreleased]
 
+## MURF 1.10.3 — 2026-10-24
+- **Security / privacy**: removed personal default Harness remote URL from the Hermes tab. Unpaired users only get Devices pairing — no open button to an owner VDS IP.
+- **Безопасность**: убран личный URL Harness по умолчанию со вкладки «На Hermes». Без сопряжения — только «Устройства», чужой сервер не подставляется.
+- **Phone-only Harness pair**: «На Hermes» tab has inline address/?auth= + code → pairWithDshAuth; remembers last successful base URL (not a hardcoded owner IP). Permanent access code from Harness Remote access works the same as the 8-char temporary code.
+- **Сопряжение с телефона**: на вкладке «На Hermes» ввод адреса/?auth= и кода на месте; запоминается свой последний URL. Постоянный код из «Удалённый доступ» работает так же, как временный 8‑символьный.
+
 ## MURF 1.10.2 — 2026-10-24
 - **Simplified menu**: primary sidebar is Screen → Harness → Bots → Devices → Local → Drive → Own VDS → Tasks → Kanban → More. Rare items (Phone & Termux, Providers, Bot tasks, Server CLIs, Skills, Memory, Insights) live under More.
 - **Harness hub**: one «Harness» entry with tabs On phone | On Hermes (remote pairing / open web UI).

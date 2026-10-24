@@ -39,10 +39,10 @@ class MurfPairingTest {
         assertEquals("https://harness.example.com/", https.server.toString())
         assertEquals("AB23EFGH", https.code)
 
-        val lan = PairPayloadParser.parse("http://192.168.6.113:3088/?auth=YZDYTAUH")
+        val lan = PairPayloadParser.parse("http://192.168.1.10:3088/?auth=YZDYTAUH")
         assertNotNull(lan)
         assertEquals(PairProtocol.DshRemote, lan!!.protocol)
-        assertEquals("http://192.168.6.113:3088/", lan.server.toString())
+        assertEquals("http://192.168.1.10:3088/", lan.server.toString())
         assertEquals("YZDYTAUH", lan.code)
     }
 

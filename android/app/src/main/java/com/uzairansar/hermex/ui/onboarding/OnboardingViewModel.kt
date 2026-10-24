@@ -131,8 +131,10 @@ class OnboardingViewModel(
                 when (payload.protocol) {
                     com.uzairansar.hermex.agent.PairProtocol.HermesMurf ->
                         authRepository.pairWithCode(payload.server.toString(), payload.code)
-                    com.uzairansar.hermex.agent.PairProtocol.DshRemote ->
+                    com.uzairansar.hermex.agent.PairProtocol.DshRemote -> {
                         authRepository.pairWithDshAuth(payload.server.toString(), payload.code)
+                        com.uzairansar.hermex.agent.DshRemotePrefs.saveBase(payload.server.toString())
+                    }
                 }
             }
             result

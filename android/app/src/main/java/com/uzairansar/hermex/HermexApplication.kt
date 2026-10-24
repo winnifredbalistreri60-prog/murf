@@ -39,6 +39,7 @@ class HermexApplication : Application() {
         super.onCreate()
         AppVisibilityTracker.register(this)
         com.uzairansar.hermex.agent.UiPrefs.init(this)
+        com.uzairansar.hermex.agent.DshRemotePrefs.init(this)
         com.uzairansar.hermex.agent.ScreenHandoff.init(this)
         com.uzairansar.hermex.agent.NetworkMonitor.init(this)
         container = AppContainer(this)
