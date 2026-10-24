@@ -110,15 +110,15 @@ class OnboardingViewModel(
         }
     }
 
-    /** Вход по QR (MURF): одноразовый код из `murf pair` или с другого устройства. */
+    /** Вход по QR/ссылке: MURF `murf://pair` или DeepSeek Harness `?auth=`. */
     fun pairWithQr(raw: String) {
         val payload = com.uzairansar.hermex.agent.PairPayloadParser.parse(raw)
         if (payload == null) {
             _state.update {
                 it.copy(
                     message = com.uzairansar.hermex.agent.tr(
-                        "Это не QR привязки MURF (нужен QR из «murf pair» или из «Устройства» в MURF).",
-                        "This is not a MURF pairing QR (use the QR from `murf pair` or from MURF → Devices).",
+                        "Это не QR привязки (нужен murf://pair или ссылка Harness с ?auth=).",
+                        "This is not a pairing QR (need murf://pair or a Harness ?auth= link).",
                     ),
                     messageIsError = true,
                 )
@@ -127,8 +127,24 @@ class OnboardingViewModel(
         }
         viewModelScope.launch {
             _state.update { it.copy(isBusy = true, serverUrl = payload.server.toString(), message = null, messageIsError = false) }
-            runSuspendCatching { authRepository.pairWithCode(payload.server.toString(), payload.code) }
-                .onSuccess { _state.update { it.copy(isBusy = false, isConnected = true) } }
+            val result = runSuspendCatching {
+                when (payload.protocol) {
+                    com.uzairansar.hermex.agent.PairProtocol.HermesMurf ->
+                        authRepository.pairWithCode(payload.server.toString(), payload.code)
+                    com.uzairansar.hermex.agent.PairProtocol.DshRemote ->
+                        authRepository.pairWithDshAuth(payload.server.toString(), payload.code)
+                }
+            }
+            result
+                .onSuccess {
+                    val note = if (payload.protocol == com.uzairansar.hermex.agent.PairProtocol.DshRemote) {
+                        com.uzairansar.hermex.agent.tr(
+                            "Harness привязан (cookie). Чат Hermex к Harness не подключается — откройте веб-UI сервера.",
+                            "Harness paired (cookie). Hermex chat APIs are Hermes-only — open the server web UI.",
+                        )
+                    } else null
+                    _state.update { it.copy(isBusy = false, isConnected = true, message = note, messageIsError = false) }
+                }
                 .onFailure { error ->
                     _state.update {
                         it.copy(

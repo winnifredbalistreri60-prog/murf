@@ -48,6 +48,8 @@ class AuthRepository(
     private val cookieJar: PersistentCookieJar,
     private val clearCachedServer: suspend (String) -> Unit = {},
     private val deviceSessions: DeviceSessions? = null,
+    /** DeepSeek Harness remote: GET /?auth= → cookie dsh_remote_session (не Hermes relay). */
+    private val dshPairing: (suspend (okhttp3.HttpUrl, String) -> Unit)? = null,
 ) {
     private val authGenerations = ConcurrentHashMap<String, AtomicLong>()
     private val accountSelectionGeneration = AtomicLong()
@@ -144,6 +146,36 @@ class AuthRepository(
     }
 
     fun hasDeviceToken(server: okhttp3.HttpUrl): Boolean = deviceSessions?.hasToken(server) == true
+
+    /**
+     * Сопряжение с DeepSeek Harness remote (`?auth=`).
+     * Пишет `dsh_remote_session` в cookie jar и активирует сервер в реестре.
+     * Не вызывает Hermes `/health` / `/api/auth/…` — chat API Hermex к Harness не применим;
+     * дальше UI должен открывать веб-UI Harness (WebView/Custom Tab). TODO: отдельный экран DSH.
+     */
+    suspend fun pairWithDshAuth(serverUrlString: String, code: String) {
+        val claim = dshPairing ?: throw IllegalStateException("DSH pairing is unavailable.")
+        val url = normalizeServerUrl(serverUrlString)
+        val generation = advanceAuthGeneration(url)
+        withAuthMutation(url) {
+            ensureCurrentAuthGeneration(url, generation)
+            try {
+                claim(url, code)
+                ensureCurrentAuthGeneration(url, generation)
+                runCatching { clearCachedServer(url.toString()) }
+                ensureCurrentAuthGeneration(url, generation)
+                accountSelectionGeneration.incrementAndGet()
+                val account = withSecureStorage {
+                    registry.activate(url, loggedOut = false)
+                }
+                _state.value = AuthState.LoggedIn(url, account)
+            } catch (error: Throwable) {
+                discardSupersededCookies(url, generation)
+                throw error
+            }
+        }
+    }
+
 
     suspend fun addServer(
         serverUrlString: String,

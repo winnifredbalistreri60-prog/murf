@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.10.1 — 2026-10-24
+- **DeepSeek Harness remote pairing**: enter a full `?auth=` link or server address + 8-character code (alphabet without 0/1/I/O). Claims `dsh_remote_session` for the Harness web UI.
+- **Сопряжение с DeepSeek Harness**: «Ввести код» принимает полную ссылку `?auth=` или адрес сервера и 8-символьный код (алфавит без 0/1/I/O). Сохраняется cookie `dsh_remote_session` для веб-UI Harness.
+- Manual pair dialog copy clarifies MURF vs Harness flows (RU/EN).
+
 ## 1.10.0 — 2026-10-21
 - **DeepSeek Harness на телефоне**: агент dsh (0.2.1-rc.2) в локальной среде (Ubuntu в proot, Node 22), без сервера. Установка из приложения, идемпотентная. Чат со стримингом, продолжение сессий, список сессий. Телеметрия dsh выключена.
 - **Провайдеры и ключи**: DeepSeek, OpenAI, Anthropic, Google, xAI, OpenRouter, свой OpenAI-совместимый. Ключи хранятся зашифрованно и передаются в dsh только через переменные окружения; списки моделей загружаются с провайдера.

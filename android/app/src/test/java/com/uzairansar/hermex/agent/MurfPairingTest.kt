@@ -32,6 +32,40 @@ class MurfPairingTest {
     }
 
     @Test
+    fun parsesDshAuthLink() {
+        val https = PairPayloadParser.parse("https://harness.example.com/?auth=AB23EFGH")
+        assertNotNull(https)
+        assertEquals(PairProtocol.DshRemote, https!!.protocol)
+        assertEquals("https://harness.example.com/", https.server.toString())
+        assertEquals("AB23EFGH", https.code)
+
+        val lan = PairPayloadParser.parse("http://192.168.6.113:3088/?auth=YZDYTAUH")
+        assertNotNull(lan)
+        assertEquals(PairProtocol.DshRemote, lan!!.protocol)
+        assertEquals("http://192.168.6.113:3088/", lan.server.toString())
+        assertEquals("YZDYTAUH", lan.code)
+    }
+
+    @Test
+    fun parsesDshManualUrlAndCode() {
+        val p = PairPayloadParser.parse("https://harness.example.com/  AB23EFGH")
+        assertNotNull(p)
+        assertEquals(PairProtocol.DshRemote, p!!.protocol)
+        assertEquals("AB23EFGH", p.code)
+    }
+
+    @Test
+    fun rejectsPublicHttpDshLink() {
+        assertNull(PairPayloadParser.parse("http://public.example.com/?auth=AB23EFGH"))
+    }
+
+    @Test
+    fun hermesMurfProtocolUnchanged() {
+        val p = PairPayloadParser.parse("murf://pair?v=1&u=https%3A%2F%2Fagent.example.com&c=ABCDEFGHIJKLMNOPQRST")
+        assertEquals(PairProtocol.HermesMurf, p!!.protocol)
+    }
+
+    @Test
     fun parsesManualServerAndCode() {
         val p = PairPayloadParser.parse("  https://agent.example.com/chat  abcdefghijklmnopqrst ")
         assertEquals("https://agent.example.com/", p!!.server.toString())
@@ -122,6 +156,36 @@ class MurfPairingTest {
         }
     }
 
+
+    @Test
+    fun pairWithDshAuthStoresSessionCookie() = runBlocking {
+        val server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val auth = request.url.queryParameter("auth")
+                return if (request.url.encodedPath == "/" && auth == "AB23EFGH") {
+                    MockResponse.Builder().code(302)
+                        .addHeader("Location", "/")
+                        .addHeader("Set-Cookie", "dsh_remote_session=v1.testsession; Path=/; HttpOnly; SameSite=Lax")
+                        .build()
+                } else {
+                    MockResponse.Builder().code(200).addHeader("Content-Type", "text/html").body("<html>ok</html>").build()
+                }
+            }
+        }
+        server.start()
+        try {
+            val env = Env()
+            val url = server.url("/").toString()
+            env.auth.pairWithDshAuth(url, "AB23EFGH")
+            assertTrue(env.auth.state.value is AuthState.LoggedIn)
+            val base = server.url("/")
+            assertTrue(env.jar.loadForRequest(base).any { it.name == "dsh_remote_session" && it.value.contains("testsession") })
+        } finally {
+            server.close()
+        }
+    }
+
     private class Env {
         val secrets = MemorySecrets()
         val registry = ServerRegistry(secrets)
@@ -129,12 +193,14 @@ class MurfPairingTest {
         val http = OkHttpClient.Builder().cookieJar(jar).build()
         val tokens = DeviceTokenStore(secrets)
         val api = MurfPairingApi(http, jar)
+        val dshApi = DshRemotePairingApi(http, jar)
         val auth = AuthRepository(
             registry = registry,
             clientFactory = { url -> HermesApiClient(baseUrl = url, client = http, customHeaders = { emptyList() }) },
             probeClientFactory = { url, headers -> HermesApiClient(baseUrl = url, client = http, customHeaders = { headers }) },
             cookieJar = jar,
             deviceSessions = MurfDeviceSessions(api, tokens) { "Test phone" },
+            dshPairing = { url, code -> dshApi.claim(url, code) },
         )
     }
 

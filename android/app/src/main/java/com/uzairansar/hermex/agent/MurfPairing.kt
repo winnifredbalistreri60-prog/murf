@@ -20,13 +20,28 @@ import java.net.URLDecoder
 import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 
-/** Содержимое QR привязки: murf://pair?v=1&u=<адрес сервера>&c=<одноразовый код>. */
-data class PairPayload(val server: HttpUrl, val code: String)
+/**
+ * Содержимое QR/ссылки привязки.
+ * - [PairProtocol.HermesMurf]: murf://pair?v=1&u=&c= → relay `/phone/up/pair/…` → cookie `hermes_session`
+ * - [PairProtocol.DshRemote]: `https://host/?auth=CODE` (DeepSeek Harness remote) → cookie `dsh_remote_session`
+ *
+ * После DSH-сопряжения сессия годится для веб-UI Harness (cookie), а не для HermesApiClient chat API.
+ */
+enum class PairProtocol { HermesMurf, DshRemote }
+
+data class PairPayload(
+    val server: HttpUrl,
+    val code: String,
+    val protocol: PairProtocol = PairProtocol.HermesMurf,
+)
 
 object PairPayloadParser {
-    private val CODE = Regex("^[A-Z2-7]{16,40}$")
+    /** Коды MURF/Hermes: base32 без 0/1/8/9, длина 16–40. */
+    private val HERMES_CODE = Regex("^[A-Z2-7]{16,40}$")
+    /** Коды DSH remote: алфавит без 0/1/I/O, ровно 8 символов. */
+    private val DSH_CODE = Regex("^[2-9A-HJ-NP-Z]{8}$")
 
-    /** Разбирает QR или ручной ввод «адрес код». Возвращает null для чужих/опасных данных. */
+    /** Разбирает QR или ручной ввод. Возвращает null для чужих/опасных данных. */
     fun parse(raw: String): PairPayload? {
         val text = raw.trim()
         if (text.startsWith("murf://pair", ignoreCase = true)) {
@@ -37,22 +52,49 @@ object PairPayloadParser {
             }.toMap()
             val version = params["v"]?.toIntOrNull() ?: 1
             if (version != 1) return null
-            return build(params["u"].orEmpty(), params["c"].orEmpty())
+            return buildHermes(params["u"].orEmpty(), params["c"].orEmpty())
+        }
+        // DeepSeek Harness remote: https://host/?auth=CODE (или http://LAN:port/?auth=)
+        text.toHttpUrlOrNull()?.let { url ->
+            val auth = url.queryParameter("auth")?.trim().orEmpty()
+            if (auth.isNotEmpty()) return buildDsh(url, auth)
         }
         val parts = text.split(Regex("\\s+"))
-        if (parts.size == 2) return build(parts[0], parts[1])
+        if (parts.size == 2) {
+            val code = parts[1].trim().uppercase()
+            if (DSH_CODE.matches(code)) return buildDshUrl(parts[0], code)
+            if (HERMES_CODE.matches(code)) return buildHermes(parts[0], code)
+        }
         return null
     }
 
-    private fun build(serverText: String, codeText: String): PairPayload? {
+    private fun buildHermes(serverText: String, codeText: String): PairPayload? {
         val code = codeText.trim().uppercase()
-        if (!CODE.matches(code)) return null
+        if (!HERMES_CODE.matches(code)) return null
+        val base = normalizeServer(serverText) ?: return null
+        return PairPayload(base, code, PairProtocol.HermesMurf)
+    }
+
+    private fun buildDshUrl(serverText: String, code: String): PairPayload? {
+        val base = normalizeServer(serverText) ?: return null
+        return PairPayload(base, code, PairProtocol.DshRemote)
+    }
+
+    private fun buildDsh(url: HttpUrl, codeText: String): PairPayload? {
+        val code = codeText.trim().uppercase()
+        if (!DSH_CODE.matches(code)) return null
+        if (url.username.isNotEmpty() || url.password.isNotEmpty()) return null
+        if (!url.isHttps && !isPrivateNetworkHost(url.host)) return null
+        val base = url.newBuilder().encodedPath("/").query(null).fragment(null).build()
+        return PairPayload(base, code, PairProtocol.DshRemote)
+    }
+
+    private fun normalizeServer(serverText: String): HttpUrl? {
         val server = serverText.trim().toHttpUrlOrNull() ?: return null
         if (server.username.isNotEmpty() || server.password.isNotEmpty()) return null
         // только HTTPS, кроме адресов локальной сети (как и при обычном входе)
         if (!server.isHttps && !isPrivateNetworkHost(server.host)) return null
-        val base = server.newBuilder().encodedPath("/").query(null).fragment(null).build()
-        return PairPayload(base, code)
+        return server.newBuilder().encodedPath("/").query(null).fragment(null).build()
     }
 }
 
@@ -121,6 +163,47 @@ sealed interface DeviceSessionResult {
 }
 
 class PairingException(message: String) : IOException(message)
+
+/**
+ * Сопряжение с DeepSeek Harness remote access (`?auth=` → cookie `dsh_remote_session`).
+ * Не вызывает Hermes `/phone/up/pair/…`. Родные chat API Hermex остаются Hermes-specific;
+ * после успеха сервер в [ServerRegistry] и cookie в общем jar — для открытия веб-UI Harness
+ * (Custom Tab / WebView). TODO: отдельный экран/Custom Tab для DSH, если ещё нет.
+ */
+class DshRemotePairingApi(
+    baseClient: OkHttpClient,
+    private val cookieJar: CookieJar,
+) {
+    private val client = baseClient.newBuilder().cookieJar(cookieJar)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    /** GET `/?auth=CODE`, сохранить Set-Cookie `dsh_remote_session` в общий jar. */
+    suspend fun claim(server: HttpUrl, code: String) = withContext(Dispatchers.IO) {
+        val target = server.newBuilder().encodedPath("/").query(null).addQueryParameter("auth", code).build()
+        val response = client.newCall(Request.Builder().url(target).get().build()).execute()
+        response.use { r ->
+            val cookies = cookieJar.loadForRequest(server)
+            val hasSession = cookies.any { it.name == "dsh_remote_session" && it.value.isNotBlank() }
+            if (!hasSession) {
+                throw PairingException(
+                    tr(
+                        "Harness не выдал сессию (проверьте код и что доступ извне включён)",
+                        "Harness did not issue a session (check the code and that remote access is enabled)",
+                    ),
+                )
+            }
+            // 302→200 ожидаемы; 401/403 — отказ
+            if (r.code == 401 || r.code == 403 || r.code == 429) {
+                throw PairingException(tr("код Harness отклонён или слишком много попыток", "Harness code rejected or rate-limited") + " (HTTP ${r.code})")
+            }
+        }
+    }
+}
+
 
 /** HTTP-клиент эндпоинтов привязки relay MURF. */
 class MurfPairingApi(

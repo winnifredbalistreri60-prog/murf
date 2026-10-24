@@ -218,17 +218,34 @@ fun MurfDevicesRoute(
 fun ManualPairDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
     var server by remember { mutableStateOf("https://") }
     var code by remember { mutableStateOf("") }
+    // MURF Hermes: 16–40; DeepSeek Harness remote: 8 (алфавит без 0/1/I/O) или полная ссылка ?auth= в поле адреса.
+    val canSubmit = PairPayloadParser.parse("$server $code") != null ||
+        PairPayloadParser.parse(server) != null
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(tr("Код привязки", "Pairing code")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(tr("На сервере выполните «murf pair» и введите адрес и код.", "Run `murf pair` on the server and enter the address and code."), style = MaterialTheme.typography.bodySmall)
+                Text(
+                    tr(
+                        "MURF: «murf pair» + адрес и код. Harness: ссылка с ?auth= или адрес и 8-символьный код.",
+                        "MURF: `murf pair` + address and code. Harness: a ?auth= link, or address + 8-char code.",
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 OutlinedTextField(server, { server = it.trim() }, label = { Text(tr("Адрес сервера", "Server address")) }, singleLine = true)
                 OutlinedTextField(code, { code = it.trim().uppercase() }, label = { Text(tr("Код", "Code")) }, singleLine = true)
             }
         },
-        confirmButton = { TextButton(enabled = code.length >= 16, onClick = { onSubmit("$server $code") }) { Text(tr("Подключить", "Connect")) } },
+        confirmButton = {
+            TextButton(
+                enabled = canSubmit,
+                onClick = {
+                    val raw = if (server.contains("auth=", ignoreCase = true)) server else "$server $code"
+                    onSubmit(raw)
+                },
+            ) { Text(tr("Подключить", "Connect")) }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
     )
 }
