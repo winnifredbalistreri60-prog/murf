@@ -126,6 +126,15 @@ function connect(){
   MS.attempts++; MS.ws='connecting';
   try{ rfb=new RFB($('screen'),url,{shared:true}); }catch(e){ MS.ws='error'; MS.lastError=String(e&&e.message||e); setTimeout(connect,5000); return; }
   rfb.viewOnly=!CTL; rfb.scaleViewport=true; rfb.resizeSession=false; rfb.background='#000';
+  // Плавность на мобильном WAN: Tight/JPEG, чуть ниже качество кадров → меньше битрейт → ближе к FrameRate 30.
+  // Дефолты noVNC: qualityLevel=6, compressionLevel=2. URL ?ql=0..9 / ?cl=0..9 — ручная подстройка.
+  (function(){
+    var ql=parseInt(q.get('ql')||'4',10), cl=parseInt(q.get('cl')||'2',10);
+    if(!Number.isInteger(ql)||ql<0||ql>9) ql=4;
+    if(!Number.isInteger(cl)||cl<0||cl>9) cl=2;
+    rfb.qualityLevel=ql; rfb.compressionLevel=cl;
+    MS.stream={qualityLevel:ql,compressionLevel:cl};
+  })();
   rfb.addEventListener('securityfailure',e=>{MS.lastError='securityfailure: '+((e.detail&&e.detail.reason)||'');});
   rfb.focusOnClick=CTL; rfb.showDotCursor=CTL;
   rfb.addEventListener('connect',()=>{connected=true;MS.connected=true;MS.ws='open';MS.everConnected=true;$('off').style.display='none';status();});
