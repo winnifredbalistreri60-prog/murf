@@ -116,13 +116,22 @@ object MurfProviders {
                 ProviderKind.Anthropic -> rb.header("x-api-key", key).header("anthropic-version", "2023-06-01")
                 else -> if (key.isNotBlank()) rb.header("Authorization", "Bearer $key")
             }
-            http.newCall(rb.get().build()).execute().use { r ->
-                val body = r.body?.string().orEmpty()
-                if (!r.isSuccessful) error(when (r.code) {
-                    401, 403 -> tr("Ключ не принят (HTTP ${r.code})", "Key rejected (HTTP ${r.code})")
-                    else -> "HTTP ${r.code}: " + body.replace(key, "***").take(200)
-                })
-                parseModels(body)
+            try {
+                http.newCall(rb.get().build()).execute().use { r ->
+                    val body = r.body?.string().orEmpty()
+                    if (!r.isSuccessful) error(when (r.code) {
+                        401, 403 -> tr("Ключ не принят (HTTP ${r.code})", "Key rejected (HTTP ${r.code})")
+                        else -> "HTTP ${r.code}: " + body.replace(key, "***").take(200)
+                    })
+                    parseModels(body)
+                }
+            } catch (e: java.net.UnknownHostException) {
+                throw e
+            } catch (e: java.net.SocketTimeoutException) {
+                throw e
+            } catch (e: java.io.IOException) {
+                // Preserve IO/network cause for ProviderApiErrors; avoid wrapping into generic.
+                throw e
             }
         }
     }

@@ -78,7 +78,7 @@ class OnboardingViewModel(
                     _state.update {
                         it.copy(
                             isBusy = false,
-                            message = error.message ?: "Connection failed.",
+                            message = friendlyAuthError(error).ifBlank { "Connection failed." },
                             messageIsError = true,
                         )
                     }
@@ -96,7 +96,7 @@ class OnboardingViewModel(
                     _state.update { it.copy(isBusy = false, isConnected = true) }
                 }
                 .onFailure { error ->
-                    val message = error.message ?: "Sign in failed."
+                    val message = friendlyAuthError(error).ifBlank { "Sign in failed." }
                     _state.update {
                         it.copy(
                             isBusy = false,
@@ -152,11 +152,34 @@ class OnboardingViewModel(
                         it.copy(
                             isBusy = false,
                             message = com.uzairansar.hermex.agent.tr("Привязка не удалась: ", "Pairing failed: ") +
-                                (error.message ?: error.javaClass.simpleName),
+                                friendlyAuthError(error),
                             messageIsError = true,
                         )
                     }
                 }
+        }
+    }
+
+
+    private fun friendlyAuthError(error: Throwable): String {
+        val raw = error.message ?: error.javaClass.simpleName
+        return when {
+            error is java.net.UnknownHostException ||
+                error is java.net.SocketTimeoutException ||
+                raw.contains("Unable to resolve host", ignoreCase = true) ||
+                raw.contains("failed to connect", ignoreCase = true) ||
+                raw.contains("timeout", ignoreCase = true) ->
+                com.uzairansar.hermex.agent.tr(
+                    "Сервер недоступен. Проверьте сеть или адрес и попробуйте снова.",
+                    "Server unreachable. Check the network or address and try again.",
+                )
+            raw.contains("401") || raw.contains("Unauthorized", ignoreCase = true) ||
+                (raw.contains("password", ignoreCase = true) && raw.contains("invalid", ignoreCase = true)) ->
+                com.uzairansar.hermex.agent.tr(
+                    "Неверный пароль или нет доступа (401).",
+                    "Wrong password or no access (401).",
+                )
+            else -> raw
         }
     }
 

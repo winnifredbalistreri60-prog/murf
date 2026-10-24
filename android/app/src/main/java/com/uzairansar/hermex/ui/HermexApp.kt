@@ -1042,18 +1042,56 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
     offer?.let { text ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { offer = null },
-            title = { androidx.compose.material3.Text(tr("Сервер Hermes недоступен", "Hermes server unreachable")) },
-            text = { androidx.compose.material3.Text((server?.host ?: tr("Сервер", "Server")) + tr(" не отвечает. ", " is not responding. ") + text + tr(" Переключиться на «Телефон (локально)»?", " Switch to “Phone (local)”?")) },
+            title = { androidx.compose.material3.Text(tr("Сервер недоступен", "Server unreachable")) },
+            text = {
+                androidx.compose.material3.Text(
+                    tr(
+                        "Сервер недоступен. Проверьте сеть или адрес и попробуйте снова. ",
+                        "Server unreachable. Check the network or address and try again. ",
+                    ) + (server?.host?.let { "$it. " } ?: "") + text,
+                )
+            },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
-                    offer = null
                     scope.launch {
-                        com.uzairansar.hermex.agent.LocalEnv.switchToLocal(context, container.authRepository)
-                            .onFailure { com.uzairansar.hermex.agent.AgentShare.toast(context, tr("Не удалось: ", "Failed: ") + (it.message ?: "")) }
+                        val ok = server != null && com.uzairansar.hermex.agent.LocalEnv.reachable(server)
+                        if (ok) {
+                            offer = null
+                            com.uzairansar.hermex.agent.AgentShare.toast(
+                                context,
+                                tr("Сервер снова отвечает", "Server is responding again"),
+                            )
+                        } else {
+                            com.uzairansar.hermex.agent.AgentShare.toast(
+                                context,
+                                tr(
+                                    "Сервер недоступен. Проверьте сеть или адрес и попробуйте снова.",
+                                    "Server unreachable. Check the network or address and try again.",
+                                ),
+                            )
+                        }
                     }
-                }) { androidx.compose.material3.Text(tr("Переключиться", "Switch")) }
+                }) { androidx.compose.material3.Text(tr("Переподключить", "Reconnect")) }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { offer = null }) { androidx.compose.material3.Text(tr("Остаться", "Stay")) } },
+            dismissButton = {
+                androidx.compose.foundation.layout.Row {
+                    androidx.compose.material3.TextButton(onClick = {
+                        offer = null
+                        scope.launch {
+                            com.uzairansar.hermex.agent.LocalEnv.switchToLocal(context, container.authRepository)
+                                .onFailure {
+                                    com.uzairansar.hermex.agent.AgentShare.toast(
+                                        context,
+                                        tr("Не удалось: ", "Failed: ") + (it.message ?: ""),
+                                    )
+                                }
+                        }
+                    }) { androidx.compose.material3.Text(tr("На телефон", "Use phone")) }
+                    androidx.compose.material3.TextButton(onClick = { offer = null }) {
+                        androidx.compose.material3.Text(tr("Остаться", "Stay"))
+                    }
+                }
+            },
         )
     }
 }

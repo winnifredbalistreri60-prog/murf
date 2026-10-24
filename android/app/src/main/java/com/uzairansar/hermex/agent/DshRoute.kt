@@ -302,10 +302,16 @@ private fun DshPhonePanel(
                             }
                         }
                         val sel = remember(refresh, status) { MurfProviders.selected(context) }
-                        Text(tr("Модель: ", "Model: ") + (sel?.let { "${it.first} / ${it.second}" } ?: tr("не выбрана", "not chosen")), style = MaterialTheme.typography.bodySmall)
+                        if (sel == null) {
+                            ProviderQuickSetup(Modifier.fillMaxWidth())
+                        } else {
+                            Text(tr("Модель: ", "Model: ") + "${sel.first} / ${sel.second}", style = MaterialTheme.typography.bodySmall)
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = onProviders) { Text(tr("Провайдеры и ключи", "Providers & keys")) }
-                            Button(onClick = { onOpenChat("") }, enabled = st?.optBoolean("installed") == true) { Text(tr("Новый чат", "New chat")) }
+                            OutlinedButton(onClick = onProviders) { Text(tr("Все провайдеры", "All providers")) }
+                            Button(onClick = { onOpenChat("") }, enabled = st?.optBoolean("installed") == true && sel != null) {
+                                Text(tr("Новый чат", "New chat"))
+                            }
                         }
                         Text(tr("DeepSeek Harness — открытый агент DeepSeek (MIT). Работает в Ubuntu (proot) на телефоне, ключи хранятся в MURF зашифрованными. Телеметрия dsh отключена.",
                             "DeepSeek Harness is DeepSeek's open agent (MIT). It runs in Ubuntu (proot) on the phone; keys are stored encrypted in MURF. dsh telemetry is off."),

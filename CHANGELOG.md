@@ -11,6 +11,13 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.4 — 2026-10-24
+- **Auth → live models**: onboarding Connect and Harness (phone) get ProviderQuickSetup — encrypted API key → MurfProviders.fetchModels → model picker (honest 401 vs network errors).
+- **Вход → живые модели**: на Connect и в Harness на телефоне — ключ (Keystore) → список моделей с API → выбор модели; ошибки 401 и сети разделены.
+- **Server health / reconnect**: unreachable banner with Reconnect on sessions (cached/offline) and LocalFallbackOffer dialog; Russian «Сервер недоступен…».
+- **Сервер недоступен / Переподключить**: баннер в списке сессий и диалог fallback; без мёртвого мастера SelfServe в навигации.
+- **No SelfServe wizard** in this release (thin cut); public Agent Screen auto-start remains in murf-install from the parallel track.
+
 ## MURF 1.10.3 — 2026-10-24
 - **Security / privacy**: removed personal default Harness remote URL from the Hermes tab. Unpaired users only get Devices pairing — no open button to an owner VDS IP.
 - **Безопасность**: убран личный URL Harness по умолчанию со вкладки «На Hermes». Без сопряжения — только «Устройства», чужой сервер не подставляется.

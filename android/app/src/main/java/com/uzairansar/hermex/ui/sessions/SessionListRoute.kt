@@ -399,7 +399,7 @@ fun SessionListRoute(
                     }
                 }
                 item {
-                    StatusStack(state = state)
+                    StatusStack(state = state, onReconnect = viewModel::refreshAll)
                 }
                 if (state.isLoading && state.sessions.isEmpty()) {
                     item {
@@ -1551,7 +1551,7 @@ private fun ProjectColorSwatch(
 }
 
 @Composable
-private fun StatusStack(state: SessionListUiState) {
+private fun StatusStack(state: SessionListUiState, onReconnect: () -> Unit = {}) {
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (state.isSearchingRemoteSessions) {
             Row(
@@ -1562,16 +1562,48 @@ private fun StatusStack(state: SessionListUiState) {
                 StatusLine("Searching sessions", MaterialTheme.colorScheme.secondary)
             }
         }
-        if (state.isViewingCachedData) StatusLine("Offline cache", MaterialTheme.colorScheme.tertiary)
+        if (state.isViewingCachedData) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusLine(
+                    com.uzairansar.hermex.agent.tr(
+                        "Сервер недоступен. Показан кэш. Проверьте сеть или адрес.",
+                        "Server unreachable. Showing cache. Check network or address.",
+                    ),
+                    MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onReconnect, enabled = !state.isLoading) {
+                    Text(
+                        if (state.isLoading) com.uzairansar.hermex.agent.tr("…", "…")
+                        else com.uzairansar.hermex.agent.tr("Переподключить", "Reconnect"),
+                    )
+                }
+            }
+        }
         state.notice?.let { StatusLine(it, MaterialTheme.colorScheme.tertiary) }
         state.searchError?.let { StatusLine(it, MaterialTheme.colorScheme.error) }
-        state.error?.let { StatusLine(it, MaterialTheme.colorScheme.error) }
+        state.error?.let { err ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusLine(err, MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                TextButton(onClick = onReconnect, enabled = !state.isLoading) {
+                    Text(com.uzairansar.hermex.agent.tr("Переподключить", "Reconnect"))
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun StatusLine(text: String, color: Color) {
-    Text(text, color = color, style = MaterialTheme.typography.bodySmall)
+private fun StatusLine(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(text, color = color, style = MaterialTheme.typography.bodySmall, modifier = modifier)
 }
 
 @Composable

@@ -796,7 +796,10 @@ private fun OnboardingConnectPage(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                localizedString("Enter the exact HTTPS Tailscale Serve URL your agent returned, for example `https://server.tailnet-name.ts.net`."),
+                com.uzairansar.hermex.agent.tr(
+                    "Адрес сервера Hermes (HTTPS) или подключитесь по QR / коду. Ниже — ключ провайдера для агента на телефоне.",
+                    "Hermes server HTTPS URL, or connect via QR / code. Below — provider key for the on-phone agent.",
+                ),
                 color = Color.White.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -892,6 +895,11 @@ private fun OnboardingConnectPage(
                 }
             }
         }
+        // Путь к первому ответу агента на телефоне: ключ → живые модели (не мастер self-serve).
+        com.uzairansar.hermex.agent.ProviderQuickSetup(
+            modifier = Modifier.fillMaxWidth(),
+            onboardingStyle = true,
+        )
         if (state.isBusy) {
             OnboardingStatusBanner(
                 text = localizedString("Checking server..."),
