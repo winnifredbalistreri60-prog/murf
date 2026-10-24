@@ -130,7 +130,7 @@ function connect(){
   rfb.focusOnClick=CTL; rfb.showDotCursor=CTL;
   rfb.addEventListener('connect',()=>{connected=true;MS.connected=true;MS.ws='open';MS.everConnected=true;$('off').style.display='none';status();});
   rfb.addEventListener('disconnect',(e)=>{connected=false;MS.connected=false;MS.ws='closed';MS.clean=!!(e&&e.detail&&e.detail.clean);MS.lastDisconnect=Date.now();status();
-    // локальный режим MURF: экран бота мог быть не запущен — один раз просим его поднять (на сервере это 404)
+    // экран бота мог быть не запущен — просим поднять (POST /phone/api/screen/start; без сессии nginx даст 401)
     if(!window.__deskStart){ window.__deskStart=1; fetch('/phone/api/screen/start',{method:'POST',credentials:'same-origin',headers:{'X-Agent-App':'1'}}).catch(()=>{}); }
     setTimeout(connect,4000);});
 }
@@ -185,5 +185,19 @@ $('k-zoom').onclick=()=>{ const w=$('wrap'); const cx=(w.scrollLeft+w.clientWidt
   requestAnimationFrame(()=>{ w.scrollLeft=cx*w.scrollWidth-w.clientWidth/2; w.scrollTop=cy*w.scrollHeight-w.clientHeight/2; }); };
 $('k-pan').onclick=()=>{ if(zoom===1){ toast('Сначала увеличьте экран (🔍)'); return; } const on=!$('wrap').classList.contains('pan'); $('wrap').classList.toggle('pan',on); $('k-pan').classList.toggle('on',on); toast(on?'Перемещение: двигайте экран пальцем':'Перемещение выключено — касания снова управляют'); };
 window.murf={mode:CTL?'control':'view', zoom:()=>zoom};
+// сразу поднимаем Bot Desktop (идемпотентно); ошибку показываем, не глотаем молча
+(async function deskStart(){
+  if(window.__deskStart) return; window.__deskStart=1;
+  try{
+    const r=await fetch('/phone/api/screen/start',{method:'POST',credentials:'same-origin',headers:{'X-Agent-App':'1'}});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || d.ok===false){
+      const msg=(d&&d.error)||('HTTP '+r.status);
+      MS.lastError='screen/start: '+msg;
+      if(typeof toast==='function') toast(msg);
+      const off=$('off'); if(off){ off.style.display=''; off.textContent=msg; }
+    }
+  }catch(e){ MS.lastError='screen/start: '+String(e&&e.message||e); }
+})();
 status(); connect(); poll();
 </script></body></html>

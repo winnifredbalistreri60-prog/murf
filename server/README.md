@@ -9,6 +9,7 @@ MURF works with a stock **hermes-webui** + **Hermes Agent** server. The files he
 | `examples/*.env.example` | environment templates for Hermes API server and WebUI |
 | `examples/agent-screen-wsview.service` | websockify serving the screen page + view-only stream |
 | `agent-screen/` | screen page (`index.html`, needs noVNC `core/` + `vendor/` next to it), RFB view-only filter proxy, systemd user units |
+| `docs/AGENT-SCREEN-SUPPORT.md` | Agent Screen / Bot Desktop support matrix (what murf-install enables)
 | `phone-relay/` | phone bridge relay (`phone_relay.py`), MCP server `agent_tools_mcp.py` for the agent, server update helper |
 | `local-mode/` | Termux/proot scripts for running everything on the phone (`murf-local`) |
 

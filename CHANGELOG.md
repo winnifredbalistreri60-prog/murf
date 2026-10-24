@@ -7,6 +7,10 @@ Security sections per release.
 
 ## [Unreleased]
 
+### Server / murf-install (Agent Screen)
+- Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
+- Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
+
 ## MURF 1.10.3 — 2026-10-24
 - **Security / privacy**: removed personal default Harness remote URL from the Hermes tab. Unpaired users only get Devices pairing — no open button to an owner VDS IP.
 - **Безопасность**: убран личный URL Harness по умолчанию со вкладки «На Hermes». Без сопряжения — только «Устройства», чужой сервер не подставляется.

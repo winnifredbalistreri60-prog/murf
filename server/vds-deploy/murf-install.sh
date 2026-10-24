@@ -16,7 +16,7 @@
 set -Eeuo pipefail
 umask 022
 
-INSTALLER_VERSION=1
+INSTALLER_VERSION=2
 DOMAIN=""
 EMAIL=""
 SVC_USER="murf"
@@ -94,6 +94,15 @@ export DEBIAN_FRONTEND=noninteractive
 APT="apt-get -q -y -o DPkg::Lock::Timeout=300"
 PKGS="ca-certificates curl git python3 python3-venv nginx qrencode openssl sudo procps libatomic1 xz-utils"
 [ "$NO_TLS" -eq 1 ] || PKGS="$PKGS certbot python3-certbot-nginx"
+# Bot Desktop / экран агента: пакеты только на x86_64 (проверено). ARM — явно не поддерживается.
+ARCH=$(uname -m)
+MURF_SCREEN_ARCH_OK=0
+case "$ARCH" in x86_64|amd64) MURF_SCREEN_ARCH_OK=1 ;; esac
+if [ "$MURF_SCREEN_ARCH_OK" -eq 1 ]; then
+  PKGS="$PKGS tigervnc-standalone-server tigervnc-tools xfce4-panel xfwm4 xfdesktop4 xfce4-settings xfce4-terminal dbus-x11 x11-utils x11-xkb-utils xauth xdotool websockify fonts-dejavu-core"
+else
+  echo "Архитектура $ARCH: пакеты экрана агента не ставятся — экран не поддерживается (server/docs/AGENT-SCREEN-SUPPORT.md)"
+fi
 missing=""
 for p in $PKGS; do dpkg -s "$p" >/dev/null 2>&1 || missing="$missing $p"; done
 if [ -n "$missing" ]; then
@@ -165,12 +174,13 @@ PAYLOAD_LINE=$(awk '/^__MURF_PAYLOAD_BELOW__$/ {print NR + 1; exit 0}' "$0" || t
 if [ -n "$PAYLOAD_LINE" ]; then
   tail -n +"$PAYLOAD_LINE" "$0" | base64 -d | tar -xz -C "$HOME_DIR/agent-phone" --no-same-owner
 elif [ -n "${MURF_RELAY_SRC:-}" ] && [ -d "$MURF_RELAY_SRC" ]; then
-  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf_screen_lease.py "$MURF_RELAY_SRC"/murf_reports.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
+  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf_screen_lease.py "$MURF_RELAY_SRC"/murf_screen_desktop.py "$MURF_RELAY_SRC"/murf_reports.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
 else
   die "в установщике нет файлов relay (соберите его через build-installer.sh)"
 fi
 chown -R "$SVC_USER:$SVC_USER" "$HOME_DIR/agent-phone"
 chmod 755 "$HOME_DIR/agent-phone/murf"
+[ -f "$HOME_DIR/agent-phone/murf_screen_desktop.py" ] && chmod 755 "$HOME_DIR/agent-phone/murf_screen_desktop.py"
 cat > /usr/local/bin/murf <<EOF
 #!/bin/sh
 # обёртка: команды murf выполняются от пользователя $SVC_USER
@@ -223,14 +233,111 @@ write_unit murf-relay "MURF: relay (QR-привязка, 127.0.0.1:$PHONE_PORT/$
 write_unit murf-bots "MURF: боты (Hermes ACP и установленные CLI, 127.0.0.1:8792)" "$HOME_DIR" \
   "/usr/bin/python3 -u $HOME_DIR/agent-phone/murf_bots.py" "Environment=MURF_BOTS_PORT=8792
 UMask=0077"
+# --- Bot Desktop keep-alive (экран агента): только при доказанном стеке x86_64+Xvnc+Xfce ---
+enable_bot_desktop_unit() {
+  local hermes_py="" helper="$HOME_DIR/agent-phone/murf_screen_desktop.py" agent="$HOME_DIR/.hermes/hermes-agent"
+  if [ "${MURF_SCREEN_ARCH_OK:-0}" -ne 1 ]; then
+    warn "murf-bot-desktop: архитектура $(uname -m) не поддерживается для экрана агента (нужен x86_64)"
+    return 0
+  fi
+  if ! has_systemd; then
+    warn "murf-bot-desktop: нет systemd — keep-alive unit не ставится"
+    return 0
+  fi
+  if [ ! -f "$helper" ]; then
+    warn "murf-bot-desktop: нет $helper — пропуск"
+    return 0
+  fi
+  if [ ! -d "$agent/tools/bot_desktop" ]; then
+    warn "murf-bot-desktop: нет Hermes tools/bot_desktop — пропуск"
+    return 0
+  fi
+  if ! command -v Xvnc >/dev/null 2>&1 && ! command -v Xtigervnc >/dev/null 2>&1; then
+    warn "murf-bot-desktop: нет Xvnc — экран агента требует TigerVNC; unit не включаю"
+    return 0
+  fi
+  for b in xfwm4 xfce4-panel xfdesktop xfsettingsd; do
+    if ! command -v "$b" >/dev/null 2>&1; then
+      warn "murf-bot-desktop: нет $b (Xfce) — unit не включаю"
+      return 0
+    fi
+  done
+  hermes_py=$(as_user bash -c '
+    if [ -n "${HERMES_PYTHON:-}" ] && [ -x "$HERMES_PYTHON" ]; then echo "$HERMES_PYTHON"; exit 0; fi
+    best=""; for d in "$HOME"/.hermes/tools/python-*/bin/python3; do [ -x "$d" ] || continue; best="$d"; done
+    if [ -n "$best" ]; then echo "$best"; exit 0; fi
+    [ -x "$HOME/.hermes/hermes-agent/venv/bin/python" ] && echo "$HOME/.hermes/hermes-agent/venv/bin/python" && exit 0
+    exit 1
+  ') || hermes_py=""
+  if [ -z "$hermes_py" ] || [ ! -x "$hermes_py" ]; then
+    warn "murf-bot-desktop: не найден Hermes tools python — unit не включаю"
+    return 0
+  fi
+  as_user python3 -c '
+import os, pathlib
+home = pathlib.Path(os.path.expanduser("~/.hermes"))
+try:
+    import yaml
+except ImportError:
+    raise SystemExit(0)
+for name in ("config.yaml", "config.yml"):
+    p = home / name
+    if not p.is_file():
+        continue
+    data = yaml.safe_load(p.read_text()) or {}
+    if not isinstance(data, dict):
+        continue
+    bd = data.setdefault("bot_desktop", {})
+    if not isinstance(bd, dict):
+        data["bot_desktop"] = {}
+        bd = data["bot_desktop"]
+    bd["auto_start"] = True
+    bd.setdefault("idle_stop_minutes", 0)
+    p.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+    break
+' || true
+  cat > /etc/systemd/system/murf-bot-desktop.service <<EOF
+[Unit]
+Description=MURF: Hermes Bot Desktop (Xvnc) keep-alive for Agent Screen
+After=network-online.target murf-relay.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$SVC_USER
+Group=$SVC_USER
+WorkingDirectory=$HOME_DIR/.hermes/hermes-agent
+Environment=HOME=$HOME_DIR
+Environment=HERMES_HOME=$HOME_DIR/.hermes
+Environment=HERMES_AGENT_DIR=$HOME_DIR/.hermes/hermes-agent
+Environment=BOT_DESKTOP_WATCH_SEC=15
+Environment=PATH=$HOME_DIR/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=NO_PROXY=localhost,127.0.0.1,::1
+ExecStart=$hermes_py -I $HOME_DIR/agent-phone/murf_screen_desktop.py watch
+Restart=on-failure
+RestartSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable murf-bot-desktop >/dev/null 2>&1 || true
+  systemctl restart murf-bot-desktop
+  echo "murf-bot-desktop: $(systemctl is-active murf-bot-desktop || true) (Xvnc keep-alive)"
+}
+
+
 if has_systemd; then
   systemctl daemon-reload
   systemctl enable murf-webui murf-relay murf-bots >/dev/null 2>&1
   systemctl restart murf-relay murf-bots
   if [ "$UPDATE" -eq 1 ] || ! systemctl is-active --quiet murf-webui; then systemctl restart murf-webui; fi
   echo "murf-webui: $(systemctl is-active murf-webui || true), murf-relay: $(systemctl is-active murf-relay || true), murf-bots: $(systemctl is-active murf-bots || true)"
+  enable_bot_desktop_unit
 else
   warn "systemd не запущен (контейнер?) — запускаю службы в фоне без автозапуска"
+  warn "murf-bot-desktop: без systemd keep-alive не ставится — экран агента в этом режиме не поддерживается"
   pkill -u "$SVC_USER" -f 'phone_relay.py' 2>/dev/null || true
   if ! pgrep -u "$SVC_USER" -f 'bootstrap.py|server.py' >/dev/null 2>&1; then
     ( as_user bash -c 'cd "$2"; set -a; . "$1"; set +a; exec nohup /usr/bin/python3 bootstrap.py --no-browser --skip-agent-install --foreground' _ "$WEBUI_ENV" "$WEBUI_DIR" \

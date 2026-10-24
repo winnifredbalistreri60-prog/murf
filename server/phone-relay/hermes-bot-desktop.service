@@ -1,0 +1,23 @@
+[Unit]
+Description=MURF: Hermes Bot Desktop (Xvnc) keep-alive for Agent Screen
+Documentation=https://github.com/winnifredbalistreri60-prog/murf/blob/main/server/docs/AGENT-SCREEN-SUPPORT.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Template for systemd --user installs. murf-install.sh writes a system unit
+# murf-bot-desktop.service with concrete paths for the service user.
+Environment=HERMES_HOME=%h/.hermes
+Environment=HERMES_AGENT_DIR=%h/.hermes/hermes-agent
+Environment=BOT_DESKTOP_WATCH_SEC=15
+# Replace python-current with the real Hermes tools python-* directory after install.
+ExecStart=%h/.hermes/tools/python-current/bin/python3 -I %h/agent-phone/murf_screen_desktop.py watch
+WorkingDirectory=%h/.hermes/hermes-agent
+Restart=on-failure
+RestartSec=5
+# Watchdog only — do not tear down Xvnc/rfb on stop (launcher is a separate process group)
+KillMode=process
+
+[Install]
+WantedBy=default.target

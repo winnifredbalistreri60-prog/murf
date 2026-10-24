@@ -268,6 +268,102 @@ def screen_type(text, enter=False):
     return {"ok": True, "typed": len(text)}
 
 HERMES_AGENT_DIR = os.environ.get("HERMES_AGENT_DIR", os.path.join(HOME, ".hermes", "hermes-agent"))
+HERMES_HOME = os.environ.get("HERMES_HOME", os.path.join(HOME, ".hermes"))
+
+# Bot Desktop / «Экран агента»: проверено на Linux x86_64 + systemd + TigerVNC(Xvnc)+Xfce (как Hermes).
+# ARM, Docker-only без Xvnc, хосты без display-стека — не поддерживаются (явная ошибка, не тихий 404).
+_SCREEN_SUPPORTED_MACHINES = ("x86_64", "amd64")
+_SCREEN_NEED_RU = (
+    "экран агента требует Linux x86_64, systemd, TigerVNC (Xvnc) и Xfce "
+    "(xfwm4, xfce4-panel, xfdesktop, xfsettingsd), плюс Hermes tools/bot_desktop"
+)
+
+
+def _hermes_tools_python():
+    """Python из tools Hermes (с bot_desktop); не venv агента — там модулей может не быть."""
+    env = os.environ.get("HERMES_PYTHON")
+    if env and os.path.isfile(env):
+        return env
+    tools = os.path.join(HERMES_HOME, "tools")
+    try:
+        cands = sorted(
+            (os.path.join(tools, d, "bin", "python3")
+             for d in os.listdir(tools) if d.startswith("python-")),
+            key=lambda path: os.path.getmtime(path) if os.path.isfile(path) else 0,
+        )
+        for path in reversed(cands):
+            if os.path.isfile(path):
+                return path
+    except OSError:
+        pass
+    return os.path.join(HERMES_AGENT_DIR, "venv", "bin", "python")
+
+
+def _screen_desktop_blocker():
+    """None если можно звать runtime; иначе русский текст для клиента."""
+    helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "murf_screen_desktop.py")
+    if not os.path.isfile(helper):
+        return "экран агента: нет murf_screen_desktop.py рядом с phone_relay"
+    machine = ""
+    try:
+        machine = os.uname().machine
+    except Exception:
+        pass
+    if machine and machine not in _SCREEN_SUPPORTED_MACHINES:
+        return (
+            f"экран агента не поддерживается на {machine} — проверено только на x86_64 "
+            f"(Ubuntu/Debian + TigerVNC/Xvnc + Xfce)"
+        )
+    if not os.path.isdir(os.path.join(HERMES_AGENT_DIR, "tools", "bot_desktop")):
+        return (
+            "экран агента требует Hermes Agent с tools/bot_desktop "
+            "(переустановите агент; murf-install ставит desktop-стек отдельно от computer-use)"
+        )
+    if not (shutil.which("Xvnc") or shutil.which("Xtigervnc")):
+        return (
+            "экран агента требует TigerVNC (Xvnc): пакет tigervnc-standalone-server "
+            "и Xfce core — murf-install ставит их на x86_64"
+        )
+    for b in ("xfwm4", "xfce4-panel", "xfdesktop", "xfsettingsd"):
+        if not shutil.which(b):
+            return f"экран агента требует Xfce ({b} не найден). {_SCREEN_NEED_RU}"
+    py = _hermes_tools_python()
+    if not os.path.isfile(py):
+        return "экран агента: нет Python Hermes tools (HERMES_HOME/tools/python-*/bin/python3)"
+    return None
+
+
+def screen_desktop(cmd):
+    """Старт/статус Bot Desktop через murf_screen_desktop.py + hermes tools python -I."""
+    helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "murf_screen_desktop.py")
+    blocked = _screen_desktop_blocker()
+    if blocked:
+        return {"ok": False, "running": False, "display": None, "socket": None, "error": blocked, "supported": False}
+    py = _hermes_tools_python()
+    env = dict(os.environ, HERMES_HOME=HERMES_HOME, HERMES_AGENT_DIR=HERMES_AGENT_DIR)
+    try:
+        r = subprocess.run(
+            [py, "-I", helper, cmd],
+            cwd=HERMES_AGENT_DIR,
+            capture_output=True,
+            text=True,
+            timeout=90 if cmd == "start" else 20,
+            env=env,
+        )
+        line = (r.stdout or "").strip().splitlines()
+        if not line:
+            err = (r.stderr or "").strip()[:300] or f"exit {r.returncode}"
+            return {"ok": False, "running": False, "display": None, "socket": None, "error": err}
+        res = json.loads(line[-1])
+    except Exception as e:
+        log("screen-desktop error", cmd, type(e).__name__)
+        return {"ok": False, "running": False, "display": None, "socket": None,
+                "error": "не удалось обратиться к Bot Desktop"}
+    if cmd == "start":
+        log("screen-desktop", cmd, res.get("running"), res.get("display"))
+    return res
+
+
 HANDOFF_STATE = os.path.join(HOME, "agent-phone", "screen-handoff.json")
 
 
@@ -531,6 +627,13 @@ class PhoneHandler(Base):
             if self.headers.get("X-Agent-App") != "1":
                 return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
             return self.send_json(200, screen_lease("status", (q.get("viewer") or [""])[0][:80]))
+        if p == "/phone/api/screen/status":
+            if self.headers.get("X-Agent-App") != "1":
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            res = screen_desktop("status")
+            # 503 = стек не поддержан / не запущен; 200 = ок (running или детальный статус)
+            code = 200 if res.get("ok") or res.get("running") else (501 if res.get("supported") is False else 503)
+            return self.send_json(code, res)
         if p == "/phone/api/pair/devices":
             return self.pair_call(pairing.list_devices)
         if p == "/phone/api/ops/agent-update":
@@ -584,6 +687,19 @@ class PhoneHandler(Base):
                 return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
             j = self.jbody()
             return self.send_json(200, screen_type(str(j.get("text", "")), bool(j.get("enter", False))))
+        if p == "/phone/api/screen/start":
+            # авто-старт Bot Desktop с «Экран агента» (index.html на open/disconnect)
+            # authz: nginx auth_request (сессия WebUI) + X-Agent-App (анти-CSRF из браузера)
+            if self.headers.get("X-Agent-App") != "1":
+                log("screen-start denied: no X-Agent-App", self.client_ip())
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
+            res = screen_desktop("start")
+            if res.get("ok") or res.get("running"):
+                return self.send_json(200, res)
+            # не маскируем отказ под 200: клиент видит 501 (не поддерживается) / 503 (не поднялся)
+            code = 501 if res.get("supported") is False else 503
+            log("screen-start fail", code, (res.get("error") or "")[:120])
+            return self.send_json(code, res)
         if p == "/phone/api/report":
             if self.headers.get("X-Agent-App") != "1":
                 return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
