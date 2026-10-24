@@ -568,8 +568,27 @@ fun HermexApp(
                 composable(route = "dsh") {
                     com.uzairansar.hermex.agent.DshRoute(
                         cookieJar = container.cookieJar,
+                        auth = container.authRepository,
                         onBack = { navController.popBackStack() },
                         onProviders = { navController.navigate("providers") },
+                        onDevices = { navController.navigate("devices") },
+                        onLocal = { navController.navigate("local") },
+                        onPhone = { navController.navigate("phone") },
+                    )
+                }
+                composable(route = "more") {
+                    com.uzairansar.hermex.agent.MoreRoute(
+                        onBack = { navController.popBackStack() },
+                        onOpenRoute = { route ->
+                            navController.navigate(route) {
+                                popUpTo("more") { inclusive = true }
+                            }
+                        },
+                        onOpenPanel = { section ->
+                            navController.navigate("panels?section=$section") {
+                                popUpTo("more") { inclusive = true }
+                            }
+                        },
                     )
                 }
                 composable(route = "providers") {

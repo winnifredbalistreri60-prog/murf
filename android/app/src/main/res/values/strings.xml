@@ -30,11 +30,12 @@
     <string name="nav_local">Local mode (phone)</string>
     <string name="nav_devices">Devices (QR)</string>
     <string name="nav_deploy">Own VDS</string>
-    <string name="nav_dsh">DeepSeek Harness (on phone)</string>
+    <string name="nav_dsh">Harness</string>
     <string name="nav_providers">Model providers</string>
     <string name="nav_bots">Bots</string>
     <string name="nav_clis">Server CLIs</string>
     <string name="nav_bot_tasks">Bot tasks</string>
     <string name="nav_drive">Google Drive</string>
+    <string name="nav_more">More</string>
     <string name="a11y_murf_desc">Allows the local MURF agent (DeepSeek Harness on the phone) to see the screen and tap/type — only after you approve each action in MURF. Stop anytime with “Take screen”.</string>
 </resources>

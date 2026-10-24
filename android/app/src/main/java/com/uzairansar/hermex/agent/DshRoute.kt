@@ -1,6 +1,12 @@
 package com.uzairansar.hermex.agent
 
 import android.content.Context
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import com.uzairansar.hermex.data.repository.AuthRepository
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Tab
+import android.net.Uri
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -167,20 +173,78 @@ object DshLocal {
         }
 }
 
+/** Default public Harness URL hint when no paired remote session is remembered. */
+const val DSH_DEFAULT_REMOTE_HINT = "https://harness.193.176.78.248.sslip.io"
+
+fun findDshRemoteBase(cookieJar: CookieJar, serverUrls: List<String>): String? {
+    for (raw in serverUrls) {
+        val url = runCatching { raw.toHttpUrl() }.getOrNull() ?: continue
+        if (cookieJar.loadForRequest(url).any { it.name == "dsh_remote_session" && it.value.isNotBlank() }) {
+            return raw.trimEnd('/') + "/"
+        }
+    }
+    return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DshRoute(cookieJar: CookieJar, onBack: () -> Unit, onProviders: () -> Unit) {
+fun DshRoute(
+    cookieJar: CookieJar,
+    auth: AuthRepository,
+    onBack: () -> Unit,
+    onProviders: () -> Unit,
+    onDevices: () -> Unit,
+    onLocal: () -> Unit = {},
+    onPhone: () -> Unit = {},
+) {
+    var tab by remember { mutableIntStateOf(0) } // 0 phone, 1 Hermes remote
+    var openChat by remember { mutableStateOf<String?>(null) }   // "" — новый чат
+    var refresh by remember { mutableIntStateOf(0) }
+
+    openChat?.let { sid ->
+        DshChat(cookieJar, sid.ifBlank { null }, onBack = { openChat = null; refresh++ }, onProviders = onProviders)
+        return
+    }
+
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text(tr("Harness", "Harness")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
+            actions = {
+                if (tab == 0) IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) }
+            },
+        )
+    }) { pad ->
+        Column(Modifier.padding(pad).fillMaxSize()) {
+            TabRow(selectedTabIndex = tab) {
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(tr("На телефоне", "On phone")) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("На Hermes", "On Hermes")) })
+            }
+            when (tab) {
+                1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders)
+                else -> DshPhonePanel(cookieJar = cookieJar, refresh = refresh, onRefresh = { refresh++ }, onOpenChat = { openChat = it }, onProviders = onProviders)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DshPhonePanel(
+    cookieJar: CookieJar,
+    refresh: Int,
+    onRefresh: () -> Unit,
+    onOpenChat: (String) -> Unit,
+    onProviders: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<JSONObject?>(null) }
     var sessions by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var openChat by remember { mutableStateOf<String?>(null) }   // "" — новый чат
-    var refresh by remember { mutableIntStateOf(0) }
     var health by remember { mutableStateOf<JSONObject?>(null) }
 
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycle) {
-        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) refresh++ }
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) onRefresh() }
         lifecycle.lifecycle.addObserver(obs); onDispose { lifecycle.lifecycle.removeObserver(obs) }
     }
     LaunchedEffect(refresh) {
@@ -192,19 +256,7 @@ fun DshRoute(cookieJar: CookieJar, onBack: () -> Unit, onProviders: () -> Unit) 
         }
     }
 
-    openChat?.let { sid ->
-        DshChat(cookieJar, sid.ifBlank { null }, onBack = { openChat = null; refresh++ }, onProviders = onProviders)
-        return
-    }
-
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(tr("DeepSeek Harness (на телефоне)", "DeepSeek Harness (on phone)")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
-            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) } },
-        )
-    }) { pad ->
-        LazyColumn(Modifier.padding(pad).fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -222,7 +274,7 @@ fun DshRoute(cookieJar: CookieJar, onBack: () -> Unit, onProviders: () -> Unit) 
                                     Text(pr.optString("msg"), style = MaterialTheme.typography.bodySmall)
                                     if (pr.optString("state") == "running") LinearProgressIndicator(progress = { pr.optInt("pct") / 100f }, Modifier.fillMaxWidth())
                                 }
-                                if (pr?.optString("state") != "running") Button(onClick = { scope.launch { DshLocal.post(cookieJar, "install", JSONObject()); refresh++ } }) {
+                                if (pr?.optString("state") != "running") Button(onClick = { scope.launch { DshLocal.post(cookieJar, "install", JSONObject()); onRefresh() } }) {
                                     Text(if (pr?.optString("state") == "error") tr("Повторить установку", "Retry install") else tr("Установить", "Install"))
                                 }
                             }
@@ -231,7 +283,7 @@ fun DshRoute(cookieJar: CookieJar, onBack: () -> Unit, onProviders: () -> Unit) 
                         Text(tr("Модель: ", "Model: ") + (sel?.let { "${it.first} / ${it.second}" } ?: tr("не выбрана", "not chosen")), style = MaterialTheme.typography.bodySmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = onProviders) { Text(tr("Провайдеры и ключи", "Providers & keys")) }
-                            Button(onClick = { openChat = "" }, enabled = st?.optBoolean("installed") == true) { Text(tr("Новый чат", "New chat")) }
+                            Button(onClick = { onOpenChat("") }, enabled = st?.optBoolean("installed") == true) { Text(tr("Новый чат", "New chat")) }
                         }
                         Text(tr("DeepSeek Harness — открытый агент DeepSeek (MIT). Работает в Ubuntu (proot) на телефоне, ключи хранятся в MURF зашифрованными. Телеметрия dsh отключена.",
                             "DeepSeek Harness is DeepSeek's open agent (MIT). It runs in Ubuntu (proot) on the phone; keys are stored encrypted in MURF. dsh telemetry is off."),
@@ -242,7 +294,7 @@ fun DshRoute(cookieJar: CookieJar, onBack: () -> Unit, onProviders: () -> Unit) 
             if (sessions.isNotEmpty()) item { Text(tr("Сессии", "Sessions"), style = MaterialTheme.typography.titleMedium) }
             items(sessions, key = { it.optString("id") }) { s ->
                 val u = s.optJSONObject("usage")
-                Card(Modifier.fillMaxWidth().clickable { openChat = s.optString("id") }) {
+                Card(Modifier.fillMaxWidth().clickable { onOpenChat(s.optString("id")) }) {
                     Column(Modifier.padding(12.dp)) {
                         Text(s.optString("title").ifBlank { s.optString("id") }, fontWeight = FontWeight.Medium, maxLines = 2)
                         Text(SimpleDateFormat("dd.MM HH:mm", Locale.ROOT).format(Date(s.optLong("updated") * 1000)) + " · " +
@@ -254,6 +306,75 @@ fun DshRoute(cookieJar: CookieJar, onBack: () -> Unit, onProviders: () -> Unit) 
             }
             item { Spacer(Modifier.padding(8.dp)) }
         }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DshRemotePanel(
+    cookieJar: CookieJar,
+    auth: AuthRepository,
+    onDevices: () -> Unit,
+    onLocal: () -> Unit,
+    onPhone: () -> Unit,
+    onProviders: () -> Unit,
+) {
+    val context = LocalContext.current
+    val servers by auth.servers.collectAsState()
+    val paired = remember(servers, cookieJar) {
+        findDshRemoteBase(cookieJar, servers.servers.map { it.urlString })
+    }
+    val hint = paired ?: DSH_DEFAULT_REMOTE_HINT
+
+    fun openUrl(url: String) {
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url.trimEnd('/') + "/")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(tr("Harness на Hermes", "Harness on Hermes"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        tr(
+                            "Удалённый DeepSeek Harness на сервере. Сопряжение: «Устройства» → «Ввести код» — ссылка с ?auth= или адрес + 8‑символьный код.",
+                            "Remote DeepSeek Harness on the server. Pair via Devices → Enter code — a ?auth= link or address + 8-character code.",
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (paired != null) {
+                        Text(tr("Сессия есть: ", "Session ready: ") + paired, style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { openUrl(paired) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(tr("Открыть Harness", "Open Harness"))
+                        }
+                    } else {
+                        Text(tr("Пока нет cookie dsh_remote_session. Сопрягитесь или вставьте ссылку на экране «Устройства».",
+                            "No dsh_remote_session cookie yet. Pair or paste the link on the Devices screen."),
+                            style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
+                            Text(tr("Устройства — ввести код", "Devices — enter code"))
+                        }
+                        OutlinedButton(onClick = { openUrl(hint) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(tr("Открыть ", "Open ") + hint.removePrefix("https://").removePrefix("http://"))
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Text(tr("Связанные экраны", "Related screens"), style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onLocal, modifier = Modifier.weight(1f)) { Text(tr("Локальная среда", "Local environment")) }
+                OutlinedButton(onClick = onPhone, modifier = Modifier.weight(1f)) { Text(tr("Телефон и Termux", "Phone & Termux")) }
+            }
+        }
+        item {
+            OutlinedButton(onClick = onProviders, modifier = Modifier.fillMaxWidth()) { Text(tr("Провайдеры моделей", "Model providers")) }
+        }
+        item { Spacer(Modifier.padding(8.dp)) }
     }
 }
 

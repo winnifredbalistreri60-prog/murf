@@ -933,6 +933,7 @@ private fun NewChatFloatingButton(
 }
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun UtilityRows(
     settings: com.uzairansar.hermex.data.preferences.MainPageDisplaySettings,
     onOpenPanel: (String) -> Unit,
@@ -948,22 +949,18 @@ private fun UtilityRows(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         val rows = buildList {
+            // Primary IA (1.10.2): Screen, Harness, Bots, Devices, Local, Drive, VDS, Tasks, Kanban, More.
+            // Rare items live under More; Skills/Memory/Insights demoted there too.
             add(UtilityDestination(R.string.nav_screen, R.drawable.ic_lucide_monitor, onOpenScreen))
-            add(UtilityDestination(R.string.nav_phone, R.drawable.ic_lucide_smartphone) { onOpenAgentRoute("phone") })
-            add(UtilityDestination(R.string.nav_drive, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("drive") })
-            add(UtilityDestination(R.string.nav_local, R.drawable.ic_lucide_server) { onOpenAgentRoute("local") })
-            add(UtilityDestination(R.string.nav_bots, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("bots") })
             add(UtilityDestination(R.string.nav_dsh, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("dsh") })
-            add(UtilityDestination(R.string.nav_providers, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("providers") })
-            add(UtilityDestination(R.string.nav_bot_tasks, R.drawable.ic_hermex_lightning_bolt) { onOpenAgentRoute("bottasks") })
-            add(UtilityDestination(R.string.nav_clis, R.drawable.ic_hermex_tools_wrench) { onOpenAgentRoute("clis") })
+            add(UtilityDestination(R.string.nav_bots, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("bots") })
             add(UtilityDestination(R.string.nav_devices, R.drawable.ic_lucide_smartphone) { onOpenAgentRoute("devices") })
+            add(UtilityDestination(R.string.nav_local, R.drawable.ic_lucide_server) { onOpenAgentRoute("local") })
+            add(UtilityDestination(R.string.nav_drive, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("drive") })
             add(UtilityDestination(R.string.nav_deploy, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("deploy") })
-            if (settings.showTasks) add(UtilityDestination(R.string.nav_tasks, R.drawable.ic_lucide_calendar_clock) { onOpenPanel("tasks") })
-            if (settings.showKanban) add(UtilityDestination(R.string.nav_kanban, R.drawable.ic_lucide_columns_3, onOpenKanban))
-            if (settings.showSkills) add(UtilityDestination(R.string.nav_skills, R.drawable.ic_lucide_hammer) { onOpenPanel("skills") })
-            if (settings.showMemory) add(UtilityDestination(R.string.nav_memory, R.drawable.ic_lucide_brain) { onOpenPanel("memory") })
-            if (settings.showInsights) add(UtilityDestination(R.string.nav_insights, R.drawable.ic_lucide_chart_column_increasing) { onOpenPanel("insights") })
+            add(UtilityDestination(R.string.nav_tasks, R.drawable.ic_lucide_calendar_clock) { onOpenPanel("tasks") })
+            add(UtilityDestination(R.string.nav_kanban, R.drawable.ic_lucide_columns_3, onOpenKanban))
+            add(UtilityDestination(R.string.nav_more, R.drawable.ic_hermex_ellipsis, onOpen = { onOpenAgentRoute("more") }))
         }
         if (isLandscape) {
             rows.chunked(2).forEach { pair ->
