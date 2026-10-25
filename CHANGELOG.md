@@ -11,6 +11,15 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.7 — 2026-10-25
+
+- **Harness client (not screen stream):** «На Hermes» again opens an in-app Harness remote client (WebView + `dsh_remote_session` cookie sync). Primary CTA is «Открыть клиент Harness» / pair-and-open — **not** Agent Screen / VNC.
+- **Клиент Harness, не трансляция экрана:** вкладка «На Hermes» — WebView-клиент remote UI с cookie; основная кнопка «Открыть клиент Harness», без Экрана агента / VNC.
+- **DeepSeek top-up from MURF:** «Пополнить DeepSeek» / in-client «Пополнить» → `https://platform.deepseek.com/top_up` (Chrome/browser). No Desktop stream required to pay.
+- **Пополнение DeepSeek из MURF:** кнопка «Пополнить DeepSeek» и «Пополнить» в клиенте → platform.deepseek.com/top_up.
+- **pairWithDshAuth unchanged:** still side-channel cookie only; does not activate Hermes LoggedIn /api/profiles.
+- **Сопряжение DSH без изменений:** только cookie; Hermes LoggedIn не включается.
+
 ## MURF 1.10.6 — 2026-10-25
 
 - **Harness → Desktop on Hermes:** «На Hermes» primary CTA opens full DeepSeek Harness Desktop via Agent Screen (VNC), not the browser web UI. Billing/top-up lives in Desktop: profile → Settings → Account → «Пополнить».

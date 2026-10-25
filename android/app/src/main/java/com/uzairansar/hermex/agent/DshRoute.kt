@@ -7,6 +7,14 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Tab
 import android.net.Uri
 import android.content.Intent
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebViewClient
+import android.webkit.WebView
+import android.webkit.WebSettings
+import android.webkit.WebChromeClient
+import android.webkit.CookieManager
+import android.view.ViewGroup
+import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -244,7 +252,7 @@ fun DshRoute(
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("На Hermes", "On Hermes")) })
             }
             when (tab) {
-                1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders, onOpenScreen = onOpenScreen)
+                1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders)
                 else -> DshPhonePanel(cookieJar = cookieJar, refresh = refresh, onRefresh = { refresh++ }, onOpenChat = { openChat = it }, onProviders = onProviders)
             }
         }
@@ -346,12 +354,10 @@ private fun DshRemotePanel(
     onLocal: () -> Unit,
     onPhone: () -> Unit,
     onProviders: () -> Unit,
-    onOpenScreen: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val servers by auth.servers.collectAsState()
-    val hermesConnected = servers.servers.isNotEmpty()
     var remembered by remember { mutableStateOf(DshRemotePrefs.lastBase()) }
     var refresh by remember { mutableIntStateOf(0) }
     val candidateUrls = remember(servers, remembered, refresh) {
@@ -369,7 +375,7 @@ private fun DshRemotePanel(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
-    var showWeb by remember { mutableStateOf(false) }
+    var clientBase by remember { mutableStateOf<String?>(null) }
 
     val canSubmit = remember(server, code) {
         val raw = if (server.contains("auth=", ignoreCase = true)) server else "$server $code"
@@ -377,13 +383,16 @@ private fun DshRemotePanel(
         p != null && p.protocol == PairProtocol.DshRemote
     }
 
-    fun openUrl(url: String) {
+    fun openTopUp() {
         runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url.trimEnd('/') + "/")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://platform.deepseek.com/top_up"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
         }
     }
 
-    fun submitPair() {
+    fun submitPair(openClientAfter: Boolean = true) {
         val raw = if (server.contains("auth=", ignoreCase = true)) server.trim() else "${server.trim()} ${code.trim()}"
         val payload = PairPayloadParser.parse(raw)
         if (payload == null || payload.protocol != PairProtocol.DshRemote) {
@@ -401,11 +410,13 @@ private fun DshRemotePanel(
                     server = remembered ?: payload.server.toString()
                     code = ""
                     info = tr(
-                        "Веб-UI привязан (cookie на телефоне). Полный Desktop — кнопка выше через Экран агента.",
-                        "Web UI paired (cookie on phone). Full Desktop is the button above via Agent Screen.",
+                        "Клиент Harness привязан (cookie на телефоне). Откройте клиент ниже — без трансляции экрана.",
+                        "Harness client paired (cookie on phone). Open the client below — no screen streaming.",
                     )
                     refresh++
-                    // Do not auto-open the browser — Desktop via Agent Screen is the primary path.
+                    if (openClientAfter) {
+                        clientBase = (remembered ?: payload.server.toString()).trimEnd('/') + "/"
+                    }
                 }
                 .onFailure {
                     error = it.message ?: it.javaClass.simpleName
@@ -414,103 +425,94 @@ private fun DshRemotePanel(
         }
     }
 
+    clientBase?.let { base ->
+        DshRemoteClient(
+            baseUrl = base,
+            cookieJar = cookieJar,
+            onBack = { clientBase = null; refresh++ },
+            onTopUp = { openTopUp() },
+        )
+        return
+    }
+
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(tr("Harness на Hermes", "Harness on Hermes"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(tr("Клиент Harness на Hermes", "Harness client on Hermes"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         tr(
-                            "Полноценное приложение DeepSeek Harness Desktop на компьютере (как у агента): окна, меню, учётная запись и оплата DeepSeek. Открывается через Экран агента (VNC), не в браузере.",
-                            "Full DeepSeek Harness Desktop on the computer (same as the agent’s): windows, menus, account and DeepSeek billing. Opens via Agent Screen (VNC), not the browser.",
+                            "Удалённый клиент DeepSeek Harness (remote UI) внутри MURF: сопряжение по ссылке/?auth= или адресу + коду, затем чат и агент в приложении. Экран агента / VNC не нужен.",
+                            "Remote DeepSeek Harness client inside MURF: pair with a link/?auth= or address + code, then chat and agent in-app. Agent Screen / VNC is not required.",
                         ),
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    if (hermesConnected) {
-                        Button(onClick = onOpenScreen, modifier = Modifier.fillMaxWidth()) {
-                            Text(tr("Открыть Desktop Harness", "Open Desktop Harness"))
+                    if (paired != null) {
+                        Text(tr("Сессия клиента: ", "Client session: ") + paired, style = MaterialTheme.typography.bodySmall)
+                        Button(
+                            onClick = { clientBase = paired.trimEnd('/') + "/" },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(tr("Открыть клиент Harness", "Open Harness client"))
                         }
+                    } else if (remembered != null) {
+                        Text(tr("Запомнен адрес: ", "Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            tr(
-                                "В Desktop: внизу слева «Вы вошли в DeepSeek» → Настройки → Учётная запись → «Пополнить». Также Ctrl+,.",
-                                "In Desktop: bottom-left “Signed in to DeepSeek” → Settings → Account → “Top up”. Also Ctrl+,.",
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    } else {
-                        Text(
-                            tr(
-                                "Сначала подключите Hermes (QR или код на экране «Устройства»). После входа здесь появится кнопка Desktop.",
-                                "Connect Hermes first (QR or code on Devices). After sign-in, the Desktop button appears here.",
-                            ),
+                            tr("Сессии ещё нет — введите код ещё раз (лучше постоянный).", "No session yet — enter the code again (prefer the permanent one)."),
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        Button(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
-                            Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
-                        }
                     }
+                    OutlinedButton(onClick = { openTopUp() }, modifier = Modifier.fillMaxWidth()) {
+                        Text(tr("Пополнить DeepSeek", "Top up DeepSeek"))
+                    }
+                    Text(
+                        tr(
+                            "Оплата открывается на platform.deepseek.com/top_up (карта / PayPal / G Pay). Вход в аккаунт DeepSeek — в браузере.",
+                            "Payment opens platform.deepseek.com/top_up (card / PayPal / G Pay). Sign in to DeepSeek in the browser.",
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
             }
         }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { showWeb = !showWeb }, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            if (showWeb) tr("Скрыть веб-UI (урезанный)", "Hide web UI (stripped)")
-                            else tr("Веб-UI (урезанный) — запасной", "Web UI (stripped) — fallback"),
-                        )
+                    Text(tr("Сопряжение", "Pairing"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        tr(
+                            "В Desktop Harness: Удалённый доступ → код / QR. Вставьте сюда ссылку ?auth= или адрес + 8 символов. Один раз сохраните постоянный код.",
+                            "In Desktop Harness: Remote access → code / QR. Paste the ?auth= link or address + 8 characters here. Save the permanent code once.",
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedTextField(
+                        value = server,
+                        onValueChange = { server = it },
+                        label = { Text(tr("Адрес или ссылка ?auth=", "Address or ?auth= link")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                    )
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it.trim().uppercase() },
+                        label = { Text(tr("Код (8 символов, если не в ссылке)", "Code (8 chars if not in the link)")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                    )
+                    Button(
+                        onClick = { submitPair(openClientAfter = true) },
+                        enabled = canSubmit && !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (busy) tr("Подключение…", "Connecting…") else tr("Привязать и открыть клиент", "Pair and open client"))
                     }
-                    if (showWeb) {
-                        Text(
-                            tr(
-                                "Урезанный веб-интерфейс Harness в браузере. Без полного Desktop: нет нормальных меню и оплаты DeepSeek. Для оплаты используйте Desktop выше.",
-                                "Stripped Harness web UI in the browser. Not full Desktop: no proper menus or DeepSeek billing. Use Desktop above to pay.",
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        if (paired != null) {
-                            Text(tr("Сессия веб-UI: ", "Web UI session: ") + paired, style = MaterialTheme.typography.bodySmall)
-                            OutlinedButton(onClick = { openUrl(paired) }, modifier = Modifier.fillMaxWidth()) {
-                                Text(tr("Открыть веб-UI в браузере", "Open web UI in browser"))
-                            }
-                        } else if (remembered != null) {
-                            Text(tr("Запомнен адрес: ", "Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
-                            Text(
-                                tr("Сессии ещё нет — введите код ещё раз (лучше постоянный).", "No session yet — enter the code again (prefer the permanent one)."),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        OutlinedTextField(
-                            value = server,
-                            onValueChange = { server = it },
-                            label = { Text(tr("Адрес или ссылка ?auth=", "Address or ?auth= link")) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !busy,
-                        )
-                        OutlinedTextField(
-                            value = code,
-                            onValueChange = { code = it.trim().uppercase() },
-                            label = { Text(tr("Код (8 символов, если не в ссылке)", "Code (8 chars if not in the link)")) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !busy,
-                        )
-                        OutlinedButton(
-                            onClick = { submitPair() },
-                            enabled = canSubmit && !busy,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(if (busy) tr("Подключение…", "Connecting…") else tr("Привязать веб-UI", "Pair web UI"))
-                        }
-                        if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        if (info != null) Text(info!!, style = MaterialTheme.typography.bodySmall)
-                        if (hermesConnected) {
-                            TextButton(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
-                                Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
-                            }
-                        }
+                    if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    if (info != null) Text(info!!, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
+                        Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
                     }
                 }
             }
@@ -530,6 +532,113 @@ private fun DshRemotePanel(
         item { Spacer(Modifier.padding(8.dp)) }
     }
 }
+
+/** In-app Harness remote client: WebView + OkHttp cookie sync (not Agent Screen / VNC). */
+@SuppressLint("SetJavaScriptEnabled")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DshRemoteClient(
+    baseUrl: String,
+    cookieJar: CookieJar,
+    onBack: () -> Unit,
+    onTopUp: () -> Unit,
+) {
+    val context = LocalContext.current
+    val httpUrl = remember(baseUrl) { runCatching { baseUrl.toHttpUrl() }.getOrNull() }
+    var loadError by remember { mutableStateOf<String?>(null) }
+
+    androidx.activity.compose.BackHandler(onBack = onBack)
+
+    LaunchedEffect(baseUrl, httpUrl) {
+        val u = httpUrl ?: return@LaunchedEffect
+        val cookies = cookieJar.loadForRequest(u)
+        val manager = CookieManager.getInstance()
+        manager.setAcceptCookie(true)
+        val origin = "${u.scheme}://${u.host}"
+        cookies.forEach { cookie ->
+            val attrs = buildString {
+                append("${cookie.name}=${cookie.value}; Path=${cookie.path.ifBlank { "/" }}")
+                if (cookie.secure) append("; Secure")
+                if (cookie.httpOnly) append("; HttpOnly")
+            }
+            manager.setCookie(origin, attrs)
+        }
+        manager.flush()
+    }
+
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text(tr("Клиент Harness", "Harness client"), maxLines = 1) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back"))
+                }
+            },
+            actions = {
+                TextButton(onClick = onTopUp) { Text(tr("Пополнить", "Top up")) }
+                TextButton(onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(baseUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }) { Text(tr("Браузер", "Browser")) }
+            },
+        )
+    }) { pad ->
+        Column(Modifier.padding(pad).fillMaxSize()) {
+            if (httpUrl == null) {
+                Text(
+                    tr("Некорректный адрес клиента", "Invalid client address"),
+                    Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else {
+                if (loadError != null) {
+                    Text(loadError!!, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                AndroidView(
+                    factory = { ctx ->
+                        WebView(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                            )
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.cacheMode = WebSettings.LOAD_DEFAULT
+                            settings.mediaPlaybackRequiresUserGesture = true
+                            settings.allowFileAccess = false
+                            settings.allowContentAccess = false
+                            settings.setSupportZoom(true)
+                            settings.builtInZoomControls = true
+                            settings.displayZoomControls = false
+                            webChromeClient = WebChromeClient()
+                            webViewClient = object : WebViewClient() {
+                                override fun onReceivedError(
+                                    view: WebView,
+                                    request: android.webkit.WebResourceRequest,
+                                    error: android.webkit.WebResourceError,
+                                ) {
+                                    if (request.isForMainFrame) {
+                                        loadError = error.description?.toString() ?: "WebView error"
+                                    }
+                                }
+                            }
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
+                            loadUrl(baseUrl)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    update = { wv ->
+                        if (wv.url.isNullOrBlank() || wv.url == "about:blank") wv.loadUrl(baseUrl)
+                    },
+                )
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
