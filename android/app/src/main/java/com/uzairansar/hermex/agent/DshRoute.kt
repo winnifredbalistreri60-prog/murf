@@ -218,6 +218,7 @@ fun DshRoute(
     onDevices: () -> Unit,
     onLocal: () -> Unit = {},
     onPhone: () -> Unit = {},
+    onOpenScreen: () -> Unit = {},
 ) {
     var tab by remember { mutableIntStateOf(0) } // 0 phone, 1 Hermes remote
     var openChat by remember { mutableStateOf<String?>(null) }   // "" — новый чат
@@ -243,7 +244,7 @@ fun DshRoute(
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("На Hermes", "On Hermes")) })
             }
             when (tab) {
-                1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders)
+                1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders, onOpenScreen = onOpenScreen)
                 else -> DshPhonePanel(cookieJar = cookieJar, refresh = refresh, onRefresh = { refresh++ }, onOpenChat = { openChat = it }, onProviders = onProviders)
             }
         }
@@ -345,10 +346,12 @@ private fun DshRemotePanel(
     onLocal: () -> Unit,
     onPhone: () -> Unit,
     onProviders: () -> Unit,
+    onOpenScreen: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val servers by auth.servers.collectAsState()
+    val hermesConnected = servers.servers.isNotEmpty()
     var remembered by remember { mutableStateOf(DshRemotePrefs.lastBase()) }
     var refresh by remember { mutableIntStateOf(0) }
     val candidateUrls = remember(servers, remembered, refresh) {
@@ -360,13 +363,13 @@ private fun DshRemotePanel(
     val paired = remember(candidateUrls, cookieJar, refresh) {
         findDshRemoteBase(cookieJar, candidateUrls)
     }
-    val openTarget = paired ?: remembered
 
     var server by remember { mutableStateOf(remembered ?: "https://") }
     var code by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
+    var showWeb by remember { mutableStateOf(false) }
 
     val canSubmit = remember(server, code) {
         val raw = if (server.contains("auth=", ignoreCase = true)) server else "$server $code"
@@ -398,10 +401,11 @@ private fun DshRemotePanel(
                     server = remembered ?: payload.server.toString()
                     code = ""
                     info = tr(
-                        "Harness привязан. Дальше можно открывать без компа — cookie на телефоне. Для постоянного входа один раз сохраните «постоянный доступ» в Harness «Удалённый доступ».",
-                        "Harness paired. You can reopen from the phone — the cookie stays here. For lasting access, save the permanent code once from Harness Remote access.",
+                        "Веб-UI привязан (cookie на телефоне). Полный Desktop — кнопка выше через Экран агента.",
+                        "Web UI paired (cookie on phone). Full Desktop is the button above via Agent Screen.",
                     )
                     refresh++
+                    // Do not auto-open the browser — Desktop via Agent Screen is the primary path.
                 }
                 .onFailure {
                     error = it.message ?: it.javaClass.simpleName
@@ -417,57 +421,96 @@ private fun DshRemotePanel(
                     Text(tr("Harness на Hermes", "Harness on Hermes"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         tr(
-                            "Удалённый DeepSeek Harness. Вставьте свою ссылку или адрес + код с экрана «Удалённый доступ» (временный 5 мин или постоянный). Чужой сервер по умолчанию не подставляется.",
-                            "Remote DeepSeek Harness. Paste your own link or address + code from Remote access (5‑min temporary or permanent). No third-party server is prefilled.",
+                            "Полноценное приложение DeepSeek Harness Desktop на компьютере (как у агента): окна, меню, учётная запись и оплата DeepSeek. Открывается через Экран агента (VNC), не в браузере.",
+                            "Full DeepSeek Harness Desktop on the computer (same as the agent’s): windows, menus, account and DeepSeek billing. Opens via Agent Screen (VNC), not the browser.",
                         ),
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    if (openTarget != null && paired != null) {
-                        Text(tr("Сессия есть: ", "Session ready: ") + paired, style = MaterialTheme.typography.bodySmall)
-                        Button(onClick = { openUrl(paired) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(tr("Открыть Harness", "Open Harness"))
+                    if (hermesConnected) {
+                        Button(onClick = onOpenScreen, modifier = Modifier.fillMaxWidth()) {
+                            Text(tr("Открыть Desktop Harness", "Open Desktop Harness"))
                         }
-                    } else if (remembered != null) {
-                        Text(tr("Запомнен адрес: ", "Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            tr("Сессии ещё нет — введите код ещё раз (лучше постоянный).", "No session yet — enter the code again (prefer the permanent one)."),
+                            tr(
+                                "В Desktop: внизу слева «Вы вошли в DeepSeek» → Настройки → Учётная запись → «Пополнить». Также Ctrl+,.",
+                                "In Desktop: bottom-left “Signed in to DeepSeek” → Settings → Account → “Top up”. Also Ctrl+,.",
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    } else {
+                        Text(
+                            tr(
+                                "Сначала подключите Hermes (QR или код на экране «Устройства»). После входа здесь появится кнопка Desktop.",
+                                "Connect Hermes first (QR or code on Devices). After sign-in, the Desktop button appears here.",
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                         )
+                        Button(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
+                            Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
+                        }
                     }
-                    OutlinedTextField(
-                        value = server,
-                        onValueChange = { server = it },
-                        label = { Text(tr("Адрес или ссылка ?auth=", "Address or ?auth= link")) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                    )
-                    OutlinedTextField(
-                        value = code,
-                        onValueChange = { code = it.trim().uppercase() },
-                        label = { Text(tr("Код (8 символов, если не в ссылке)", "Code (8 chars if not in the link)")) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                    )
-                    Text(
-                        tr(
-                            "Один раз сохраните постоянный код в Harness «Удалённый доступ» — дальше без экрана на компе.",
-                            "Save the permanent code once in Harness Remote access — then no desktop screen needed.",
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                    Button(
-                        onClick = { submitPair() },
-                        enabled = canSubmit && !busy,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(if (busy) tr("Подключение…", "Connecting…") else tr("Подключить Harness", "Connect Harness"))
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showWeb = !showWeb }, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            if (showWeb) tr("Скрыть веб-UI (урезанный)", "Hide web UI (stripped)")
+                            else tr("Веб-UI (урезанный) — запасной", "Web UI (stripped) — fallback"),
+                        )
                     }
-                    if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    if (info != null) Text(info!!, style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
+                    if (showWeb) {
+                        Text(
+                            tr(
+                                "Урезанный веб-интерфейс Harness в браузере. Без полного Desktop: нет нормальных меню и оплаты DeepSeek. Для оплаты используйте Desktop выше.",
+                                "Stripped Harness web UI in the browser. Not full Desktop: no proper menus or DeepSeek billing. Use Desktop above to pay.",
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        if (paired != null) {
+                            Text(tr("Сессия веб-UI: ", "Web UI session: ") + paired, style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { openUrl(paired) }, modifier = Modifier.fillMaxWidth()) {
+                                Text(tr("Открыть веб-UI в браузере", "Open web UI in browser"))
+                            }
+                        } else if (remembered != null) {
+                            Text(tr("Запомнен адрес: ", "Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                tr("Сессии ещё нет — введите код ещё раз (лучше постоянный).", "No session yet — enter the code again (prefer the permanent one)."),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        OutlinedTextField(
+                            value = server,
+                            onValueChange = { server = it },
+                            label = { Text(tr("Адрес или ссылка ?auth=", "Address or ?auth= link")) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !busy,
+                        )
+                        OutlinedTextField(
+                            value = code,
+                            onValueChange = { code = it.trim().uppercase() },
+                            label = { Text(tr("Код (8 символов, если не в ссылке)", "Code (8 chars if not in the link)")) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !busy,
+                        )
+                        OutlinedButton(
+                            onClick = { submitPair() },
+                            enabled = canSubmit && !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(if (busy) tr("Подключение…", "Connecting…") else tr("Привязать веб-UI", "Pair web UI"))
+                        }
+                        if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        if (info != null) Text(info!!, style = MaterialTheme.typography.bodySmall)
+                        if (hermesConnected) {
+                            TextButton(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
+                                Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
+                            }
+                        }
                     }
                 }
             }

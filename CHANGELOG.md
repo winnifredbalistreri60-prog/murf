@@ -11,6 +11,13 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.6 — 2026-10-25
+
+- **Harness → Desktop on Hermes:** «На Hermes» primary CTA opens full DeepSeek Harness Desktop via Agent Screen (VNC), not the browser web UI. Billing/top-up lives in Desktop: profile → Settings → Account → «Пополнить».
+- **Harness → Desktop на Hermes:** основная кнопка «Открыть Desktop Harness» ведёт на Экран агента с полноценным dsh-tauri; веб-UI (урезанный) спрятан во второстепенный блок. Оплата DeepSeek — в Desktop.
+- **No auto-browser after pair:** `pairWithDshAuth` no longer opens Chrome to harness.dredd20.ru; prior fix kept — DSH pair does not activate Hermes LoggedIn /api/profiles.
+- **После привязки веб-UI браузер сам не открывается**; сопряжение DSH по-прежнему не включает Hermes LoggedIn.
+
 ## MURF 1.10.5 — 2026-10-24
 
 - **Fix updates for 1.10.3 clients:** `judge.dredd20.ru/downloads/murf-version.json` was stuck on 203 while GitHub already had 204 — in-app “Check for updates” said latest. Mirror synced to 1.10.4; 1.10.3→1.10.4 works again.

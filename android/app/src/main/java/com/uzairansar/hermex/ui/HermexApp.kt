@@ -574,6 +574,7 @@ fun HermexApp(
                         onDevices = { navController.navigate("devices") },
                         onLocal = { navController.navigate("local") },
                         onPhone = { navController.navigate("phone") },
+                        onOpenScreen = { navController.navigateSingleTop("screen") },
                     )
                 }
                 composable(route = "more") {
