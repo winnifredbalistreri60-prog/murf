@@ -349,7 +349,12 @@ private fun DshPhonePanel(
                                     "DeepSeek Harness is not installed yet (~350 MB: Node.js 22 + dsh 0.2.1-rc.2)."))
                                 if (pr != null) {
                                     Text(pr.optString("msg"), style = MaterialTheme.typography.bodySmall)
-                                    if (pr.optString("state") == "running") LinearProgressIndicator(progress = { pr.optInt("pct") / 100f }, Modifier.fillMaxWidth())
+                                    if (pr.optString("state") == "running") {
+                                        LinearProgressIndicator(progress = { pr.optInt("pct") / 100f }, Modifier.fillMaxWidth())
+                                        Text(tr("npm может идти 5–20 мин. Не сворачивайте Termux и не отключайте Wi‑Fi — полоска двигается раз в ~20 с.",
+                                            "npm can take 5–20 min. Keep Termux open and Wi‑Fi on — the bar moves about every 20s."),
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
                                 if (pr?.optString("state") != "running") Button(onClick = { scope.launch { DshLocal.post(cookieJar, "install", JSONObject()); onRefresh() } }) {
                                     Text(if (pr?.optString("state") == "error") tr("Повторить установку", "Retry install") else tr("Установить", "Install"))

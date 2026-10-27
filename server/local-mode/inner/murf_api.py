@@ -12,7 +12,7 @@ HOME = os.path.expanduser("~")
 HERMES = os.path.join(HOME, ".hermes")
 BD = os.path.join(HERMES, "bot-desktop")
 MURF = os.path.join(HOME, ".murf")
-VERSION = "murf-local/1.3.0"
+VERSION = "murf-local/1.3.1"
 
 
 def port_open(port, host="127.0.0.1"):

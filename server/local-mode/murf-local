@@ -12,7 +12,7 @@
 #   murf-local doctor            — проверка всех частей среды, короткий отчёт (для «Диагностика» в MURF)
 #   murf-local restart-screen    — перезапуск экрана агента (Xvnc + websockify)
 #   murf-local uninstall --yes    — удалить среду полностью
-MURF_LOCAL_VERSION=1.3.0
+MURF_LOCAL_VERSION=1.3.1
 D="$HOME/.murf-local"
 PD_DIR="$PREFIX/var/lib/proot-distro"
 DISTRO="${MURF_DISTRO:-$(cat "$HOME/.murf-local/distro" 2>/dev/null || echo murf-ubuntu)}"
@@ -137,6 +137,14 @@ cmd_install() {
 }
 cmd_start() {
   installed || { echo "среда не установлена: murf-local install"; return 2; }
+  # свежие скрипты из ~/.murf-local (после pushScripts из APK) → Ubuntu /opt/murf
+  if [ -d "$D/inner" ] && [ -d "$ROOTFS/usr" ]; then
+    mkdir -p "$ROOTFS/opt/murf" && cp -f "$D/inner/"* "$ROOTFS/opt/murf/" && chmod 755 "$ROOTFS/opt/murf/"*.sh 2>/dev/null || true
+    # murf_api уже импортировал murf_dsh — перезапуск api подхватывает фикс без полного stop
+    if svc_running; then
+      inner /usr/local/bin/murf-svc restart api >/dev/null 2>&1 || true
+    fi
+  fi
   termux-wake-lock 2>/dev/null || true
   if svc_running; then echo "уже запущено"; else
     if [ "${1:-}" = "--fg" ]; then

@@ -92,6 +92,67 @@ def phone_result(j):
 _runs = {}  # run_id -> {"proc", "sid"}
 
 
+PROGRESS_FILE = os.path.join(MURF, "dsh-progress.json")
+INSTALL_PID_FILE = os.path.join(MURF, "dsh-install.pid")
+
+
+def _pid_alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # процесс есть, но чужой uid
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def _read_install_pid():
+    try:
+        return int(open(INSTALL_PID_FILE).read().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def _write_progress(prog):
+    os.makedirs(MURF, exist_ok=True)
+    tmp = PROGRESS_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(prog, f, ensure_ascii=False)
+    os.replace(tmp, PROGRESS_FILE)
+
+
+def _reconcile_progress(prog):
+    """Если state=running, но PID установки мёртв — пометить error, иначе UI залипает на 30% без кнопки «Повторить»."""
+    if not isinstance(prog, dict) or prog.get("state") != "running":
+        return prog
+    pid = _read_install_pid()
+    if _pid_alive(pid):
+        return prog
+    age = time.time() - int(prog.get("ts") or 0)
+    # окно на запись PID сразу после Popen
+    if pid is None and age < 12:
+        return prog
+    stale = {
+        "state": "error",
+        "pct": int(prog.get("pct") or 0),
+        "msg": "установка прервана (процесс не работает). Держите Termux открытым и нажмите «Повторить».",
+        "ts": int(time.time()),
+    }
+    try:
+        _write_progress(stale)
+    except OSError:
+        pass
+    try:
+        os.unlink(INSTALL_PID_FILE)
+    except OSError:
+        pass
+    return stale
+
+
 def status():
     v = None
     try:
@@ -100,17 +161,23 @@ def status():
         pass
     prog = None
     try:
-        prog = json.load(open(os.path.join(MURF, "dsh-progress.json")))
+        prog = json.load(open(PROGRESS_FILE))
     except Exception:
         pass
+    prog = _reconcile_progress(prog)
     return {"installed": bool(v) and os.path.exists(DSH_BIN), "version": v, "progress": prog,
             "running": [k for k, r in _runs.items() if r["proc"].poll() is None],
-            "phone_bridge": time.time() - _device["last_poll"] < 90}
+            "phone_bridge": time.time() - _device["last_poll"] < 90,
+            "install_alive": bool(_pid_alive(_read_install_pid()))}
 
 
 def install_async():
-    if (status().get("progress") or {}).get("state") == "running":
+    prog = (status().get("progress") or {})
+    if prog.get("state") == "running" and _pid_alive(_read_install_pid()):
         return {"ok": True, "already": True}
+    os.makedirs(os.path.join(MURF, "logs"), exist_ok=True)
+    # сбросить залипший running до старта, чтобы UI сразу показал новую попытку
+    _write_progress({"state": "running", "pct": 1, "msg": "запуск установки DeepSeek Harness…", "ts": int(time.time())})
     lf = open(os.path.join(MURF, "logs", "dsh-install.out"), "a")
     subprocess.Popen(["bash", "/opt/murf/dsh-install.sh"], stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT,
                      start_new_session=True)
