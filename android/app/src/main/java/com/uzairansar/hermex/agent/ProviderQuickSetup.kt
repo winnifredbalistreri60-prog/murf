@@ -34,8 +34,11 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Компактный путь «ключ → живые модели с API → выбор» для онбординга / Harness.
- * Ключ только в EncryptedSharedPreferences; список моделей — [MurfProviders.fetchModels].
+ * Авторизация для Harness на телефоне — аналог method «api-key» / «Paste a key»
+ * из @deepseek-ai/dsh-authorization: человек вставляет токен, MURF проверяет его
+ * (живой список моделей) и сохраняет в EncryptedSharedPreferences.
+ * OAuth/device-code потоки оригинального DSH (ChatGPT и др.) пока не встроены —
+ * DeepSeek и большинство провайдеров работают через API-токен.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -138,29 +141,35 @@ fun ProviderQuickSetup(
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            tr("Ключ провайдера и модель", "Provider key & model"),
+            tr("Авторизация (API-токен)", "Authorization (API token)"),
             color = titleColor,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
             tr(
-                "Для чат-агента на телефоне (Harness). Ключ шифруется на устройстве; модели — живой запрос к API провайдера.",
-                "For the on-phone chat agent (Harness). Key stays encrypted on device; models come live from the provider API.",
+                "Как «Paste a key» в DeepSeek Harness: вставьте API-токен провайдера. Он шифруется на телефоне и уходит только в локальный dsh / API провайдера. Модели подтягиваются живым запросом.",
+                "Like “Paste a key” in DeepSeek Harness: paste the provider API token. It stays encrypted on the phone and only goes to local dsh / the provider API. Models are fetched live.",
             ),
             color = labelColor,
             style = MaterialTheme.typography.bodySmall,
         )
 
         if (!expanded && selected != null && models.isNotEmpty()) {
+            val authed = MurfProviders.isAuthorized(context)
             Text(
-                tr("Выбрано: ", "Selected: ") + "${selected.first} / ${selected.second}" +
-                    (fetchedAtLabel?.let { tr(" · обновлено ", " · fetched ") + it } ?: ""),
-                color = titleColor,
+                (if (authed) "✓ " else "⚠ ") +
+                    tr("Выбрано: ", "Selected: ") + "${selected.first} / ${selected.second}" +
+                    (fetchedAtLabel?.let { tr(" · обновлено ", " · fetched ") + it } ?: "") +
+                    if (authed) tr(" · авторизован", " · authorized") else tr(" · нет токена", " · no token"),
+                color = if (authed) titleColor else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
             )
             TextButton(onClick = { expanded = true }) {
-                Text(tr("Изменить / обновить модели", "Change / refresh models"))
+                Text(
+                    if (authed) tr("Сменить токен / модели", "Change token / models")
+                    else tr("Вставить токен и загрузить модели", "Paste token & load models"),
+                )
             }
             return@Column
         }
@@ -203,9 +212,9 @@ fun ProviderQuickSetup(
                     existing?.let { MurfProviders.hasKey(context, it.id) } == true
                 Text(
                     if (hasSaved) {
-                        tr("Новый ключ (пусто — оставить сохранённый)", "New key (empty — keep saved)")
+                        tr("Новый токен (пусто — оставить сохранённый)", "New token (empty — keep saved)")
                     } else {
-                        tr("Ключ API ", "API key ") + kind.keyHint
+                        tr("API-токен / ключ ", "API token / key ") + kind.keyHint
                     },
                 )
             },
@@ -220,8 +229,8 @@ fun ProviderQuickSetup(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                if (busy) tr("Загрузка моделей…", "Loading models…")
-                else tr("Сохранить и загрузить модели", "Save & load models"),
+                if (busy) tr("Проверка токена…", "Verifying token…")
+                else tr("Авторизовать и загрузить модели", "Authorize & load models"),
             )
         }
         msg?.let {

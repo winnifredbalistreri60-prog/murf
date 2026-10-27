@@ -89,6 +89,33 @@ object MurfProviders {
     fun hasKey(c: Context, id: String) = !s(c).getString(id, null).isNullOrBlank()
     internal fun key(c: Context, id: String): String? = s(c).getString(id, null)
 
+    /**
+     * Авторизован ли телефонный Harness для запуска dsh (как method api-key в @deepseek-ai/dsh-authorization):
+     * выбран провайдер+модель и есть сохранённый токен (или Custom без ключа).
+     */
+    fun isAuthorized(c: Context): Boolean {
+        val sel = selected(c) ?: return false
+        val cfg = list(c).firstOrNull { it.id == sel.first } ?: return false
+        return hasKey(c, cfg.id) || cfg.kind == ProviderKind.Custom
+    }
+
+    /** Сообщение, если чат/run нельзя стартовать без токена. */
+    fun authRequiredMessage(c: Context): String? {
+        if (isAuthorized(c)) return null
+        val sel = selected(c)
+        return if (sel == null) {
+            tr(
+                "Нужна авторизация: вставьте API-токен провайдера (как «Paste a key» в DeepSeek Harness).",
+                "Authorization required: paste a provider API token (like “Paste a key” in DeepSeek Harness).",
+            )
+        } else {
+            tr(
+                "Токен для «${sel.first}» не сохранён. Вставьте ключ в блок «Авторизация» ниже.",
+                "No token saved for “${sel.first}”. Paste the key in the Authorization block below.",
+            )
+        }
+    }
+
     fun select(c: Context, provider: String, model: String) = p(c).edit().putString("sel", "$provider\n$model").apply()
     fun selected(c: Context): Pair<String, String>? = p(c).getString("sel", null)?.split("\n")?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
 

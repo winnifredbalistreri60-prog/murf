@@ -149,6 +149,10 @@ object DshLocal {
     /** Запуск хода: события построчно в onEvent. Ключи провайдеров — только в теле запроса к 127.0.0.1. */
     suspend fun run(context: Context, jar: CookieJar, prompt: String, sessionId: String?, phoneTools: Boolean, onEvent: (JSONObject) -> Unit) =
         withContext(Dispatchers.IO) {
+            MurfProviders.authRequiredMessage(context)?.let { msg ->
+                withContext(Dispatchers.Main) { onEvent(JSONObject().put("type", "error").put("error", msg)) }
+                return@withContext
+            }
             val sel = MurfProviders.selected(context)
             if (sel == null) {
                 withContext(Dispatchers.Main) { onEvent(JSONObject().put("type", "error").put("error", tr("Выберите провайдера и модель", "Choose a provider and model"))) }
@@ -274,6 +278,36 @@ private fun DshPhonePanel(
     var status by remember { mutableStateOf<JSONObject?>(null) }
     var sessions by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var health by remember { mutableStateOf<JSONObject?>(null) }
+    // Hoisted out of LazyColumn item — remember() inside item was resetting on recompose.
+    var localBusy by remember { mutableStateOf<String?>(null) }
+    var localLog by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
+
+    fun runSwitchToLocal(initial: String) {
+        scope.launch {
+            localBusy = initial
+            localError = null
+            localLog = ""
+            LocalEnv.switchToLocal(
+                context,
+                auth,
+                onBusy = { localBusy = it },
+                onLog = { localLog = it },
+            )
+                .onSuccess {
+                    localBusy = null
+                    localError = null
+                    onRefresh()
+                    AgentShare.toast(context, tr("Телефон подключён", "Phone connected"))
+                }
+                .onFailure { e ->
+                    val msg = LocalEnv.localConnectUserMessage(e) ?: (e.message ?: e.toString())
+                    localError = msg
+                    localBusy = null
+                    AgentShare.toast(context, msg)
+                }
+        }
+    }
 
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycle) {
@@ -285,7 +319,7 @@ private fun DshPhonePanel(
             health = LocalEnv.health()
             status = DshLocal.get(cookieJar, "status")
             DshLocal.get(cookieJar, "sessions")?.optJSONArray("sessions")?.let { a -> sessions = List(a.length()) { a.getJSONObject(it) } }
-            delay(if (status?.optJSONObject("progress")?.optString("state") == "running") 3000 else 20000)
+            delay(if (status?.optJSONObject("progress")?.optString("state") == "running" || localBusy != null) 3000 else 20000)
         }
     }
 
@@ -294,52 +328,63 @@ private fun DshPhonePanel(
                 Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         val st = status
-                        var localBusy by remember { mutableStateOf<String?>(null) }
                         when {
                             health == null -> {
-                                Text(tr("Локальная среда не запущена. Нажмите ниже — MURF сама запустит Termux и войдёт.",
-                                    "Local environment is not running. Tap below — MURF will start Termux and sign in."))
-                                localBusy?.let { Text("⏳ $it…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                                Text(tr("Локальная среда не запущена. Нажмите ниже — MURF запустит службы в фоне (без окна Termux) и войдёт.",
+                                    "Local environment is not running. Tap below — MURF starts services in the background (no Termux window) and signs in."))
+                                localBusy?.let { Text("⏳ $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                                localError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                                if (localLog.isNotBlank()) {
+                                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                        SelectionContainer {
+                                            Text(
+                                                localLog,
+                                                Modifier.padding(8.dp),
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 10.sp,
+                                                lineHeight = 12.sp,
+                                            )
+                                        }
+                                    }
+                                }
                                 Button(
                                     enabled = localBusy == null,
-                                    onClick = {
-                                        scope.launch {
-                                            localBusy = tr("Запуск…", "Starting…")
-                                            LocalEnv.switchToLocal(context, auth) { localBusy = it }
-                                                .onSuccess { onRefresh(); AgentShare.toast(context, tr("Телефон подключён", "Phone connected")) }
-                                                .onFailure { e ->
-                                                    AgentShare.toast(
-                                                        context,
-                                                        LocalEnv.localConnectUserMessage(e) ?: (e.message ?: e.toString()),
-                                                    )
-                                                }
-                                            localBusy = null
-                                        }
-                                    },
-                                ) { Text(tr("Запустить и войти на телефон", "Start and sign in on phone")) }
+                                    onClick = { runSwitchToLocal(tr("Запуск…", "Starting…")) },
+                                ) {
+                                    Text(
+                                        if (localError != null) tr("Повторить запуск и вход", "Retry start and sign-in")
+                                        else tr("Запустить и войти на телефон", "Start and sign in on phone"),
+                                    )
+                                }
                                 TextButton(onClick = onLocal) { Text(tr("Открыть «Локальная среда»", "Open “Local environment”")) }
                             }
                             st == null -> {
                                 Text(tr("Нет входа в локальную среду — войдите один раз (профиль «Телефон»).",
                                     "Not logged in to the local environment — sign in once (Phone profile)."))
-                                localBusy?.let { Text("⏳ $it…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                                localBusy?.let { Text("⏳ $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                                localError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                                if (localLog.isNotBlank()) {
+                                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                        SelectionContainer {
+                                            Text(
+                                                localLog,
+                                                Modifier.padding(8.dp),
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 10.sp,
+                                                lineHeight = 12.sp,
+                                            )
+                                        }
+                                    }
+                                }
                                 Button(
                                     enabled = localBusy == null,
-                                    onClick = {
-                                        scope.launch {
-                                            localBusy = tr("Вход…", "Signing in…")
-                                            LocalEnv.switchToLocal(context, auth) { localBusy = it }
-                                                .onSuccess { onRefresh(); AgentShare.toast(context, tr("Телефон подключён", "Phone connected")) }
-                                                .onFailure { e ->
-                                                    AgentShare.toast(
-                                                        context,
-                                                        LocalEnv.localConnectUserMessage(e) ?: (e.message ?: e.toString()),
-                                                    )
-                                                }
-                                            localBusy = null
-                                        }
-                                    },
-                                ) { Text(tr("Войти на телефон", "Sign in on phone")) }
+                                    onClick = { runSwitchToLocal(tr("Вход…", "Signing in…")) },
+                                ) {
+                                    Text(
+                                        if (localError != null) tr("Повторить вход", "Retry sign-in")
+                                        else tr("Войти на телефон", "Sign in on phone"),
+                                    )
+                                }
                             }
                             st.optBoolean("installed") -> Text(tr("Установлен dsh ", "Installed dsh ") + st.optString("version") +
                                 tr(" · мост телефона: ", " · phone bridge: ") + (if (st.optBoolean("phone_bridge")) tr("подключён", "connected") else tr("не подключён", "not connected")))
@@ -351,8 +396,8 @@ private fun DshPhonePanel(
                                     Text(pr.optString("msg"), style = MaterialTheme.typography.bodySmall)
                                     if (pr.optString("state") == "running") {
                                         LinearProgressIndicator(progress = { pr.optInt("pct") / 100f }, Modifier.fillMaxWidth())
-                                        Text(tr("npm может идти 5–20 мин. Не сворачивайте Termux и не отключайте Wi‑Fi — полоска двигается раз в ~20 с.",
-                                            "npm can take 5–20 min. Keep Termux open and Wi‑Fi on — the bar moves about every 20s."),
+                                        Text(tr("npm может идти 5–20 мин. Не отключайте Wi‑Fi; прогресс здесь в MURF — полоска двигается раз в ~20 с.",
+                                            "npm can take 5–20 min. Keep Wi‑Fi on; progress stays in MURF — the bar moves about every 20s."),
                                             style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
@@ -362,19 +407,27 @@ private fun DshPhonePanel(
                             }
                         }
                         val sel = remember(refresh, status) { MurfProviders.selected(context) }
-                        if (sel == null) {
-                            ProviderQuickSetup(Modifier.fillMaxWidth())
-                        } else {
-                            Text(tr("Модель: ", "Model: ") + "${sel.first} / ${sel.second}", style = MaterialTheme.typography.bodySmall)
-                        }
+                        val authorized = remember(refresh, status, sel) { MurfProviders.isAuthorized(context) }
+                        // Всегда показываем блок авторизации (api-key method как в оригинальном DSH)
+                        ProviderQuickSetup(Modifier.fillMaxWidth())
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = onProviders) { Text(tr("Все провайдеры", "All providers")) }
-                            Button(onClick = { onOpenChat("") }, enabled = st?.optBoolean("installed") == true && sel != null) {
+                            Button(
+                                onClick = { onOpenChat("") },
+                                enabled = st?.optBoolean("installed") == true && authorized,
+                            ) {
                                 Text(tr("Новый чат", "New chat"))
                             }
                         }
-                        Text(tr("DeepSeek Harness — открытый агент DeepSeek (MIT). Работает в Ubuntu (proot) на телефоне, ключи хранятся в MURF зашифрованными. Телеметрия dsh отключена.",
-                            "DeepSeek Harness is DeepSeek's open agent (MIT). It runs in Ubuntu (proot) on the phone; keys are stored encrypted in MURF. dsh telemetry is off."),
+                        if (!authorized) {
+                            Text(
+                                MurfProviders.authRequiredMessage(context).orEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        Text(tr("DeepSeek Harness — открытый агент DeepSeek (MIT). На телефоне: авторизация API-токеном (как «Paste a key» в оригинале); токен шифруется в MURF. OAuth/device-code провайдеров DSH — позже. Телеметрия dsh отключена.",
+                            "DeepSeek Harness is DeepSeek's open agent (MIT). On phone: authorize with an API token (like “Paste a key” upstream); token is encrypted in MURF. DSH OAuth/device-code flows — later. dsh telemetry is off."),
                             style = MaterialTheme.typography.labelSmall)
                     }
                 }

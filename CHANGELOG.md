@@ -11,6 +11,14 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.10 — 2026-10-27
+
+- **Harness authorization (API token):** phone Harness always shows Authorization (API token) — same idea as DeepSeek Harness «Paste a key» / dsh-authorization api-key method; encrypted in MURF; New chat / run blocked until authorized. OAuth/device-code flows of upstream DSH are staged for later.
+- **Авторизация Harness (API-токен):** на «На телефоне» всегда блок авторизации как «Paste a key» в оригинальном Harness; без токена чат не стартует. OAuth/device-code — позже.
+- **Termux inside MURF:** local env start/install/uninstall run via background RUN_COMMAND — no jump to a separate Termux window for Harness «Запустить и войти» or Local «Установить/Запустить».
+- **Live start status:** Harness «На телефоне» shows step + elapsed seconds + scrollable log tail; on failure — error text and Retry (button no longer stuck disabled forever).
+- **Termux в MURF:** старт/установка/удаление среды без перехода в окно Termux; Harness показывает шаг, таймер и хвост журнала, при ошибке — «Повторить».
+
 ## MURF 1.10.9 — 2026-10-27
 
 - **DSH install stall fix:** npm-install progress heartbeats so the bar moves during long `npm install`; stale PID → clear error + Retry; npm install retries (3×); murf-local **1.3.1** sync-on-start from assets.

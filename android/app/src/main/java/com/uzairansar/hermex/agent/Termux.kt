@@ -66,12 +66,24 @@ object Termux {
     }
 
     /**
-     * Долгая команда в отдельной сессии Termux (живёт, пока жива сессия; Termux держит foreground-service).
-     * Важно: Termux запускает процесс сессии только при показе окна (проверено на 0.118.3) — поэтому openActivity=true.
+     * Долгая команда в видимой сессии Termux (окно Termux). Для UX внутри MURF предпочитайте
+     * [runDetached] / [run] — без переключения Activity (см. LocalEnv.start/install).
+     * SESSION_ACTION "0" = показать сессию; "2" = не переключать (на 0.118.3 процесс сессии
+     * часто не стартует без показа окна — поэтому для фона используем BACKGROUND=true).
      */
     fun runSession(context: Context, command: String, openActivity: Boolean) {
         start(context, baseIntent(command, null, background = false)
             .putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", if (openActivity) "0" else "2"))
+    }
+
+    /**
+     * Фоновый RUN_COMMAND без ожидания результата и без открытия окна Termux.
+     * Подходит для `murf-local install` / `start` (скрипт сам пишет progress/логи; MURF опрашивает).
+     */
+    fun runDetached(context: Context, command: String) {
+        if (!isInstalled(context) || !hasPermission(context)) return
+        start(context, baseIntent(command, null, background = true)
+            .putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "2"))
     }
 
     /** Фоновый запуск с ожиданием результата (stdout/stderr/exit code). */

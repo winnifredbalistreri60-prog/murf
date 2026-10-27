@@ -157,15 +157,38 @@ object LocalEnv {
         )
     }
 
-    fun install(context: Context) = Termux.runSession(context,
-        "murf-local install; echo; echo 'Готово/остановлено. Вернитесь в MURF. Повторный запуск продолжит с места остановки.'", openActivity = true)
+    /**
+     * Установка без окна Termux: фоновый RUN_COMMAND + progress в `murf-local status`
+     * (LocalRoute уже опрашивает pct/step). Повторный вызов продолжит с места остановки.
+     */
+    fun install(context: Context) = Termux.runDetached(
+        context,
+        "termux-wake-lock 2>/dev/null; murf-local install >> ~/.murf-local/logs/install.log 2>&1",
+    )
 
-    fun start(context: Context) = Termux.runSession(context, "murf-local start --fg", openActivity = true)
+    /**
+     * Старт служб внутри MURF: без --fg и без Termux Activity.
+     * `murf-local start` сам nohup-ит murf-svc и до ~90 с ждёт health.
+     */
+    suspend fun start(context: Context): TermuxResult =
+        Termux.run(context, "termux-wake-lock 2>/dev/null; murf-local start", timeoutMs = 150_000)
+
+    /** Fire-and-forget старт (для параллельного опроса логов в UI). */
+    fun startDetached(context: Context) = Termux.runDetached(
+        context,
+        "termux-wake-lock 2>/dev/null; murf-local start >> ~/.murf-local/logs/svc.log 2>&1",
+    )
 
     suspend fun stop(context: Context) = Termux.run(context, "murf-local stop", timeoutMs = 60_000)
 
-    fun login(context: Context, openTermux: Boolean) = Termux.runSession(context,
-        "murf-local login xai-oauth; echo; read -p 'Enter — закрыть окно' _", openActivity = true)
+    fun login(context: Context, openTermux: Boolean) {
+        val cmd = "murf-local login xai-oauth"
+        if (openTermux) {
+            Termux.runSession(context, "$cmd; echo; read -p 'Enter — закрыть окно' _", openActivity = true)
+        } else {
+            Termux.runDetached(context, "$cmd >> ~/.murf-local/logs/login.log 2>&1")
+        }
+    }
 
     suspend fun loginStatus(context: Context): JSONObject? =
         Termux.run(context, "murf-local login-status", timeoutMs = 30_000).stdout.lines().lastOrNull { it.startsWith("{") }
@@ -178,10 +201,25 @@ object LocalEnv {
     suspend fun setProxy(context: Context, url: String) =
         Termux.run(context, "murf-local proxy " + Termux.shellQuote(url.ifBlank { "off" }), timeoutMs = 60_000)
 
-    fun uninstall(context: Context) = Termux.runSession(context, "murf-local uninstall --yes", openActivity = true)
+    fun uninstall(context: Context) = Termux.runDetached(context, "murf-local uninstall --yes >> ~/.murf-local/logs/uninstall.log 2>&1")
 
     suspend fun logs(context: Context, name: String) =
         Termux.run(context, "murf-local logs " + Termux.shellQuote(name) + " 60", timeoutMs = 30_000).combined()
+
+    /** Хвост лога старта/служб для UI (без открытия Termux). */
+    suspend fun startLogTail(context: Context, lines: Int = 40): String {
+        val n = lines.coerceIn(10, 120)
+        val r = Termux.run(
+            context,
+            "tail -n $n ~/.murf-local/logs/svc.log ~/.murf-local/logs/gateway.log ~/.murf-local/logs/install.log 2>/dev/null | tail -n $n",
+            timeoutMs = 20_000,
+        )
+        return r.combined().trim().takeLast(4000)
+    }
+
+    /** Короткий статус шага для Harness/Local (юнит-тестируется). */
+    internal fun startBusyLabel(elapsedSec: Int, phase: String): String =
+        if (elapsedSec <= 0) phase else "$phase (${elapsedSec} с)"
 
     /** Сообщение вместо сырого OkHttp «Failed to connect» при мёртвом 127.0.0.1:18080. */
     internal fun localConnectUserMessage(t: Throwable): String? {
@@ -206,14 +244,15 @@ object LocalEnv {
 
     /**
      * Переключиться на профиль «Телефон (локально)».
-     * Если среда не запущена — стартует через Termux и ждёт health до ~120 с;
+     * Если среда не запущена — стартует в фоне Termux (без окна) и ждёт health до ~180 с;
      * при уже известном профиле только activate() (как switchToServer), без живого login.
-     * [onBusy] — короткие статусы для UI («Запуск…», «Ожидание…»).
+     * [onBusy] — шаг для UI; [onLog] — хвост журнала (обновляется во время ожидания).
      */
     suspend fun switchToLocal(
         context: Context,
         auth: AuthRepository,
         onBusy: (String) -> Unit = {},
+        onLog: (String) -> Unit = {},
     ): Result<Unit> = runCatching {
         onBusy(tr("Проверка локальной среды", "Checking local environment"))
         var h = health()
@@ -230,20 +269,51 @@ object LocalEnv {
                     "Grant MURF the “Run commands in Termux” permission (Phone & Termux)",
                 ))
             }
-            onBusy(tr("Запуск локальной среды…", "Starting local environment…"))
-            runCatching { pushScripts(context) }
-            start(context)
-            val deadline = System.currentTimeMillis() + 120_000L
+            onBusy(tr("Синхронизация скриптов…", "Syncing scripts…"))
+            val push = runCatching { pushScripts(context) }.getOrNull()
+            if (push != null && push.error != null) {
+                onLog(push.combined().takeLast(1500))
+            }
+            onBusy(tr("Запуск служб (в фоне, без окна Termux)…", "Starting services (background, no Termux window)…"))
+            // Detached: UI остаётся в MURF; murf-local start nohup-ит svc и пишет svc.log
+            startDetached(context)
+            val deadline = System.currentTimeMillis() + 180_000L
             var waited = 0
+            var lastLogAt = 0L
             while (System.currentTimeMillis() < deadline) {
                 delay(2_000)
                 waited += 2
-                onBusy(tr("Ожидание запуска среды (${waited} с)…", "Waiting for environment (${waited} s)…"))
+                onBusy(
+                    startBusyLabel(
+                        waited,
+                        tr("Ожидание запуска среды", "Waiting for environment"),
+                    ),
+                )
+                if (System.currentTimeMillis() - lastLogAt >= 4_000L) {
+                    lastLogAt = System.currentTimeMillis()
+                    runCatching { startLogTail(context, 30) }.getOrNull()?.takeIf { it.isNotBlank() }?.let(onLog)
+                    if (waited in 6..14) {
+                        val st = runCatching { status(context) }.getOrNull()
+                        if (st != null && st.scripts && !st.installed) {
+                            error(tr(
+                                "Среда ещё не установлена — откройте «Локальная среда» → Установить (идёт в фоне, без окна Termux).",
+                                "Environment is not installed yet — open Local environment → Install (runs in background, no Termux window).",
+                            ))
+                        }
+                    }
+                }
                 h = health()
                 if (h != null) break
             }
             if (h == null) {
-                error(tr("Сначала дождитесь запуска среды", "Wait for the environment to finish starting"))
+                val tail = runCatching { startLogTail(context, 50) }.getOrDefault("")
+                if (tail.isNotBlank()) onLog(tail)
+                error(
+                    tr(
+                        "Среда не поднялась за 3 мин. Проверьте журнал ниже или «Локальная среда» → Диагностика.",
+                        "Environment did not come up in 3 min. Check the log below or Local environment → Diagnostics.",
+                    ),
+                )
             }
         }
 

@@ -233,17 +233,19 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                             val r = LocalEnv.pushScripts(context)
                             if (r.error != null || r.exitCode != 0) error(r.error ?: r.combined().take(300))
                             LocalEnv.install(context)
-                            tr("Установка запущена в Termux (откроется окно с журналом). Займёт 20–60 мин и ~4 ГБ. Вернитесь в MURF — прогресс виден здесь; сессию Termux не закрывайте.", "Installation started in Termux (a log window opens). Takes 20–60 min and ~4 GB. Return to MURF — progress is shown here; don't close the Termux session.")
+                            tr("Установка запущена в фоне (без окна Termux). Займёт 20–60 мин и ~4 ГБ — прогресс и журнал здесь в MURF.", "Installation started in the background (no Termux window). Takes 20–60 min and ~4 GB — progress and log stay in MURF.")
                         }
                     }) { Text(if (s?.installed == true) tr("Обновить", "Update") else tr("Установить", "Install")) }
                     OutlinedButton(enabled = termuxOk && busy == null && s?.installed == true && !s.running, onClick = {
                         act(tr("Запуск", "Starting")) {
                             LocalEnv.pushScripts(context)
-                            LocalEnv.start(context)
+                            LocalEnv.startDetached(context)
                             // После старта — дождаться health и сразу выбрать профиль «Телефон».
-                            val deadline = System.currentTimeMillis() + 120_000L
+                            val deadline = System.currentTimeMillis() + 180_000L
+                            var waited = 0
                             while (System.currentTimeMillis() < deadline) {
                                 delay(3_000)
+                                waited += 3
                                 if (LocalEnv.health() != null) {
                                     LocalEnv.switchToLocal(context, auth) { busy = it }.getOrThrow()
                                     return@act tr(
@@ -251,11 +253,11 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                                         "Environment started; “Phone (local)” profile selected.",
                                     )
                                 }
-                                busy = tr("Ожидание запуска среды…", "Waiting for environment…")
+                                busy = LocalEnv.startBusyLabel(waited, tr("Ожидание запуска среды", "Waiting for environment"))
                             }
                             tr(
-                                "Службы запускаются в сессии Termux (WebUI поднимается 1–3 мин). Вернитесь в MURF; сессию не закрывайте. Потом нажмите «Телефон (локально)».",
-                                "Services start in a Termux session (WebUI takes 1–3 min). Return to MURF; don't close the session. Then tap “Phone (local)”.",
+                                "Службы стартуют в фоне (WebUI 1–3 мин). Оставайтесь в MURF — журнал и статус здесь. Потом «Телефон (локально)».",
+                                "Services are starting in the background (WebUI 1–3 min). Stay in MURF — log and status are here. Then tap “Phone (local)”.",
                             )
                         }
                     }) { Text(tr("Запустить", "Start")) }
@@ -387,7 +389,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
             confirmUninstall = false
             scope.launch {
                 if (onLocal) LocalEnv.switchToServer(auth)
-                LocalEnv.uninstall(context); message = tr("Удаление запущено в Termux", "Removal started in Termux"); refresh++
+                LocalEnv.uninstall(context); message = tr("Удаление запущено в фоне", "Removal started in the background"); refresh++
             }
         }) { Text(tr("Удалить", "Remove")) } },
         dismissButton = { TextButton(onClick = { confirmUninstall = false }) { Text(tr("Отмена", "Cancel")) } },
