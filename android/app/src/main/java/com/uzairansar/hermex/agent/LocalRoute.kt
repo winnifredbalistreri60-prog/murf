@@ -144,7 +144,10 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
     fun act(label: String, block: suspend () -> String?) {
         busy = label; message = null
         scope.launch {
-            message = runCatching { block() }.getOrElse { tr("Ошибка: ", "Error: ") + (it.message ?: it.toString()) }
+            message = runCatching { block() }.getOrElse { e ->
+                LocalEnv.localConnectUserMessage(e)
+                    ?: (tr("Ошибка: ", "Error: ") + (e.message ?: e.toString()))
+            }
             busy = null; refresh++
         }
     }
@@ -180,7 +183,10 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 }
                 Row(
                     Modifier.fillMaxWidth().selectable(selected = onLocal, role = Role.RadioButton, enabled = busy == null) {
-                        act(tr("Переключение на телефон", "Switching to phone")) { LocalEnv.switchToLocal(context, auth).getOrThrow(); tr("Подключено к локальной среде ${LocalEnv.URL}", "Connected to local environment ${LocalEnv.URL}") }
+                        act(tr("Переключение на телефон", "Switching to phone")) {
+                            LocalEnv.switchToLocal(context, auth) { busy = it }.getOrThrow()
+                            tr("Подключено к локальной среде ${LocalEnv.URL}", "Connected to local environment ${LocalEnv.URL}")
+                        }
                     }.testTag("profile_local"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -231,7 +237,27 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                         }
                     }) { Text(if (s?.installed == true) tr("Обновить", "Update") else tr("Установить", "Install")) }
                     OutlinedButton(enabled = termuxOk && busy == null && s?.installed == true && !s.running, onClick = {
-                        act(tr("Запуск", "Starting")) { LocalEnv.pushScripts(context); LocalEnv.start(context); delay(4000); tr("Службы запускаются в сессии Termux (WebUI поднимается 1–3 мин). Вернитесь в MURF; сессию не закрывайте.", "Services start in a Termux session (WebUI takes 1–3 min). Return to MURF; don't close the session.") }
+                        act(tr("Запуск", "Starting")) {
+                            LocalEnv.pushScripts(context)
+                            LocalEnv.start(context)
+                            // После старта — дождаться health и сразу выбрать профиль «Телефон».
+                            val deadline = System.currentTimeMillis() + 120_000L
+                            while (System.currentTimeMillis() < deadline) {
+                                delay(3_000)
+                                if (LocalEnv.health() != null) {
+                                    LocalEnv.switchToLocal(context, auth) { busy = it }.getOrThrow()
+                                    return@act tr(
+                                        "Среда запущена, выбран профиль «Телефон (локально)».",
+                                        "Environment started; “Phone (local)” profile selected.",
+                                    )
+                                }
+                                busy = tr("Ожидание запуска среды…", "Waiting for environment…")
+                            }
+                            tr(
+                                "Службы запускаются в сессии Termux (WebUI поднимается 1–3 мин). Вернитесь в MURF; сессию не закрывайте. Потом нажмите «Телефон (локально)».",
+                                "Services start in a Termux session (WebUI takes 1–3 min). Return to MURF; don't close the session. Then tap “Phone (local)”.",
+                            )
+                        }
                     }) { Text(tr("Запустить", "Start")) }
                     OutlinedButton(enabled = termuxOk && busy == null && s?.running == true, onClick = {
                         act(tr("Остановка", "Stopping")) { LocalEnv.stop(context).combined().take(300) }

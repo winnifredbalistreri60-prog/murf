@@ -12,6 +12,7 @@ import com.uzairansar.hermex.data.repository.AddServerResult
 import com.uzairansar.hermex.data.repository.AuthRepository
 import com.uzairansar.hermex.data.secure.ServerAccount
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -182,21 +183,94 @@ object LocalEnv {
     suspend fun logs(context: Context, name: String) =
         Termux.run(context, "murf-local logs " + Termux.shellQuote(name) + " 60", timeoutMs = 30_000).combined()
 
-    /** Переключиться на профиль «Телефон (локально)»: при необходимости добавить его с локальным паролем WebUI. */
-    suspend fun switchToLocal(context: Context, auth: AuthRepository): Result<Unit> = runCatching {
+    /** Сообщение вместо сырого OkHttp «Failed to connect» при мёртвом 127.0.0.1:18080. */
+    internal fun localConnectUserMessage(t: Throwable): String? {
+        val chain = generateSequence(t) { it.cause }.toList()
+        if (chain.any { it is java.net.ConnectException || it is java.net.SocketTimeoutException }) {
+            return tr("Сначала дождитесь запуска среды", "Wait for the environment to finish starting")
+        }
+        val m = chain.mapNotNull { it.message }.joinToString(" ")
+        if (m.contains("Failed to connect", ignoreCase = true) ||
+            m.contains("Connection refused", ignoreCase = true) ||
+            m.contains("failed to connect", ignoreCase = true)
+        ) {
+            return tr("Сначала дождитесь запуска среды", "Wait for the environment to finish starting")
+        }
+        return null
+    }
+
+    private fun rethrowLocalConnect(t: Throwable): Nothing {
+        localConnectUserMessage(t)?.let { error(it) }
+        throw t
+    }
+
+    /**
+     * Переключиться на профиль «Телефон (локально)».
+     * Если среда не запущена — стартует через Termux и ждёт health до ~120 с;
+     * при уже известном профиле только activate() (как switchToServer), без живого login.
+     * [onBusy] — короткие статусы для UI («Запуск…», «Ожидание…»).
+     */
+    suspend fun switchToLocal(
+        context: Context,
+        auth: AuthRepository,
+        onBusy: (String) -> Unit = {},
+    ): Result<Unit> = runCatching {
+        onBusy(tr("Проверка локальной среды", "Checking local environment"))
+        var h = health()
+        if (h == null) {
+            if (!Termux.isInstalled(context)) {
+                error(tr(
+                    "Установите Termux (F-Droid/GitHub) — без него локальная среда не запустится",
+                    "Install Termux (F-Droid/GitHub) — the local environment cannot start without it",
+                ))
+            }
+            if (!Termux.hasPermission(context)) {
+                error(tr(
+                    "Дайте MURF разрешение «Запуск команд в Termux» (Телефон и Termux)",
+                    "Grant MURF the “Run commands in Termux” permission (Phone & Termux)",
+                ))
+            }
+            onBusy(tr("Запуск локальной среды…", "Starting local environment…"))
+            runCatching { pushScripts(context) }
+            start(context)
+            val deadline = System.currentTimeMillis() + 120_000L
+            var waited = 0
+            while (System.currentTimeMillis() < deadline) {
+                delay(2_000)
+                waited += 2
+                onBusy(tr("Ожидание запуска среды (${waited} с)…", "Waiting for environment (${waited} s)…"))
+                h = health()
+                if (h != null) break
+            }
+            if (h == null) {
+                error(tr("Сначала дождитесь запуска среды", "Wait for the environment to finish starting"))
+            }
+        }
+
+        val existing = localAccount(auth)
+        if (existing != null) {
+            onBusy(tr("Переключение на телефон", "Switching to phone"))
+            auth.activate(existing.id)
+            return@runCatching
+        }
+
+        onBusy(tr("Первый вход в локальный WebUI", "First login to local WebUI"))
         val r = Termux.run(context, "murf-local creds", timeoutMs = 60_000)
         r.error?.let { error(it) }
-        val j = JSONObject(r.stdout.lines().last { it.startsWith("{") })
+        val j = runCatching { JSONObject(r.stdout.lines().last { it.startsWith("{") }) }.getOrElse {
+            error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
+        }
         val pw = j.optString("password")
-        if (pw.isBlank()) error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
-        val existing = localAccount(auth)
-        if (existing == null) {
+        if (pw.isBlank()) {
+            error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
+        }
+        try {
             when (val res = auth.addServer(URL, pw, displayName = DISPLAY_NAME, initials = "ТЛ", headerLogoColorHex = "#4CAF50")) {
                 is AddServerResult.Added -> Unit
                 else -> error(tr("Локальный WebUI не принял пароль ($res)", "Local WebUI rejected the password ($res)"))
             }
-        } else {
-            auth.configure(URL, pw)
+        } catch (t: Throwable) {
+            rethrowLocalConnect(t)
         }
     }
 

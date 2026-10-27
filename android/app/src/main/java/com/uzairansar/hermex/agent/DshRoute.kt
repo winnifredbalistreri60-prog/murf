@@ -253,7 +253,7 @@ fun DshRoute(
             }
             when (tab) {
                 1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders)
-                else -> DshPhonePanel(cookieJar = cookieJar, refresh = refresh, onRefresh = { refresh++ }, onOpenChat = { openChat = it }, onProviders = onProviders)
+                else -> DshPhonePanel(cookieJar = cookieJar, auth = auth, refresh = refresh, onRefresh = { refresh++ }, onOpenChat = { openChat = it }, onProviders = onProviders, onLocal = onLocal)
             }
         }
     }
@@ -262,10 +262,12 @@ fun DshRoute(
 @Composable
 private fun DshPhonePanel(
     cookieJar: CookieJar,
+    auth: AuthRepository,
     refresh: Int,
     onRefresh: () -> Unit,
     onOpenChat: (String) -> Unit,
     onProviders: () -> Unit,
+    onLocal: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -292,9 +294,53 @@ private fun DshPhonePanel(
                 Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         val st = status
+                        var localBusy by remember { mutableStateOf<String?>(null) }
                         when {
-                            health == null -> Text(tr("Локальная среда не запущена. Запустите её в «Локальная среда».", "The local environment is not running. Start it in “Local environment”."))
-                            st == null -> Text(tr("Нет входа в локальную среду — войдите в «Телефон (локально)» хотя бы раз.", "Not logged in to the local environment — log in to “Phone (local)” once."))
+                            health == null -> {
+                                Text(tr("Локальная среда не запущена. Нажмите ниже — MURF сама запустит Termux и войдёт.",
+                                    "Local environment is not running. Tap below — MURF will start Termux and sign in."))
+                                localBusy?.let { Text("⏳ $it…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                                Button(
+                                    enabled = localBusy == null,
+                                    onClick = {
+                                        scope.launch {
+                                            localBusy = tr("Запуск…", "Starting…")
+                                            LocalEnv.switchToLocal(context, auth) { localBusy = it }
+                                                .onSuccess { onRefresh(); AgentShare.toast(context, tr("Телефон подключён", "Phone connected")) }
+                                                .onFailure { e ->
+                                                    AgentShare.toast(
+                                                        context,
+                                                        LocalEnv.localConnectUserMessage(e) ?: (e.message ?: e.toString()),
+                                                    )
+                                                }
+                                            localBusy = null
+                                        }
+                                    },
+                                ) { Text(tr("Запустить и войти на телефон", "Start and sign in on phone")) }
+                                TextButton(onClick = onLocal) { Text(tr("Открыть «Локальная среда»", "Open “Local environment”")) }
+                            }
+                            st == null -> {
+                                Text(tr("Нет входа в локальную среду — войдите один раз (профиль «Телефон»).",
+                                    "Not logged in to the local environment — sign in once (Phone profile)."))
+                                localBusy?.let { Text("⏳ $it…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                                Button(
+                                    enabled = localBusy == null,
+                                    onClick = {
+                                        scope.launch {
+                                            localBusy = tr("Вход…", "Signing in…")
+                                            LocalEnv.switchToLocal(context, auth) { localBusy = it }
+                                                .onSuccess { onRefresh(); AgentShare.toast(context, tr("Телефон подключён", "Phone connected")) }
+                                                .onFailure { e ->
+                                                    AgentShare.toast(
+                                                        context,
+                                                        LocalEnv.localConnectUserMessage(e) ?: (e.message ?: e.toString()),
+                                                    )
+                                                }
+                                            localBusy = null
+                                        }
+                                    },
+                                ) { Text(tr("Войти на телефон", "Sign in on phone")) }
+                            }
                             st.optBoolean("installed") -> Text(tr("Установлен dsh ", "Installed dsh ") + st.optString("version") +
                                 tr(" · мост телефона: ", " · phone bridge: ") + (if (st.optBoolean("phone_bridge")) tr("подключён", "connected") else tr("не подключён", "not connected")))
                             else -> {
