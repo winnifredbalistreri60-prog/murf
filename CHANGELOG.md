@@ -11,6 +11,11 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.9 — 2026-10-27
+
+- **DSH install stall fix:** npm-install progress heartbeats so the bar moves during long `npm install`; stale PID → clear error + Retry; npm install retries (3×); murf-local **1.3.1** sync-on-start from assets.
+- **Установка Harness не зависает:** во время долгого npm install прогресс обновляется (heartbeat); если Termux убил процесс — «Повторить» вместо вечного «идёт»; повторы npm; murf-local 1.3.1 подтягивается при старте среды.
+
 ## MURF 1.10.8 — 2026-10-27
 
 - **Local phone one-tap:** «Телефон (локально)» starts murf-local via Termux when stopped, waits for health (~120s), then `activate()` if the profile already exists (no live WebUI login). Raw OkHttp «Failed to connect» → Russian «Сначала дождитесь запуска среды».
