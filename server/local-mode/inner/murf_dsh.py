@@ -94,6 +94,7 @@ _runs = {}  # run_id -> {"proc", "sid"}
 
 PROGRESS_FILE = os.path.join(MURF, "dsh-progress.json")
 INSTALL_PID_FILE = os.path.join(MURF, "dsh-install.pid")
+_install_lock = threading.Lock()
 
 
 def _pid_alive(pid):
@@ -172,16 +173,21 @@ def status():
 
 
 def install_async():
-    prog = (status().get("progress") or {})
-    if prog.get("state") == "running" and _pid_alive(_read_install_pid()):
-        return {"ok": True, "already": True}
-    os.makedirs(os.path.join(MURF, "logs"), exist_ok=True)
-    # сбросить залипший running до старта, чтобы UI сразу показал новую попытку
-    _write_progress({"state": "running", "pct": 1, "msg": "запуск установки DeepSeek Harness…", "ts": int(time.time())})
-    lf = open(os.path.join(MURF, "logs", "dsh-install.out"), "a")
-    subprocess.Popen(["bash", "/opt/murf/dsh-install.sh"], stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT,
-                     start_new_session=True)
-    return {"ok": True}
+    with _install_lock:
+        prog = (status().get("progress") or {})
+        # The installer writes its PID after Popen; running also covers that window.
+        if prog.get("state") == "running":
+            return {"ok": True, "already": True}
+        os.makedirs(os.path.join(MURF, "logs"), exist_ok=True)
+        _write_progress({"state": "running", "pct": 1, "msg": "запуск установки DeepSeek Harness…", "ts": int(time.time())})
+        try:
+            with open(os.path.join(MURF, "logs", "dsh-install.out"), "a") as lf:
+                subprocess.Popen(["bash", "/opt/murf/dsh-install.sh"], stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT,
+                                 start_new_session=True)
+        except OSError:
+            _write_progress({"state": "error", "pct": 1, "msg": "не удалось запустить установку DeepSeek Harness", "ts": int(time.time())})
+            return {"ok": False, "error": "не удалось запустить установку DeepSeek Harness"}
+        return {"ok": True}
 
 
 def _clean_providers(provs):

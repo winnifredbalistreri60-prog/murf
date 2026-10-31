@@ -34,7 +34,12 @@ class OnboardingViewModel(
 
     fun updateServerUrl(value: String) = _state.update {
         val boundedValue = SavedStatePolicy.boundedInput(value)
-        savedStateHandle?.setBoundedString(SAVED_SERVER_URL, boundedValue)
+        // Do not persist pasted pairing links or URL credentials in saved state.
+        if (!boundedValue.contains('?') && !boundedValue.contains('#') && !boundedValue.contains('@')) {
+            savedStateHandle?.setBoundedString(SAVED_SERVER_URL, boundedValue)
+        } else {
+            savedStateHandle?.remove<String>(SAVED_SERVER_URL)
+        }
         it.copy(
             serverUrl = boundedValue,
             message = null,
@@ -53,9 +58,10 @@ class OnboardingViewModel(
 
     fun testConnection() {
         val snapshot = _state.value
+        if (snapshot.isBusy) return
         val headers = parseHeadersOrShowMessage(snapshot.customHeadersText) ?: return
+        _state.update { it.copy(isBusy = true, message = null, messageIsError = false) }
         viewModelScope.launch {
-            _state.update { it.copy(isBusy = true, message = null, messageIsError = false) }
             runSuspendCatching { authRepository.testConnection(snapshot.serverUrl, headers) }
                 .onSuccess { status ->
                     val passkeyOnly = status.authEnabled == true && status.passwordAuthEnabled == false
@@ -88,9 +94,10 @@ class OnboardingViewModel(
 
     fun connect() {
         val snapshot = _state.value
+        if (snapshot.isBusy) return
         val headers = parseHeadersOrShowMessage(snapshot.customHeadersText) ?: return
+        _state.update { it.copy(isBusy = true, message = null, messageIsError = false) }
         viewModelScope.launch {
-            _state.update { it.copy(isBusy = true, message = null, messageIsError = false) }
             runSuspendCatching { authRepository.configure(snapshot.serverUrl, snapshot.password, headers) }
                 .onSuccess {
                     _state.update { it.copy(isBusy = false, isConnected = true) }
@@ -112,6 +119,7 @@ class OnboardingViewModel(
 
     /** Вход по QR/ссылке: MURF `murf://pair` или DeepSeek Harness `?auth=`. */
     fun pairWithQr(raw: String) {
+        if (_state.value.isBusy) return
         val payload = com.uzairansar.hermex.agent.PairPayloadParser.parse(raw)
         if (payload == null) {
             _state.update {
@@ -125,8 +133,8 @@ class OnboardingViewModel(
             }
             return
         }
+        _state.update { it.copy(isBusy = true, serverUrl = payload.server.toString(), message = null, messageIsError = false) }
         viewModelScope.launch {
-            _state.update { it.copy(isBusy = true, serverUrl = payload.server.toString(), message = null, messageIsError = false) }
             val result = runSuspendCatching {
                 when (payload.protocol) {
                     com.uzairansar.hermex.agent.PairProtocol.HermesMurf ->
@@ -179,7 +187,7 @@ class OnboardingViewModel(
                     "Неверный пароль или нет доступа (401).",
                     "Wrong password or no access (401).",
                 )
-            else -> raw
+            else -> com.uzairansar.hermex.agent.tr("Не удалось подключиться. Проверьте настройки и повторите попытку.", "Connection failed. Check the settings and try again.")
         }
     }
 

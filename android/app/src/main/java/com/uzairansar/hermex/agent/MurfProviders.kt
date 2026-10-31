@@ -166,7 +166,8 @@ object MurfProviders {
     suspend fun fetchModels(kind: ProviderKind, baseUrl: String, key: String): Result<List<String>> = withContext(Dispatchers.IO) {
         runCatching {
             val base = baseUrl.trimEnd('/')
-            require(base.toHttpUrlOrNull() != null) { tr("Неверный адрес API", "Invalid API URL") }
+            val url = base.toHttpUrlOrNull()
+            require(url != null && url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { tr("Неверный адрес API", "Invalid API URL") }
             val rb = Request.Builder().url("$base/" + if (kind == ProviderKind.Anthropic) "v1/models?limit=1000" else "models")
             when (kind) {
                 ProviderKind.Anthropic -> rb.header("x-api-key", key).header("anthropic-version", "2023-06-01")
@@ -177,7 +178,7 @@ object MurfProviders {
                     val body = r.body?.string().orEmpty()
                     if (!r.isSuccessful) error(when (r.code) {
                         401, 403 -> tr("Ключ не принят (HTTP ${r.code})", "Key rejected (HTTP ${r.code})")
-                        else -> "HTTP ${r.code}: " + body.replace(key, "***").take(200)
+                        else -> "HTTP ${r.code}"
                     })
                     parseModels(body)
                 }

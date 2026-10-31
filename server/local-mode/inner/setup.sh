@@ -203,7 +203,15 @@ fi
 # Ставится только если включено в приложении (файл-флаг) или MURF_WITH_DSH=1; иначе — кнопкой «Установить» позже.
 if [ "${MURF_WITH_DSH:-0}" = 1 ] || [ -f "$MURF_HOME/want-dsh" ]; then
   progress running 95 dsh "DeepSeek Harness: Node 22 + dsh (необязательный шаг)"
-  bash "$MURF_DIR/dsh-install.sh" || echo "DeepSeek Harness не установился — повтор: murf-local dsh-install"
+  STEP=dsh
+  rm -f "$MURF_HOME/steps/dsh.done"
+  if bash "$MURF_DIR/dsh-install.sh"; then
+    rm -f "$MURF_HOME/steps/dsh.failed"
+    done_step dsh
+  else
+    done_step dsh.failed
+    fail "DeepSeek Harness не установился — повторите murf-local install или murf-local dsh-install"
+  fi
 fi
 
 # кэш загрузок uv не нужен для работы (~300 МБ на телефоне)

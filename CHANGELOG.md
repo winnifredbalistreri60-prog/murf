@@ -11,6 +11,14 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.12 — 2026-10-31
+
+- **Harness install status:** failed `dsh-install.sh` is reported as an error with retry, not as success; Harness install cannot run twice at once (murf-local 1.3.3).
+- **Updates:** update is aborted if APK signing certificates cannot be read; `murf-version.json` capped at 64 KiB; after a network error the check retries in 1 minute instead of 6 hours.
+- **VDS installer:** Hermes Agent installer pinned to a commit and verified by SHA-256.
+- **Onboarding:** double taps no longer start parallel checks/pairing; URLs with credentials are not stored; server URLs with embedded login/password are rejected; Harness pairing needs a fresh valid cookie.
+- **Providers:** API key saved only after the provider returns models; previous provider's key is never reused after switching; provider error bodies are not shown.
+
 ## MURF 1.10.11 — 2026-10-27
 
 - **Termux stays inside MURF:** `Termux.run()` / background RUN_COMMAND now set SESSION_ACTION `"2"` (was hardcoded `"0"` → every status/pushScripts/log jumped to a separate Termux Activity). Install/Start/Harness switchToLocal no longer auto-open Termux.

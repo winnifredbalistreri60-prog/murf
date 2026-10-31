@@ -184,11 +184,26 @@ class DshRemotePairingApi(
     /** GET `/?auth=CODE`, сохранить Set-Cookie `dsh_remote_session` в общий jar. */
     suspend fun claim(server: HttpUrl, code: String) = withContext(Dispatchers.IO) {
         val target = server.newBuilder().encodedPath("/").query(null).addQueryParameter("auth", code).build()
-        val response = client.newCall(Request.Builder().url(target).get().build()).execute()
+        val response = try {
+            client.newCall(Request.Builder().url(target).get().build()).execute()
+        } catch (_: IOException) {
+            // OkHttp exceptions may contain the pairing URL and its code.
+            throw PairingException(tr("Не удалось подключиться к Harness", "Could not connect to Harness"))
+        }
         response.use { r ->
-            val cookies = cookieJar.loadForRequest(server)
-            val hasSession = cookies.any { it.name == "dsh_remote_session" && it.value.isNotBlank() }
-            if (!hasSession) {
+            var hop: okhttp3.Response? = r
+            var issuedSession = false
+            while (hop != null) {
+                val current = hop
+                issuedSession = issuedSession || current.headers("Set-Cookie").any { header ->
+                    val cookie = okhttp3.Cookie.parse(current.request.url, header)
+                    cookie != null && cookie.name == "dsh_remote_session" && cookie.value.isNotBlank() &&
+                        cookie.expiresAt > System.currentTimeMillis() && cookie.matches(server)
+                }
+                hop = current.priorResponse
+            }
+            val hasSession = cookieJar.loadForRequest(server).any { it.name == "dsh_remote_session" && it.value.isNotBlank() }
+            if (!r.isSuccessful || !issuedSession || !hasSession) {
                 throw PairingException(
                     tr(
                         "Harness не выдал сессию (проверьте код и что доступ извне включён)",

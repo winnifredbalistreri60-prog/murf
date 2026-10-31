@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -82,7 +83,8 @@ fun ProviderQuickSetup(
 
     fun saveAndFetch() {
         if (busy) return
-        val id = providerId ?: existing?.id ?: MurfProviders.newId(context, kind)
+        val id = if (existing != null && existing.kind != kind) MurfProviders.newId(context, kind)
+            else providerId ?: existing?.id ?: MurfProviders.newId(context, kind)
         val apiKey = key.trim().ifBlank { MurfProviders.key(context, id).orEmpty() }
         if (apiKey.isBlank() && kind != ProviderKind.Custom) {
             msg = tr("Вставьте ключ API провайдера", "Paste the provider API key")
@@ -98,80 +100,78 @@ fun ProviderQuickSetup(
         msg = null
         msgError = false
         scope.launch {
-            // If user pasted sk-… while Anthropic chip was leftover, switch to DeepSeek/OpenAI — not Anthropic.
-            val prevKind = kind
-            val inferred = if (key.isNotBlank()) MurfProviders.inferKindFromKey(apiKey, prevKind) else prevKind
-            val switched = inferred != prevKind
-            if (switched) {
-                kind = inferred
-                base = inferred.baseUrl
-            }
-            val useKind = inferred
-            val useBase = (if (switched) inferred.baseUrl else base).trim().trimEnd('/').ifBlank { useKind.baseUrl }
-            // New kind → new id (do not keep "anthropic" id when user pasted a DeepSeek key).
-            val useId = when {
-                existing != null && existing.kind == useKind -> existing.id
-                providerId != null && existing?.kind == useKind -> providerId!!
-                else -> MurfProviders.newId(context, useKind)
-            }
-            val cfg = ProviderConfig(
-                id = useId,
-                kind = useKind,
-                name = existing?.name?.takeIf { existing.kind == useKind } ?: useKind.title,
-                baseUrl = useBase,
-                models = if (existing?.kind == useKind) models else emptyList(),
-                defaultModel = picked?.takeIf { existing?.kind == useKind },
-                modelsFetchedAt = existing?.modelsFetchedAt?.takeIf { existing.kind == useKind } ?: 0L,
-            )
-            // Drop stale Anthropic (or any other) selection until this key's models are confirmed.
-            val prevSel = MurfProviders.selected(context)
-            if (switched || prevSel?.first != useId) {
-                MurfProviders.clearSelection(context)
-                picked = null
-            }
-            MurfProviders.upsert(context, cfg, apiKey.takeIf { key.isNotBlank() })
-            providerId = useId
-            val storedKey = MurfProviders.key(context, useId).orEmpty()
-            MurfProviders.fetchModels(cfg.kind, cfg.baseUrl, storedKey).fold(
-                onSuccess = { list ->
-                    if (list.isEmpty()) {
-                        MurfProviders.clearSelection(context)
-                        models = emptyList()
-                        picked = null
-                        msg = tr(
-                            "Ключ принят, но список моделей пуст — выберите модель после повтора",
-                            "Key saved but model list is empty — retry and pick a model",
-                        )
-                        msgError = true
-                        ver++
-                        return@fold
-                    }
-                    val choose = picked?.takeIf { it in list && existing?.kind == useKind } ?: list.first()
-                    val updated = cfg.copy(
-                        models = list,
-                        modelsFetchedAt = System.currentTimeMillis(),
-                        defaultModel = choose,
-                    )
-                    MurfProviders.upsert(context, updated, null)
-                    models = list
-                    MurfProviders.select(context, useId, choose)
-                    picked = choose
-                    msg = tr("Моделей с API: ", "Models from API: ") + list.size
-                    msgError = false
-                    key = ""
-                    ver++
-                    expanded = false
-                },
-                onFailure = { e ->
-                    // Keep key on disk for retry, but do NOT leave previous Anthropic selected/authorized.
+            try {
+                // If user pasted sk-… while Anthropic chip was leftover, switch to DeepSeek/OpenAI — not Anthropic.
+                val prevKind = kind
+                val inferred = if (key.isNotBlank()) MurfProviders.inferKindFromKey(apiKey, prevKind) else prevKind
+                val switched = inferred != prevKind
+                if (switched) {
+                    kind = inferred
+                    base = inferred.baseUrl
+                }
+                val useKind = inferred
+                val useBase = (if (switched) inferred.baseUrl else base).trim().trimEnd('/').ifBlank { useKind.baseUrl }
+                // New kind → new id (do not keep "anthropic" id when user pasted a DeepSeek key).
+                val useId = when {
+                    existing != null && existing.kind == useKind -> existing.id
+                    !switched && existing == null && id.isNotBlank() -> id
+                    else -> MurfProviders.newId(context, useKind)
+                }
+                // A typed key belongs to the provider it was typed for; never reuse another provider's stored key.
+                val useKey = if (key.isNotBlank()) apiKey else MurfProviders.key(context, useId).orEmpty()
+                val cfg = ProviderConfig(
+                    id = useId,
+                    kind = useKind,
+                    name = existing?.name?.takeIf { existing.kind == useKind } ?: useKind.title,
+                    baseUrl = useBase,
+                    models = if (existing?.kind == useKind) models else emptyList(),
+                    defaultModel = picked?.takeIf { existing?.kind == useKind },
+                    modelsFetchedAt = existing?.modelsFetchedAt?.takeIf { existing.kind == useKind } ?: 0L,
+                )
+                // Drop stale Anthropic (or any other) selection until this key's models are confirmed.
+                val prevSel = MurfProviders.selected(context)
+                if (switched || prevSel?.first != useId) {
                     MurfProviders.clearSelection(context)
                     picked = null
-                    msg = ProviderApiErrors.userMessage(e)
-                    msgError = true
-                    ver++
-                },
-            )
-            busy = false
+                }
+                MurfProviders.fetchModels(cfg.kind, cfg.baseUrl, useKey).fold(
+                    onSuccess = { list ->
+                        if (list.isEmpty()) {
+                            msg = tr("Провайдер не вернул моделей", "Provider returned no models")
+                            msgError = true
+                            return@fold
+                        }
+                        val choose = picked?.takeIf { it in list && existing?.kind == useKind } ?: list.first()
+                        val updated = cfg.copy(
+                            models = list,
+                            modelsFetchedAt = System.currentTimeMillis(),
+                            defaultModel = choose,
+                        )
+                        // Key is persisted only after the provider accepted it.
+                        MurfProviders.upsert(context, updated, useKey.takeIf { key.isNotBlank() })
+                        providerId = useId
+                        models = list
+                        MurfProviders.select(context, useId, choose)
+                        picked = choose
+                        msg = tr("Моделей с API: ", "Models from API: ") + list.size
+                        msgError = false
+                        key = ""
+                        ver++
+                        expanded = false
+                    },
+                    onFailure = { e ->
+                        msg = ProviderApiErrors.userMessage(e)
+                        msgError = true
+                    },
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                msg = ProviderApiErrors.userMessage(e)
+                msgError = true
+            } finally {
+                busy = false
+            }
         }
     }
 
@@ -222,6 +222,11 @@ fun ProviderQuickSetup(
                 FilterChip(
                     selected = kind == k,
                     onClick = {
+                        if (kind != k) {
+                            models = emptyList()
+                            picked = null
+                            key = ""
+                        }
                         kind = k
                         if (existing == null || existing.kind != k) base = k.baseUrl
                     },
@@ -341,7 +346,7 @@ object ProviderApiErrors {
             raw.contains("Неверный адрес", ignoreCase = true) ||
                 raw.contains("Invalid API", ignoreCase = true) ->
                 tr("Неверный адрес API", "Invalid API URL")
-            else -> tr("Не удалось получить модели: ", "Could not fetch models: ") + raw.take(180)
+            else -> tr("Не удалось получить модели. Проверьте настройки и повторите попытку.", "Could not fetch models. Check the settings and try again.")
         }
     }
 }

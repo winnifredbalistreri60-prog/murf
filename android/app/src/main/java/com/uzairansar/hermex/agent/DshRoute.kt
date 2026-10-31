@@ -497,6 +497,7 @@ private fun DshRemotePanel(
     }
 
     fun submitPair(openClientAfter: Boolean = true) {
+        if (busy) return
         val raw = if (server.contains("auth=", ignoreCase = true)) server.trim() else "${server.trim()} ${code.trim()}"
         val payload = PairPayloadParser.parse(raw)
         if (payload == null || payload.protocol != PairProtocol.DshRemote) {

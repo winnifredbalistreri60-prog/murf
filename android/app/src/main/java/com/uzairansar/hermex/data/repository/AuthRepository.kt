@@ -460,6 +460,7 @@ class AuthRepository(
                 "${defaultScheme(trimmed)}://$trimmed"
             }
             val parsed = withScheme.toHttpUrl()
+            require(parsed.username.isEmpty() && parsed.password.isEmpty()) { "Server URL must not contain credentials." }
             val normalized = parsed.newBuilder()
                 .host(normalizedHost(parsed.host))
                 .encodedPath("/")

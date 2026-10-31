@@ -77,6 +77,9 @@ try:
     r = m.install_async()
     assert r.get("ok") is True and not r.get("already"), r
     assert len(calls) == 1, calls
+    # Повторный запрос до записи PID не запускает ещё один установщик.
+    assert m.install_async().get("already") is True
+    assert len(calls) == 1
     # после install_async прогресс снова running (стартовый)
     prog = json.load(open(m.PROGRESS_FILE))
     assert prog["state"] == "running" and prog["pct"] == 1, prog
@@ -84,6 +87,17 @@ finally:
     m.subprocess.Popen = real_popen
     try: os.unlink(m.INSTALL_PID_FILE)
     except OSError: pass
+
+# Ошибка запуска должна завершить состояние running.
+def failing_popen(*args, **kwargs):
+    raise OSError("spawn failed")
+m._write_progress({"state": "error", "pct": 1, "msg": "old", "ts": int(time.time())})
+m.subprocess.Popen = failing_popen
+try:
+    assert m.install_async()["ok"] is False
+    assert m.status()["progress"]["state"] == "error"
+finally:
+    m.subprocess.Popen = real_popen
 
 # свежий running без PID в grace window (<12s) не помечается error
 m._write_progress({"state": "running", "pct": 1, "msg": "start", "ts": int(time.time())})

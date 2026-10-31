@@ -32,6 +32,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -54,6 +55,8 @@ object AppUpdates {
     const val MANIFEST_URL = "https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download/murf-version.json"
     const val ALLOWED_PREFIX = "https://github.com/winnifredbalistreri60-prog/murf/releases/download/"
     private const val CHECK_EVERY_MS = 6 * 3600_000L
+    private const val RETRY_MS = 60_000L
+    private const val MANIFEST_MAX_BYTES = 64 * 1024L
 
     data class Info(val versionCode: Int, val versionName: String, val url: String, val sha256: String, val size: Long, val notes: String)
 
@@ -125,7 +128,13 @@ object AppUpdates {
             // OkHttp follows redirects; log the final URL for diagnosis.
             val finalUrl = r.request.url.toString()
             if (!r.isSuccessful) error("HTTP ${r.code} @ $finalUrl")
-            val text = r.body!!.string()
+            val body = r.body ?: error("Empty manifest response")
+            if (body.contentLength() > MANIFEST_MAX_BYTES) error("Manifest too large")
+            val source = body.source()
+            source.request(MANIFEST_MAX_BYTES + 1)
+            val bytes = source.readByteArray(minOf(source.buffer.size, MANIFEST_MAX_BYTES + 1))
+            if (bytes.size > MANIFEST_MAX_BYTES) error("Manifest too large")
+            val text = bytes.toString(Charsets.UTF_8)
             android.util.Log.i("MURF-update", "manifest ok finalUrl=$finalUrl bytes=${text.length}")
             return text
         }
@@ -143,9 +152,14 @@ object AppUpdates {
             val result = runCatching { fetchManifestText() }
             if (gen != checkGeneration.get()) return@launch // superseded by a newer check
             // Only stamp the throttle after a completed attempt for this generation.
-            p.edit().putLong("update_checked_at", System.currentTimeMillis()).apply()
+            if (result.isSuccess) p.edit().putLong("update_checked_at", System.currentTimeMillis()).apply()
             result.onFailure {
                 android.util.Log.w("MURF-update", "manifest check failed: ${it.message}")
+                if (auto && it is java.io.IOException) {
+                    delay(RETRY_MS)
+                    if (gen == checkGeneration.get()) check(context.applicationContext, auto = true)
+                    return@launch
+                }
                 if (gen != checkGeneration.get()) return@launch
                 _phase.value = if (auto) Phase.Idle else Phase.Failed(
                     tr(
@@ -247,8 +261,8 @@ object AppUpdates {
         var fromApk = certDigests(archive)
         if (fromApk.isEmpty()) fromApk = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNATURES)?.let { certDigests(it) }.orEmpty()
         android.util.Log.i("MURF-update", "certs apk=${fromApk.map { it.take(8) }} installed=${installed.map { it.take(8) }}")
-        // Если подпись APK прочитать не удалось вовсе, её всё равно сверит сам Android при установке обновления.
-        if (fromApk.isNotEmpty() && installed.isNotEmpty() && fromApk.intersect(installed).isEmpty()) {
+        if (fromApk.isEmpty() || installed.isEmpty()) error(tr("не удалось прочитать сертификаты подписи", "could not read signing certificates"))
+        if (fromApk.intersect(installed).isEmpty()) {
             error(tr("подпись APK отличается от установленного приложения", "APK signature differs from the installed app"))
         }
     }

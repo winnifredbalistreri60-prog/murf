@@ -26,7 +26,9 @@ SKIP_AGENT=0
 WEBUI_PORT=8787
 PHONE_PORT=8790
 AGENT_PORT=8791
-HERMES_INSTALL_URL="${MURF_HERMES_INSTALL_URL:-https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh}"
+HERMES_COMMIT="${MURF_HERMES_COMMIT:-0240fa4a84123406a0e5e6e7262e5b772b43f0bd}"
+HERMES_INSTALL_SHA256="${MURF_HERMES_INSTALL_SHA256:-14b4c89518cf0e4e71841708dd5d8a28f1f494d22cd20e12f4d5eeb29c7d2fdb}"
+HERMES_INSTALL_URL="${MURF_HERMES_INSTALL_URL:-https://raw.githubusercontent.com/NousResearch/hermes-agent/$HERMES_COMMIT/scripts/install.sh}"
 WEBUI_REPO="${MURF_WEBUI_REPO:-https://github.com/nesquena/hermes-webui.git}"
 
 while [ $# -gt 0 ]; do
@@ -133,8 +135,11 @@ if [ "$SKIP_AGENT" -eq 1 ]; then
 elif [ -f "$AGENT_DIR/.hermes-bootstrap-complete" ] && [ "$UPDATE" -eq 0 ]; then
   echo "Hermes Agent уже установлен ($AGENT_DIR)"
 else
+  [[ "$HERMES_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || die "MURF_HERMES_COMMIT должен быть полным хешем коммита"
+  [[ "$HERMES_INSTALL_SHA256" =~ ^[0-9a-fA-F]{64}$ ]] || die "задайте проверенный SHA-256 установщика в MURF_HERMES_INSTALL_SHA256"
   TMP_INST=$(mktemp /tmp/hermes-install.XXXXXX.sh)
   curl -fsSL --retry 3 "$HERMES_INSTALL_URL" -o "$TMP_INST" || die "не удалось скачать официальный установщик Hermes Agent"
+  printf '%s  %s\n' "$HERMES_INSTALL_SHA256" "$TMP_INST" | sha256sum -c - >/dev/null || { rm -f "$TMP_INST"; die "SHA-256 установщика Hermes не совпал"; }
   chmod 644 "$TMP_INST"
   echo "Запускаю официальный установщик Hermes Agent (несколько минут)…"
   as_user env HERMES_INSTALL_VERBOSE=1 bash "$TMP_INST" --non-interactive --skip-browser --skip-computer-use </dev/null \
