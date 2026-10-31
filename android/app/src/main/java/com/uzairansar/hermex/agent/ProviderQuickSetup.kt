@@ -98,21 +98,55 @@ fun ProviderQuickSetup(
         msg = null
         msgError = false
         scope.launch {
+            // If user pasted sk-… while Anthropic chip was leftover, switch to DeepSeek/OpenAI — not Anthropic.
+            val prevKind = kind
+            val inferred = if (key.isNotBlank()) MurfProviders.inferKindFromKey(apiKey, prevKind) else prevKind
+            val switched = inferred != prevKind
+            if (switched) {
+                kind = inferred
+                base = inferred.baseUrl
+            }
+            val useKind = inferred
+            val useBase = (if (switched) inferred.baseUrl else base).trim().trimEnd('/').ifBlank { useKind.baseUrl }
+            // New kind → new id (do not keep "anthropic" id when user pasted a DeepSeek key).
+            val useId = when {
+                existing != null && existing.kind == useKind -> existing.id
+                providerId != null && existing?.kind == useKind -> providerId!!
+                else -> MurfProviders.newId(context, useKind)
+            }
             val cfg = ProviderConfig(
-                id = id,
-                kind = kind,
-                name = existing?.name ?: kind.title,
-                baseUrl = base.trim().trimEnd('/'),
-                models = models,
-                defaultModel = picked,
-                modelsFetchedAt = existing?.modelsFetchedAt ?: 0L,
+                id = useId,
+                kind = useKind,
+                name = existing?.name?.takeIf { existing.kind == useKind } ?: useKind.title,
+                baseUrl = useBase,
+                models = if (existing?.kind == useKind) models else emptyList(),
+                defaultModel = picked?.takeIf { existing?.kind == useKind },
+                modelsFetchedAt = existing?.modelsFetchedAt?.takeIf { existing.kind == useKind } ?: 0L,
             )
+            // Drop stale Anthropic (or any other) selection until this key's models are confirmed.
+            val prevSel = MurfProviders.selected(context)
+            if (switched || prevSel?.first != useId) {
+                MurfProviders.clearSelection(context)
+                picked = null
+            }
             MurfProviders.upsert(context, cfg, apiKey.takeIf { key.isNotBlank() })
-            providerId = id
-            val storedKey = MurfProviders.key(context, id).orEmpty()
+            providerId = useId
+            val storedKey = MurfProviders.key(context, useId).orEmpty()
             MurfProviders.fetchModels(cfg.kind, cfg.baseUrl, storedKey).fold(
                 onSuccess = { list ->
-                    val choose = picked?.takeIf { it in list } ?: list.firstOrNull()
+                    if (list.isEmpty()) {
+                        MurfProviders.clearSelection(context)
+                        models = emptyList()
+                        picked = null
+                        msg = tr(
+                            "Ключ принят, но список моделей пуст — выберите модель после повтора",
+                            "Key saved but model list is empty — retry and pick a model",
+                        )
+                        msgError = true
+                        ver++
+                        return@fold
+                    }
+                    val choose = picked?.takeIf { it in list && existing?.kind == useKind } ?: list.first()
                     val updated = cfg.copy(
                         models = list,
                         modelsFetchedAt = System.currentTimeMillis(),
@@ -120,19 +154,21 @@ fun ProviderQuickSetup(
                     )
                     MurfProviders.upsert(context, updated, null)
                     models = list
-                    if (choose != null) {
-                        MurfProviders.select(context, id, choose)
-                        picked = choose
-                    }
+                    MurfProviders.select(context, useId, choose)
+                    picked = choose
                     msg = tr("Моделей с API: ", "Models from API: ") + list.size
                     msgError = false
                     key = ""
                     ver++
-                    if (list.isNotEmpty()) expanded = false
+                    expanded = false
                 },
                 onFailure = { e ->
+                    // Keep key on disk for retry, but do NOT leave previous Anthropic selected/authorized.
+                    MurfProviders.clearSelection(context)
+                    picked = null
                     msg = ProviderApiErrors.userMessage(e)
                     msgError = true
+                    ver++
                 },
             )
             busy = false

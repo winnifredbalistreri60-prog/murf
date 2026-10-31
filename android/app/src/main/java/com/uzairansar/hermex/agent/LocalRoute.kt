@@ -265,7 +265,6 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                         act(tr("Остановка", "Stopping")) { LocalEnv.stop(context).combined().take(300) }
                     }) { Text(tr("Остановить", "Stop")) }
                     TextButton(enabled = termuxOk, onClick = { act(tr("Журнал", "Log")) { logText = LocalEnv.logs(context, if (status?.installed == true) "gateway" else "install"); null } }) { Text(tr("Журнал", "Log")) }
-                    TextButton(onClick = { LocalEnv.openTermux(context) }) { Text(tr("Открыть Termux", "Open Termux")) }
                 }
             }
 
@@ -281,6 +280,9 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                         act(tr("Перезапуск экрана (до 1,5 мин)", "Restarting the screen (up to 1.5 min)")) { LocalEnv.restartScreen(context).combined().trim().takeLast(400) }
                     }) { Text(tr("Перезапустить экран", "Restart screen")) }
                     TextButton(enabled = termuxOk, onClick = { act(tr("Журнал экрана", "Screen log")) { logText = LocalEnv.screenLogs(context); null } }) { Text(tr("Журнал экрана", "Screen log")) }
+                    TextButton(onClick = { LocalEnv.openTermux(context) }) {
+                        Text(tr("Termux (диагностика)", "Termux (diagnostics)"))
+                    }
                 }
                 diagText?.let { t ->
                     Card(Modifier.fillMaxWidth().testTag("local_doctor_report")) {
@@ -316,7 +318,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (url.isNotBlank()) OutlinedButton(onClick = { LocalEnv.tryStart(context, android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }) { Text(tr("Открыть ссылку", "Open link")) }
                                 if (code.isNotBlank()) TextButton(onClick = { AgentShare.copy(context, code); AgentShare.toast(context, tr("Код скопирован", "Code copied")) }) { Text(tr("Копировать код", "Copy code")) }
-                                TextButton(onClick = { LocalEnv.openTermux(context) }) { Text(tr("Показать в Termux", "Show in Termux")) }
+                                TextButton(onClick = { LocalEnv.openTermux(context) }) { Text(tr("Termux (диагностика)", "Termux (diagnostics)")) }
                             }
                             if (url.isBlank()) Text(j.optString("tail").takeLast(300), fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                         }

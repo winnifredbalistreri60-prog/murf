@@ -117,6 +117,7 @@ object MurfProviders {
     }
 
     fun select(c: Context, provider: String, model: String) = p(c).edit().putString("sel", "$provider\n$model").apply()
+    fun clearSelection(c: Context) = p(c).edit().remove("sel").apply()
     fun selected(c: Context): Pair<String, String>? = p(c).getString("sel", null)?.split("\n")?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
 
     fun newId(c: Context, kind: ProviderKind): String {
@@ -125,11 +126,39 @@ object MurfProviders {
         return (2..99).map { "${kind.id}$it" }.first { it !in ids }
     }
 
-    /** Провайдеры для murf_dsh (с ключами — только в теле запроса к 127.0.0.1). */
-    fun forLocalRun(c: Context): JSONArray = JSONArray(list(c).filter { hasKey(c, it.id) || it.kind == ProviderKind.Custom }.map { cfg ->
-        JSONObject().put("id", cfg.id).put("name", cfg.name).put("api", cfg.kind.api).put("baseURL", cfg.baseUrl)
-            .put("models", JSONArray(cfg.models.take(200))).put("key", key(c, cfg.id) ?: "")
-    })
+    /**
+     * Infer provider kind from a pasted API token prefix so “Paste a key” does not
+     * keep a stale Anthropic selection when the user pasted a DeepSeek/OpenAI key.
+     */
+    internal fun inferKindFromKey(key: String, fallback: ProviderKind = ProviderKind.DeepSeek): ProviderKind {
+        val k = key.trim()
+        return when {
+            k.startsWith("sk-ant-") -> ProviderKind.Anthropic
+            k.startsWith("sk-or-") -> ProviderKind.OpenRouter
+            k.startsWith("xai-") -> ProviderKind.XAI
+            k.startsWith("AIza") -> ProviderKind.Google
+            k.startsWith("sk-") -> fallback.takeUnless { it == ProviderKind.Anthropic } ?: ProviderKind.DeepSeek
+            else -> fallback
+        }
+    }
+
+    /**
+     * Providers for murf_dsh. Prefer **only the selected** provider+key so headless
+     * cannot fall back to a built-in/stale Anthropic route when the user chose DeepSeek.
+     */
+    fun forLocalRun(c: Context): JSONArray {
+        val sel = selected(c)
+        val all = list(c).filter { hasKey(c, it.id) || it.kind == ProviderKind.Custom }
+        // Strict: only the selected provider. Never fall back to "all" (would reintroduce Anthropic).
+        val chosen = if (sel != null) all.filter { it.id == sel.first } else emptyList()
+        return JSONArray(chosen.map { cfg ->
+            val models = cfg.models.toMutableList()
+            sel?.takeIf { it.first == cfg.id && it.second.isNotBlank() && it.second !in models }
+                ?.let { models.add(0, it.second) }
+            JSONObject().put("id", cfg.id).put("name", cfg.name).put("api", cfg.kind.api).put("baseURL", cfg.baseUrl)
+                .put("models", JSONArray(models.take(200))).put("key", key(c, cfg.id) ?: "")
+        })
+    }
 
     private val http = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
 

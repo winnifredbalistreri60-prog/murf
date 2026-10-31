@@ -8,8 +8,24 @@ provs, env = m._clean_providers([{"id": "deepseek", "api": "openai-completions",
                                  {"id": "bad id", "api": "x"}, {"id": "loc", "api": "openai-completions", "baseURL": "http://127.0.0.1:1/v1"}])
 assert [p["id"] for p in provs] == ["deepseek", "loc"], provs
 assert env == {"MURF_KEY_DEEPSEEK": "sk-SECRET", "MURF_KEY_LOC": "none"}
-patch = json.dumps(m.build_patch(provs, "deepseek", "deepseek-chat"))
+patch_obj = m.build_patch(provs, "deepseek", "deepseek-chat")
+patch = json.dumps(patch_obj)
 assert "SECRET" not in patch and "MURF_KEY_DEEPSEEK" in patch and "session-telemetry-otel" in patch and "murf_phone" in patch
+assert '"provider": "murf-deepseek"' in patch or '"provider":"murf-deepseek"' in patch.replace(" ", "")
+assert "murf-anthropic" not in patch and "api.anthropic.com" not in patch
+# selected deepseek must be default — not bare anthropic provider route
+assert any(e.get("id") == "agent-default-model" and e.get("config", {}).get("provider") == "murf-deepseek" for e in patch_obj)
+# sync writes headless cordis.patch.yml
+os.makedirs(m.DSH_HOME, exist_ok=True)
+spath = m.sync_headless_default(provs, "deepseek", "deepseek-chat")
+synced = json.load(open(spath))
+assert any(e.get("id") == "agent-default-model" and e["config"]["provider"] == "murf-deepseek" for e in synced)
+# missing provider raises
+try:
+    m.build_patch(provs, "anthropic", "claude")
+    raise SystemExit("expected ValueError for missing provider")
+except ValueError:
+    pass
 tok = m.phone_token(); assert oct(os.stat(m.TOKEN_FILE).st_mode & 0o777) == "0o600"
 assert m.phone_call({"tool": "battery"}, "wrong")[0] == 403
 m.phone_hello({"device": "t"})

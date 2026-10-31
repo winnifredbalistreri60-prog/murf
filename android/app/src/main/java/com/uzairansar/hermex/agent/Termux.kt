@@ -48,13 +48,26 @@ object Termux {
 
     fun shellQuote(s: String): String = "'" + s.replace("'", "'\\''") + "'"
 
-    private fun baseIntent(command: String, workdir: String?, background: Boolean): Intent =
+    /**
+     * SESSION_ACTION: "0" = switch to Termux Activity; "2" = stay in caller.
+     * Background commands MUST use "2" — otherwise every [run] (status/pushScripts/logs)
+     * jumps out of MURF into a separate Termux window.
+     */
+    internal fun sessionAction(background: Boolean, openSession: Boolean = !background): String =
+        if (openSession) "0" else "2"
+
+    private fun baseIntent(
+        command: String,
+        workdir: String?,
+        background: Boolean,
+        openSession: Boolean = !background,
+    ): Intent =
         Intent(ACTION).setClassName(PACKAGE, SERVICE)
             .putExtra("com.termux.RUN_COMMAND_PATH", BASH)
             .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arrayOf("-lc", command))
             .putExtra("com.termux.RUN_COMMAND_WORKDIR", workdir ?: HOME)
             .putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
-            .putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
+            .putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", sessionAction(background, openSession))
 
     private fun start(context: Context, intent: Intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent) else context.startService(intent)
@@ -62,7 +75,7 @@ object Termux {
 
     /** Открыть команду в видимой сессии Termux (пользователь видит ввод/вывод). */
     fun runVisible(context: Context, command: String) {
-        start(context, baseIntent(command, null, background = false))
+        start(context, baseIntent(command, null, background = false, openSession = true))
     }
 
     /**
@@ -72,8 +85,7 @@ object Termux {
      * часто не стартует без показа окна — поэтому для фона используем BACKGROUND=true).
      */
     fun runSession(context: Context, command: String, openActivity: Boolean) {
-        start(context, baseIntent(command, null, background = false)
-            .putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", if (openActivity) "0" else "2"))
+        start(context, baseIntent(command, null, background = false, openSession = openActivity))
     }
 
     /**
@@ -82,11 +94,10 @@ object Termux {
      */
     fun runDetached(context: Context, command: String) {
         if (!isInstalled(context) || !hasPermission(context)) return
-        start(context, baseIntent(command, null, background = true)
-            .putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "2"))
+        start(context, baseIntent(command, null, background = true, openSession = false))
     }
 
-    /** Фоновый запуск с ожиданием результата (stdout/stderr/exit code). */
+    /** Фоновый запуск с ожиданием результата. Никогда не открывает Activity Termux (SESSION_ACTION 2). */
     suspend fun run(context: Context, command: String, workdir: String? = null, timeoutMs: Long = 120_000): TermuxResult {
         if (!isInstalled(context)) return TermuxResult("", "", null, tr("Termux не установлен", "Termux is not installed"))
         if (!hasPermission(context)) return TermuxResult("", "", null, tr("Нет разрешения «Запуск команд в Termux» для приложения MURF", "MURF lacks the “Run commands in Termux” permission"))
@@ -96,7 +107,7 @@ object Termux {
         val resultIntent = Intent(context, TermuxResultReceiver::class.java).putExtra(EXTRA_ID, id)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
         val pi = PendingIntent.getBroadcast(context, id, resultIntent, flags)
-        val intent = baseIntent(command, workdir, background = true)
+        val intent = baseIntent(command, workdir, background = true, openSession = false)
             .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pi)
         return try {
             start(context, intent)

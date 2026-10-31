@@ -201,20 +201,29 @@ def _clean_providers(provs):
 
 
 def build_patch(provs, provider, model, phone_tools=True):
-    """Слой --patch для профиля headless (JSON — тоже YAML). Без ключей: только имена переменных."""
+    """Слой --patch для профиля headless (JSON — тоже YAML). Без ключей: только имена переменных.
+
+    Только переданные provs попадают в llm-pi-ai — встроенный anthropic/deepseek-official
+    из каталога pi-ai не используется как маршрут по умолчанию.
+    """
     routes = {}
     for p in provs:
         r = {"displayName": p["name"], "api": p["api"], "apiKeyEnv": p["keyEnv"]}
         if p["baseURL"]: r["baseURL"] = p["baseURL"]
         if p["models"]: r["models"] = [{"id": m} for m in p["models"]]
         routes["murf-" + p["id"]] = r
+    if not provider or not model:
+        raise ValueError("provider and model required")
+    route = "murf-" + provider
+    if route not in routes:
+        raise ValueError("provider not in providers list")
     patch = [
         # телеметрия dsh по умолчанию шлёт данные на серверы DeepSeek — в MURF выключаем
         {"id": "session-telemetry-otel", "disabled": True},
+        # Полная замена providers: без anthropic, если его не передал клиент MURF
         {"id": "llm-pi-ai", "config": {"providers": routes}},
+        {"id": "agent-default-model", "config": {"provider": route, "model": model}},
     ]
-    if provider and model:
-        patch.append({"id": "agent-default-model", "config": {"provider": "murf-" + provider, "model": model}})
     if phone_tools:
         patch.append({"insert": [{"id": "murf-phone", "name": "@deepseek-ai/dsh-mcp-client", "config": {
             "transport": "stdio", "serverName": "murf_phone", "command": "python3", "args": [MCP],
@@ -222,6 +231,20 @@ def build_patch(provs, provider, model, phone_tools=True):
                     "MURF_PHONE_API": "http://127.0.0.1:%s/murf/phone/call" % os.environ.get("MURF_API_PORT", "18083")}, "cwd": HOME, "toolCallTimeoutMs": 300000,
             "failOnStartupError": False}}]})
     return patch
+
+
+def sync_headless_default(provs, provider, model, phone_tools=True):
+    """Переписать profiles/headless/cordis.patch.yml выбранным провайдером MURF.
+
+    Иначе dsh может держать stale agent-default-model=anthropic с прошлого запуска UI.
+    """
+    profile = os.path.join(DSH_HOME, "profiles", "headless")
+    os.makedirs(profile, exist_ok=True)
+    patch = build_patch(provs, provider, model, phone_tools)
+    path = os.path.join(profile, "cordis.patch.yml")
+    with open(path, "w") as f:
+        json.dump(patch, f)
+    return path
 
 
 def run(j, write):
@@ -241,8 +264,14 @@ def run(j, write):
     os.chmod(DSH_DIR, 0o700)
     phone_token()
     run_id = uuid.uuid4().hex[:12]
+    phone_tools = j.get("phone_tools", True)
+    try:
+        patch = build_patch(provs, provider, model, phone_tools)
+    except ValueError as e:
+        write({"type": "error", "error": str(e)[:200]}); return
+    sync_headless_default(provs, provider, model, phone_tools)
     pf = os.path.join(DSH_DIR, f"patch-{run_id}.yml")
-    with open(pf, "w") as f: json.dump(build_patch(provs, provider, model, j.get("phone_tools", True)), f)
+    with open(pf, "w") as f: json.dump(patch, f)
     cwd = j.get("cwd") or os.path.join(HOME, "murf-dsh")
     if not os.path.isabs(cwd) or ".." in cwd: cwd = os.path.join(HOME, "murf-dsh")
     os.makedirs(cwd, exist_ok=True)

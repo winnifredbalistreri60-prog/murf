@@ -11,6 +11,16 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.11 — 2026-10-27
+
+- **Termux stays inside MURF:** `Termux.run()` / background RUN_COMMAND now set SESSION_ACTION `"2"` (was hardcoded `"0"` → every status/pushScripts/log jumped to a separate Termux Activity). Install/Start/Harness switchToLocal no longer auto-open Termux.
+- **All-tabs audit:** Harness phone + Hermes, Local environment, Phone & Termux, Providers — auto Activity jumps removed; «Open Termux» demoted to Diagnostics only.
+- **Stale Anthropic on paste:** ProviderQuickSetup clears selection until models load for the new key; failed/empty fetch cannot leave old Anthropic authorized.
+- **Вставка ключа:** selection сбрасывается до успешной загрузки моделей — старый Anthropic не остаётся «авторизованным».
+- **New chat uses selected provider:** `forLocalRun` sends only the selected MurfProviders config; murf_dsh syncs `profiles/headless/cordis.patch.yml` agent-default-model on each run so a stale Anthropic default cannot win; API key prefix inference avoids saving DeepSeek keys under Anthropic.
+- **Termux в MURF:** фоновый RUN_COMMAND больше не открывает окно Termux (SESSION_ACTION 2).
+- **Новый чат:** выбранный провайдер/ключ MURF (DeepSeek и т.д.), не застрявший Anthropic; sync cordis.patch.yml при каждом run.
+
 ## MURF 1.10.10 — 2026-10-27
 
 - **Harness authorization (API token):** phone Harness always shows Authorization (API token) — same idea as DeepSeek Harness «Paste a key» / dsh-authorization api-key method; encrypted in MURF; New chat / run blocked until authorized. OAuth/device-code flows of upstream DSH are staged for later.
