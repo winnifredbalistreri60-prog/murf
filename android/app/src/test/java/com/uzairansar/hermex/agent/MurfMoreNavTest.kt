@@ -7,19 +7,31 @@ import org.junit.Test
 
 class MurfMoreNavTest {
     @Test
-    fun primaryOrderMatchesShippedIa() {
+    fun primaryMenuContainsDailyDestinations() {
+        assertEquals(listOf("screen", "bots", "tasks", "kanban", "more"), MurfMoreNav.primaryIds())
+    }
+
+    @Test
+    fun regroupingPreservesEveryPreviousDestination() {
+        val reachable = MurfMoreNav.primaryIds().toSet() + MurfMoreNav.items().map { it.routeOrPanel }
         assertEquals(
-            listOf("screen", "dsh", "bots", "devices", "local", "drive", "deploy", "tasks", "kanban", "more"),
-            MurfMoreNav.primaryIds(),
+            setOf("screen", "dsh", "bots", "devices", "local", "drive", "deploy", "tasks", "kanban", "more",
+                "phone", "providers", "bottasks", "clis", "skills", "memory", "insights"),
+            reachable,
         )
     }
 
     @Test
-    fun moreHoldsDemotedItemsNotPrimaryCore() {
-        val more = MurfMoreNav.items().map { it.routeOrPanel }
-        assertEquals(listOf("phone", "providers", "bottasks", "clis", "skills", "memory", "insights"), more)
-        for (id in listOf("drive", "deploy", "local", "devices", "bots", "dsh")) {
-            assertFalse(more.contains(id))
+    fun groupedUtilitiesHaveNoDuplicatesAndUseCorrectNavigationKind() {
+        val items = MurfMoreNav.items()
+        assertEquals(items.size, items.map { it.routeOrPanel }.toSet().size)
+        assertTrue(MurfMoreNav.groups().all { it.items.isNotEmpty() })
+        assertEquals(setOf("tasks", "skills", "memory", "insights"),
+            items.filter { it.kind == MurfMoreNav.Kind.Panel }.map { it.routeOrPanel }.toSet())
+        assertTrue(items.any { it.routeOrPanel == "tasks" })
+        assertTrue(items.any { it.routeOrPanel == "kanban" })
+        for (id in listOf("devices", "local", "deploy", "providers", "clis")) {
+            assertFalse(MurfMoreNav.primaryIds().contains(id))
         }
     }
 

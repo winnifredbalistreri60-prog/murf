@@ -959,7 +959,7 @@ private fun String?.shouldShowPanel(panel: String): Boolean =
 
 private fun String.panelTitle(): String =
     when (this) {
-        "tasks" -> "Tasks"
+        "tasks" -> com.uzairansar.hermex.agent.tr("Расписание", "Scheduled tasks")
         "skills" -> "Skills"
         "memory" -> "Memory"
         "insights" -> "Usage Analytics"

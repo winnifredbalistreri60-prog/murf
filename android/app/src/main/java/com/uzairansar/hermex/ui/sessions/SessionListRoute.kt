@@ -459,7 +459,7 @@ fun SessionListRoute(
                     val ordinarySessions = if (state.showArchived) state.visibleSessions else scheduledGroups.ordinary
                     if (ordinarySessions.isEmpty()) {
                         if (!showsScheduledDisclosure || scheduledGroups.scheduled.isEmpty()) {
-                            item { EmptySessionsRow() }
+                            item { EmptySessionsRow(state) }
                         }
                     } else {
                         itemsIndexed(
@@ -733,7 +733,7 @@ private fun ScheduledSessionsScreen(
                     }
                 }
             } else if (sessions.isEmpty()) {
-                item { EmptySessionsRow() }
+                item { EmptySessionsRow(state, query = query, scheduled = true) }
             } else {
                 itemsIndexed(
                     items = sessions,
@@ -949,18 +949,19 @@ private fun UtilityRows(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         val rows = buildList {
-            // Primary IA (1.10.2): Screen, Harness, Bots, Devices, Local, Drive, VDS, Tasks, Kanban, More.
-            // Rare items live under More; Skills/Memory/Insights demoted there too.
-            add(UtilityDestination(R.string.nav_screen, R.drawable.ic_lucide_monitor, onOpenScreen))
-            add(UtilityDestination(R.string.nav_dsh, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("dsh") })
-            add(UtilityDestination(R.string.nav_bots, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("bots") })
-            add(UtilityDestination(R.string.nav_devices, R.drawable.ic_lucide_smartphone) { onOpenAgentRoute("devices") })
-            add(UtilityDestination(R.string.nav_local, R.drawable.ic_lucide_server) { onOpenAgentRoute("local") })
-            add(UtilityDestination(R.string.nav_drive, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("drive") })
-            add(UtilityDestination(R.string.nav_deploy, R.drawable.ic_lucide_cloud) { onOpenAgentRoute("deploy") })
-            add(UtilityDestination(R.string.nav_tasks, R.drawable.ic_lucide_calendar_clock) { onOpenPanel("tasks") })
-            add(UtilityDestination(R.string.nav_kanban, R.drawable.ic_lucide_columns_3, onOpenKanban))
-            add(UtilityDestination(R.string.nav_more, R.drawable.ic_hermex_ellipsis, onOpen = { onOpenAgentRoute("more") }))
+            com.uzairansar.hermex.agent.MurfMoreNav.primaryIds().forEach { id ->
+                when (id) {
+                    "screen" -> add(UtilityDestination(R.string.nav_screen, R.drawable.ic_lucide_monitor, onOpenScreen))
+                    "bots" -> add(UtilityDestination(R.string.nav_bots, R.drawable.ic_hermex_sparkles) { onOpenAgentRoute("bots") })
+                    "tasks" -> if (settings.showTasks) {
+                        add(UtilityDestination(R.string.nav_tasks, R.drawable.ic_lucide_calendar_clock) { onOpenPanel("tasks") })
+                    }
+                    "kanban" -> if (settings.showKanban) {
+                        add(UtilityDestination(R.string.nav_kanban, R.drawable.ic_lucide_columns_3, onOpenKanban))
+                    }
+                    "more" -> add(UtilityDestination(R.string.nav_more, R.drawable.ic_hermex_ellipsis) { onOpenAgentRoute("more") })
+                }
+            }
         }
         if (isLandscape) {
             rows.chunked(2).forEach { pair ->
@@ -1607,7 +1608,33 @@ private fun StatusLine(text: String, color: Color, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun EmptySessionsRow() {
+private fun EmptySessionsRow(
+    state: SessionListUiState,
+    query: String = state.searchQuery,
+    scheduled: Boolean = false,
+) {
+    val emptyState = sessionEmptyState(
+        unavailable = state.error != null || state.searchError != null || state.isViewingCachedData,
+        searching = state.isSearchingRemoteSessions,
+        hasFilters = query.isNotBlank() || state.selectedProjectId != null ||
+            (!scheduled && state.sessions.any { (it.archived == true) == state.showArchived }),
+        archived = state.showArchived,
+        scheduled = scheduled,
+    )
+    val (title, message) = when (emptyState) {
+        SessionEmptyState.Unavailable -> com.uzairansar.hermex.agent.tr("Чаты недоступны в этом списке", "Chats unavailable in this view") to
+            com.uzairansar.hermex.agent.tr("Проверьте подключение и потяните список вниз, чтобы обновить.", "Check the connection and pull down to refresh.")
+        SessionEmptyState.Searching -> com.uzairansar.hermex.agent.tr("Ищем чаты…", "Searching chats…") to
+            com.uzairansar.hermex.agent.tr("Идёт поиск на сервере.", "Searching on the server.")
+        SessionEmptyState.Filtered -> com.uzairansar.hermex.agent.tr("Чаты не найдены", "No matching chats") to
+            com.uzairansar.hermex.agent.tr("Измените запрос, выберите все проекты или проверьте фильтры в настройках.", "Change the query, select all projects or check filters in settings.")
+        SessionEmptyState.Archived -> com.uzairansar.hermex.agent.tr("Архив пуст", "Archive is empty") to
+            com.uzairansar.hermex.agent.tr("Здесь появятся чаты, которые вы отправите в архив.", "Chats you archive will appear here.")
+        SessionEmptyState.Scheduled -> com.uzairansar.hermex.agent.tr("Запусков по расписанию пока нет", "No scheduled runs yet") to
+            com.uzairansar.hermex.agent.tr("Создайте задачу в разделе «Расписание» и дождитесь её запуска.", "Create a scheduled task and wait for it to run.")
+        SessionEmptyState.New -> com.uzairansar.hermex.agent.tr("Чатов пока нет", "No chats yet") to
+            com.uzairansar.hermex.agent.tr("Нажмите кнопку чата внизу и напишите, чем вам помочь.", "Tap the chat button below and describe what you need help with.")
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1616,9 +1643,9 @@ private fun EmptySessionsRow() {
             .padding(18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(localizedString("No sessions match this view."), style = MaterialTheme.typography.titleMedium)
+        Text(title, style = MaterialTheme.typography.titleMedium)
         Text(
-            localizedString("Create a new chat or clear search filters."),
+            message,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.padding(top = 4.dp),

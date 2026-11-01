@@ -28,10 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.uzairansar.hermex.R
 
-/**
- * Secondary utility destinations demoted from the primary sidebar (MURF 1.10.2).
- * Underlying routes stay registered; this is nav IA only.
- */
+/** Navigation catalog for daily shortcuts and grouped utilities. */
 object MurfMoreNav {
     data class Item(
         val routeOrPanel: String,
@@ -42,21 +39,37 @@ object MurfMoreNav {
 
     enum class Kind { Route, Panel }
 
-    /** Stable list for unit tests and MoreRoute. */
-    fun items(): List<Item> = listOf(
-        Item("phone", R.string.nav_phone, R.drawable.ic_lucide_smartphone, Kind.Route),
-        Item("providers", R.string.nav_providers, R.drawable.ic_lucide_cloud, Kind.Route),
-        Item("bottasks", R.string.nav_bot_tasks, R.drawable.ic_hermex_lightning_bolt, Kind.Route),
-        Item("clis", R.string.nav_clis, R.drawable.ic_hermex_tools_wrench, Kind.Route),
-        Item("skills", R.string.nav_skills, R.drawable.ic_lucide_hammer, Kind.Panel),
-        Item("memory", R.string.nav_memory, R.drawable.ic_lucide_brain, Kind.Panel),
-        Item("insights", R.string.nav_insights, R.drawable.ic_lucide_chart_column_increasing, Kind.Panel),
+    data class Group(val titleRu: String, val titleEn: String, val items: List<Item>)
+
+    fun groups(): List<Group> = listOf(
+        Group("Агенты и модели", "Agents and models", listOf(
+            Item("dsh", R.string.nav_dsh, R.drawable.ic_hermex_sparkles, Kind.Route),
+            Item("providers", R.string.nav_providers, R.drawable.ic_lucide_cloud, Kind.Route),
+            Item("clis", R.string.nav_clis, R.drawable.ic_hermex_tools_wrench, Kind.Route),
+        )),
+        Group("Задачи и знания", "Tasks and knowledge", listOf(
+            Item("tasks", R.string.nav_tasks, R.drawable.ic_lucide_calendar_clock, Kind.Panel),
+            Item("kanban", R.string.nav_kanban, R.drawable.ic_lucide_columns_3, Kind.Route),
+            Item("bottasks", R.string.nav_bot_tasks, R.drawable.ic_hermex_lightning_bolt, Kind.Route),
+            Item("skills", R.string.nav_skills, R.drawable.ic_lucide_hammer, Kind.Panel),
+            Item("memory", R.string.nav_memory, R.drawable.ic_lucide_brain, Kind.Panel),
+            Item("insights", R.string.nav_insights, R.drawable.ic_lucide_chart_column_increasing, Kind.Panel),
+        )),
+        Group("Подключения и устройства", "Connections and devices", listOf(
+            Item("devices", R.string.nav_devices, R.drawable.ic_lucide_smartphone, Kind.Route),
+            Item("drive", R.string.nav_drive, R.drawable.ic_lucide_cloud, Kind.Route),
+            Item("phone", R.string.nav_phone, R.drawable.ic_lucide_smartphone, Kind.Route),
+        )),
+        Group("Установка и обслуживание", "Setup and maintenance", listOf(
+            Item("local", R.string.nav_local, R.drawable.ic_lucide_server, Kind.Route),
+            Item("deploy", R.string.nav_deploy, R.drawable.ic_lucide_cloud, Kind.Route),
+        )),
     )
 
-    /** Primary sidebar order shipped in 1.10.2 (ids only). */
-    fun primaryIds(): List<String> = listOf(
-        "screen", "dsh", "bots", "devices", "local", "drive", "deploy", "tasks", "kanban", "more",
-    )
+    /** All utilities remain reachable even when home shortcuts are hidden. */
+    fun items(): List<Item> = groups().flatMap { it.items }
+
+    fun primaryIds(): List<String> = listOf("screen", "bots", "tasks", "kanban", "more")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,32 +99,40 @@ fun MoreRoute(
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            MurfMoreNav.items().forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                        .clickable {
-                            when (item.kind) {
-                                MurfMoreNav.Kind.Route -> onOpenRoute(item.routeOrPanel)
-                                MurfMoreNav.Kind.Panel -> onOpenPanel(item.routeOrPanel)
+            MurfMoreNav.groups().forEach { group ->
+                Text(
+                    tr(group.titleRu, group.titleEn),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                )
+                group.items.forEach { item ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .clickable {
+                                when (item.kind) {
+                                    MurfMoreNav.Kind.Route -> onOpenRoute(item.routeOrPanel)
+                                    MurfMoreNav.Kind.Panel -> onOpenPanel(item.routeOrPanel)
+                                }
                             }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Icon(
-                        painterResource(item.icon),
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        stringResource(item.label),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f),
-                    )
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Icon(
+                            painterResource(item.icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            stringResource(item.label),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }

@@ -166,6 +166,11 @@ private fun OnboardingRouteContent(
         if (state.isConnected) latestOnConnected()
     }
 
+    // System Back walks the welcome pages backwards instead of closing the app.
+    androidx.activity.compose.BackHandler(enabled = pagerState.currentPage > 0) {
+        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+    }
+
     LaunchedEffect(pagerState, hasCopiedAgentPrompt, hasBypassedCopyReminder) {
         snapshotFlow { pagerState.settledPage }.collect { newPage ->
             val oldPage = lastSettledPage
@@ -777,6 +782,7 @@ private fun OnboardingConnectPage(
     onCustomHeadersChange: (String) -> Unit,
 ) {
     var isShowingAdvanced by rememberSaveable { mutableStateOf(false) }
+    var showPhoneProvider by rememberSaveable { mutableStateOf(false) }
     var showsCustomHeaders by remember { mutableStateOf(false) }
     SecureContentEffect(showsCustomHeaders)
     val advancedDescription = localizedString("Advanced")
@@ -797,8 +803,8 @@ private fun OnboardingConnectPage(
             )
             Text(
                 com.uzairansar.hermex.agent.tr(
-                    "Адрес сервера Hermes (HTTPS) или подключитесь по QR / коду. Ниже — ключ провайдера для агента на телефоне.",
-                    "Hermes server HTTPS URL, or connect via QR / code. Below — provider key for the on-phone agent.",
+                    "Подключитесь к серверу Hermes по адресу HTTPS, QR-коду или коду привязки.",
+                    "Connect to a Hermes server using its HTTPS URL, QR code or pairing code.",
                 ),
                 color = Color.White.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodySmall,
@@ -895,11 +901,28 @@ private fun OnboardingConnectPage(
                 }
             }
         }
-        // Путь к первому ответу агента на телефоне: ключ → живые модели (не мастер self-serve).
-        com.uzairansar.hermex.agent.ProviderQuickSetup(
-            modifier = Modifier.fillMaxWidth(),
-            onboardingStyle = true,
-        )
+        if (!showPhoneProvider) {
+            TextButton(onClick = { showPhoneProvider = true }) {
+                Text(com.uzairansar.hermex.agent.tr(
+                    "Настроить модели на телефоне (необязательно)",
+                    "Set up on-phone models (optional)",
+                ))
+            }
+        }
+        if (showPhoneProvider) {
+            Text(
+                com.uzairansar.hermex.agent.tr(
+                    "Для агента Harness на телефоне. Для входа на сервер Hermes этот ключ не нужен.",
+                    "For the Harness agent on this phone. This key is not needed to sign in to a Hermes server.",
+                ),
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            com.uzairansar.hermex.agent.ProviderQuickSetup(
+                modifier = Modifier.fillMaxWidth(),
+                onboardingStyle = true,
+            )
+        }
         if (state.isBusy) {
             OnboardingStatusBanner(
                 text = localizedString("Checking server..."),
@@ -1159,7 +1182,7 @@ private fun OnboardingPageIndicator(
     pageCount: Int,
     currentPage: Int,
 ) {
-    val pageDescription = localizedStringFormat("Page %1\$lld of %2\$lld", currentPage + 1, pageCount)
+    val pageDescription = com.uzairansar.hermex.agent.tr("Страница ${currentPage + 1} из $pageCount", "Page ${currentPage + 1} of $pageCount")
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.semantics {
@@ -1198,11 +1221,11 @@ private fun OnboardingActionButton(
     val buttonModifier = if (primary) {
         modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .heightIn(min = 50.dp)
     } else {
         modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .heightIn(min = 50.dp)
             .hermexGlass(
                 shape = OnboardingShape,
                 castsShadow = false,
@@ -1246,8 +1269,9 @@ private fun OnboardingActionButton(
                 text = label,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
         }
     }

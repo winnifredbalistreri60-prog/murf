@@ -12,9 +12,9 @@
     <string name="widget_open_sessions">Сессии</string>
     <string name="widget_new_session">Новая сессия</string>
     <string name="widget_new_voice">Голосовой ввод</string>
-    <string name="nav_tasks">Задачи</string>
-    <string name="nav_screen">Экран</string>
-    <string name="nav_kanban">Канбан</string>
+    <string name="nav_tasks">Расписание</string>
+    <string name="nav_screen">Экран агента</string>
+    <string name="nav_kanban">Доска задач</string>
     <string name="nav_skills">Навыки</string>
     <string name="nav_memory">Память</string>
     <string name="nav_insights">Статистика</string>
@@ -27,15 +27,15 @@
     <string name="close_search">Закрыть поиск</string>
     <string name="settings_title">Настройки</string>
     <string name="nav_phone">Телефон и Termux</string>
-    <string name="nav_local">Локальная среда</string>
+    <string name="nav_local">Среда на телефоне</string>
     <string name="nav_devices">Устройства (QR)</string>
-    <string name="nav_deploy">Свой VDS</string>
-    <string name="nav_dsh">Harness</string>
-    <string name="nav_providers">Провайдеры моделей</string>
+    <string name="nav_deploy">Установить сервер</string>
+    <string name="nav_dsh">Агент Harness</string>
+    <string name="nav_providers">Модели на телефоне</string>
     <string name="nav_bots">Боты</string>
-    <string name="nav_clis">CLI на сервере</string>
-    <string name="nav_bot_tasks">Задачи ботов</string>
+    <string name="nav_clis">Движки ботов (CLI)</string>
+    <string name="nav_bot_tasks">Запуски ботов</string>
     <string name="nav_drive">Google Диск</string>
-    <string name="nav_more">Ещё</string>
+    <string name="nav_more">Дополнительно</string>
     <string name="a11y_murf_desc">Разрешает локальному агенту MURF (DeepSeek Harness на телефоне) видеть экран и нажимать/вводить текст — только после вашего подтверждения каждого действия в MURF. Остановить — «Взять экран».</string>
 </resources>

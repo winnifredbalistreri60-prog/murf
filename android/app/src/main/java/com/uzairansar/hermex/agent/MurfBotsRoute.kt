@@ -712,7 +712,7 @@ fun MurfAgentTasksRoute(server: HttpUrl, api: MurfBotsApi, onOpenChat: (String) 
             delay(if (runs.orEmpty().any { TaskStatus.from(it.status).isActive }) 2000 else 6000)
         }
     }
-    Scaffold(topBar = { BotsTopBar(tr("Задачи ботов", "Bot tasks"), onBack) }) { pad ->
+    Scaffold(topBar = { BotsTopBar(tr("Запуски ботов", "Bot runs"), onBack) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { ErrorLine(error) }
             item { BotProposalsSection(server, api, refreshKey = (runs?.size ?: 0)) }

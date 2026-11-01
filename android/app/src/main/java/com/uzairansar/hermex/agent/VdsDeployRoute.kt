@@ -182,7 +182,7 @@ fun VdsDeployRoute(auth: AuthRepository, onBack: () -> Unit, onConnected: () -> 
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Свой сервер (VDS)", "Own server (VDS)")) },
+            title = { Text(tr("Установить сервер", "Install server")) },
             navigationIcon = { IconButton(onClick = { if (!busy) onBack() }) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
         )
     }) { pad ->

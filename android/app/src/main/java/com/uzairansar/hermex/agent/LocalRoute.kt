@@ -154,7 +154,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Локальная среда", "Local environment")) },
+            title = { Text(tr("Среда на телефоне", "Phone environment")) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
             actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) } },
         )

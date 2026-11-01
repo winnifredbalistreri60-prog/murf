@@ -292,7 +292,7 @@ fun SettingsRoute(
                 }
             }
             item {
-                SettingsSection(title = "Interaction") {
+                SettingsSection(title = "Interaction", collapsible = true) {
                     val swipesOn by com.uzairansar.hermex.agent.UiPrefs.swipesEnabled.collectAsState()
                     SettingsToggleRow(
                         label = tr("Свайпы", "Swipes"),
@@ -394,7 +394,7 @@ fun SettingsRoute(
                 }
             }
             item {
-                SettingsSection(title = "Chat") {
+                SettingsSection(title = "Chat", collapsible = true) {
                     SettingsToggleRow(
                         label = localizedString("Thinking and Tool Cards"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_brain,
@@ -632,7 +632,7 @@ fun SettingsRoute(
                 }
             }
             item {
-                SettingsSection(title = "Sessions") {
+                SettingsSection(title = "Sessions", collapsible = true) {
                     SettingsToggleRow(
                         label = localizedString("Message Count"),
                         value = state.sessionRowDisplaySettings.showMessageCount,
@@ -784,19 +784,26 @@ private fun SettingsHeader(onBack: () -> Unit) {
 @Composable
 private fun SettingsSection(
     title: String,
+    collapsible: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    var expanded by rememberSaveable(title) { mutableStateOf(!collapsible) }
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
+        if (collapsible) {
+            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+                Text(localizedString(title).uppercase(), modifier = Modifier.weight(1f))
+                Text(if (expanded) tr("Свернуть", "Collapse") else tr("Настроить", "Configure"))
+            }
+        } else Text(
             text = localizedString(title).uppercase(),
             modifier = Modifier.padding(start = 8.dp, bottom = 7.dp),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.secondary,
         )
-        Column(
+        if (expanded) Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .hermexGlass(

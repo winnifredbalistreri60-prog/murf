@@ -243,7 +243,7 @@ fun DshRoute(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Harness", "Harness")) },
+            title = { Text(tr("Агент Harness", "Harness agent")) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
             actions = {
                 if (tab == 0) IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) }
@@ -253,7 +253,7 @@ fun DshRoute(
         Column(Modifier.padding(pad).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(tr("На телефоне", "On phone")) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("На Hermes", "On Hermes")) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("На сервере", "On server")) })
             }
             when (tab) {
                 1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders)
@@ -544,7 +544,7 @@ private fun DshRemotePanel(
         item {
             Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(tr("Клиент Harness на Hermes", "Harness client on Hermes"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(tr("Harness на сервере", "Harness on server"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         tr(
                             "Удалённый клиент DeepSeek Harness (remote UI) внутри MURF: сопряжение по ссылке/?auth= или адресу + коду, затем чат и агент в приложении. Экран агента / VNC не нужен.",

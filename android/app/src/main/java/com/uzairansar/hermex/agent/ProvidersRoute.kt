@@ -45,7 +45,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Настройки → Провайдеры моделей: ключи (зашифрованы), живые списки моделей, выбор модели для агентов на телефоне. */
+/** Настройки → Модели на телефоне: ключи (зашифрованы), живые списки моделей, выбор модели для агентов на телефоне. */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ProvidersRoute(onBack: () -> Unit) {
@@ -75,7 +75,7 @@ fun ProvidersRoute(onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Провайдеры моделей", "Model providers")) },
+            title = { Text(tr("Модели на телефоне", "On-phone models")) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
         )
     }) { pad ->
@@ -84,6 +84,12 @@ fun ProvidersRoute(onBack: () -> Unit) {
                 "Keys are stored encrypted on the phone (Android Keystore) and sent only to the provider and the local agent. Model lists come live from the provider API."),
                 style = MaterialTheme.typography.bodySmall)
             msg?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            if (providers.isEmpty()) {
+                Text(tr("Модели ещё не настроены", "No models configured yet"), style = MaterialTheme.typography.titleMedium)
+                Text(tr("Нажмите «Добавить провайдера», сохраните ключ API и выберите модель. Эти настройки используются агентом на телефоне.",
+                    "Tap “Add provider”, save an API key and choose a model. These settings are used by the on-phone agent."),
+                    style = MaterialTheme.typography.bodySmall)
+            }
             providers.forEach { p ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -92,6 +98,11 @@ fun ProvidersRoute(onBack: () -> Unit) {
                             " · " + p.baseUrl + " · " + tr("моделей: ", "models: ") + p.models.size +
                             (if (p.modelsFetchedAt > 0) " (" + SimpleDateFormat("dd.MM HH:mm", Locale.ROOT).format(Date(p.modelsFetchedAt)) + ")" else ""),
                             style = MaterialTheme.typography.bodySmall)
+                        if (p.models.isEmpty()) {
+                            Text(tr("Список моделей пуст. Нажмите «Обновить модели»; если запрос не удастся, проверьте ключ через «Изменить».",
+                                "The model list is empty. Tap “Refresh models”; if the request fails, check the key under “Edit”."),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                         androidx.compose.foundation.layout.FlowRow(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             p.models.forEach { m ->

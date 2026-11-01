@@ -581,14 +581,10 @@ fun HermexApp(
                     com.uzairansar.hermex.agent.MoreRoute(
                         onBack = { navController.popBackStack() },
                         onOpenRoute = { route ->
-                            navController.navigate(route) {
-                                popUpTo("more") { inclusive = true }
-                            }
+                            navController.navigateSingleTop(route)
                         },
                         onOpenPanel = { section ->
-                            navController.navigate("panels?section=$section") {
-                                popUpTo("more") { inclusive = true }
-                            }
+                            navController.navigateSingleTop("panels?section=$section")
                         },
                     )
                 }

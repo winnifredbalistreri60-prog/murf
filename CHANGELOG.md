@@ -11,6 +11,15 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.13 — 2026-11-01
+
+- **Simpler main screen:** 5 quick links instead of 10; install/integration entries moved to «More».
+- **«More» grouped:** Agents & models, Tasks & knowledge, Connections & devices, Install & maintenance; Back returns to «More».
+- **Clearer names:** Schedule, Bot runs, On-phone models, On server.
+- **Sign-in:** optional on-phone keys block is collapsible; buttons wrap at large font; page indicator localized; system Back steps through welcome pages.
+- **Empty states:** chats, archive, search, schedule runs and provider models explain what to do next.
+- **Settings:** long groups are collapsible.
+
 ## MURF 1.10.12 — 2026-10-31
 
 - **Harness install status:** failed `dsh-install.sh` is reported as an error with retry, not as success; Harness install cannot run twice at once (murf-local 1.3.3).

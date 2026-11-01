@@ -382,16 +382,17 @@ class HermexUiFlowTest {
         composeRule.waitUntil(timeoutMillis = 5_000) { openedChat == "s-copy" }
         assertTrue(branchBody.contains(""""session_id":"s1""""))
         assertTrue(branchBody.contains(""""title":"Android Port (copy)""""))
-        composeRule.onNodeWithText("Tasks").assertIsDisplayed()
-        composeRule.onNodeWithText("Kanban").assertIsDisplayed()
-        composeRule.onNodeWithText("Skills").assertIsDisplayed()
-        composeRule.onNodeWithText("Memory").assertIsDisplayed()
-        composeRule.onNodeWithText("Insights").assertIsDisplayed()
+        composeRule.onNodeWithText("Scheduled tasks").assertIsDisplayed()
+        composeRule.onNodeWithText("Task board").assertIsDisplayed()
+        composeRule.onNodeWithText("More").assertIsDisplayed()
+        composeRule.onNodeWithText("Skills").assertDoesNotExist()
+        composeRule.onNodeWithText("Memory").assertDoesNotExist()
+        composeRule.onNodeWithText("Insights").assertDoesNotExist()
         assertTrue(composeRule.onAllNodesWithText("Cal").fetchSemanticsNodes().isEmpty())
         assertTrue(composeRule.onAllNodesWithText("Tool").fetchSemanticsNodes().isEmpty())
         assertTrue(composeRule.onAllNodesWithText("Mem").fetchSemanticsNodes().isEmpty())
         assertTrue(composeRule.onAllNodesWithText("Chart").fetchSemanticsNodes().isEmpty())
-        composeRule.onNodeWithText("Kanban").performClick()
+        composeRule.onNodeWithText("Task board").performClick()
         composeRule.runOnIdle { assertTrue(openedKanban) }
         composeRule.onNodeWithText("Projects").assertIsDisplayed()
         assertTrue(composeRule.onAllNodesWithText("Mobile").fetchSemanticsNodes().isEmpty())
@@ -423,7 +424,7 @@ class HermexUiFlowTest {
             assertTrue(abs(icon.center.x - circle.center.x) <= 1f)
             assertTrue(abs(icon.center.y - circle.center.y) <= 1f)
         }
-        composeRule.onNodeWithText("Tasks").performClick()
+        composeRule.onNodeWithText("Scheduled tasks").performClick()
         assertEquals("tasks", openedPanel)
         composeRule.waitUntil(timeoutMillis = 5_000) { hasText("Active Profile") }
         composeRule.onNodeWithText("Active Profile").performClick()
@@ -2324,12 +2325,12 @@ class HermexUiFlowTest {
             snapshot.servers.firstOrNull { it.id == snapshot.activeServerId }?.headerLogoColorHex == "#123456"
         }
         composeRule.onNodeWithTag("settings_list").performScrollToNode(hasSemanticsText("INTERACTION"))
-        composeRule.onNodeWithText("INTERACTION").assertIsDisplayed()
-        composeRule.onNodeWithText("Haptic Feedback").assertIsDisplayed()
+        composeRule.onNodeWithText("INTERACTION").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Haptic Feedback").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Send While Responding").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Dictation Provider").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("settings_list").performScrollToNode(hasSemanticsText("CHAT"))
-        composeRule.onNodeWithText("CHAT").assertIsDisplayed()
+        composeRule.onNodeWithText("CHAT").assertIsDisplayed().performClick()
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
         composeRule.onNodeWithText("Thinking and Tool Cards").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Expand Thinking by Default").performScrollTo().assertIsDisplayed()
@@ -2359,7 +2360,7 @@ class HermexUiFlowTest {
         composeRule.onNodeWithText("Done").performClick()
 
         composeRule.onNodeWithTag("settings_list").performScrollToNode(hasSemanticsText("SESSIONS"))
-        composeRule.onNodeWithText("SESSIONS").assertIsDisplayed()
+        composeRule.onNodeWithText("SESSIONS").assertIsDisplayed().performClick()
         composeRule.onNodeWithText("Session visibility is synced with this server, so the WebUI follows it too.")
             .performScrollTo()
             .assertIsDisplayed()
