@@ -578,7 +578,11 @@ fun HermexApp(
                     )
                 }
                 composable(route = "more") {
+                    val moreServer = (authState as? AuthState.LoggedIn)?.server
+                    val morePanels = androidx.compose.runtime.remember(moreServer) { moreServer?.let { container.panelsRepository(it) } }
                     com.uzairansar.hermex.agent.MoreRoute(
+                        panelsRepository = morePanels,
+                        localSettingsRepository = container.localSettingsRepository,
                         onBack = { navController.popBackStack() },
                         onOpenRoute = { route ->
                             navController.navigateSingleTop(route)

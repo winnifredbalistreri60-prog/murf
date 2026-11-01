@@ -11,6 +11,12 @@ Security sections per release.
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.
 
+## MURF 1.10.14 — 2026-11-01
+
+- **Card-style «More»:** one scrollable screen of rounded cards with section captions (Integrations, Work, Agent) and a collapsible «Advanced» card.
+- **Model on top:** current model and provider plus skills count at the top of «More».
+- **Model settings sheet:** pick a model, star favourites, reasoning-effort slider when the server supports it.
+
 ## MURF 1.10.13 — 2026-11-01
 
 - **Simpler main screen:** 5 quick links instead of 10; install/integration entries moved to «More».

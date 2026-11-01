@@ -36,6 +36,16 @@ class MurfMoreNavTest {
     }
 
     @Test
+    fun groupsKeepSupportedDestinationsInExpectedSections() {
+        val groups = MurfMoreNav.groups()
+        assertEquals(listOf("Integrations", "Work", "Agent", "Advanced"), groups.map { it.titleEn })
+        assertEquals(setOf("devices", "drive", "phone"), groups[0].items.map { it.routeOrPanel }.toSet())
+        assertEquals(setOf("tasks", "kanban", "bottasks"), groups[1].items.map { it.routeOrPanel }.toSet())
+        assertEquals(setOf("dsh", "memory", "insights"), groups[2].items.map { it.routeOrPanel }.toSet())
+        assertEquals(setOf("providers", "clis", "local", "deploy"), groups[3].items.map { it.routeOrPanel }.toSet())
+    }
+
+    @Test
     fun findDshRemoteBaseRequiresSessionCookie() {
         val jar = okhttp3.CookieJar.NO_COOKIES
         assertEquals(null, findDshRemoteBase(jar, listOf("https://harness.example.com/")))

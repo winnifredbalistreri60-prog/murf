@@ -47,5 +47,6 @@ class PanelsRepository(private val client: HermesApiClient) {
         baseUrl: String? = null,
         apiKey: String? = null,
     ): ProfileCreateResponse = client.createProfile(name, cloneConfig, defaultModel, modelProvider, baseUrl, apiKey)
+    suspend fun setReasoning(effort: String, model: String?, provider: String?): ReasoningResponse = client.setReasoning(effort, model, provider)
     suspend fun reasoning(model: String? = null, provider: String? = null): ReasoningResponse = client.reasoning(model, provider)
 }
