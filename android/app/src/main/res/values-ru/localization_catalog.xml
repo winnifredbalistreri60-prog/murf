@@ -1650,4 +1650,59 @@
     <string name="l10n_1abe1aae9537fce8" formatted="false">"Введено %1$d символов"</string>
     <string name="l10n_61994cec8ef1489d" formatted="false">"Поле не принимает ввод"</string>
     <string name="l10n_6995587b8d7981b5" formatted="false">"Кнопки: back, home, recents, notifications"</string>
+    <string name="l10n_0462da52204f15b1" formatted="false">"Установить сервер"</string>
+    <string name="l10n_8f0194c9fc28b417" formatted="false">"MURF установит на ваш VDS Hermes Agent, hermes-webui, nginx с HTTPS (Let\'s Encrypt), службы systemd и relay для входа по QR, а затем сам подключится. Нужен чистый Ubuntu 22.04/24.04 или Debian 12+, от 2 ГБ памяти и 5 ГБ диска."</string>
+    <string name="l10n_92bc829809befd8c" formatted="false">"Адрес (IP или имя)"</string>
+    <string name="l10n_fe035157cda20b36" formatted="false">"Порт"</string>
+    <string name="l10n_9f8a2389a20ca075" formatted="false">"Пользователь"</string>
+    <string name="l10n_aab2dc75614335a2" formatted="false">"Ключ SSH"</string>
+    <string name="l10n_6da4e91f92e0a2bb" formatted="false">"Пароль sudo"</string>
+    <string name="l10n_64c36a83888f3e36" formatted="false">"Пароль SSH"</string>
+    <string name="l10n_62d5e98ba9614173" formatted="false">"Закрытый ключ (OpenSSH/PEM, RSA или ECDSA)"</string>
+    <string name="l10n_7b347372ca8a6098" formatted="false">"Пароль ключа (если есть)"</string>
+    <string name="l10n_a897f4b38000f1d2" formatted="false">"Домен (необязательно)"</string>
+    <string name="l10n_55b66546f23a1ae8" formatted="false">"A-запись домена должна указывать на сервер. Без домена — &lt;ip&gt;.sslip.io."</string>
+    <string name="l10n_80a4798cc4772bd9" formatted="false">"E-mail для Let\'s Encrypt (необязательно)"</string>
+    <string name="l10n_8c8443f419d6cd4b" formatted="false">"Пароль и ключ используются только для этой установки, не сохраняются и стираются из памяти после неё."</string>
+    <string name="l10n_e375e2b9f19b40cf" formatted="false">"Проверить сервер"</string>
+    <string name="l10n_8eda302c8edbeb1a" formatted="false">"Подключаюсь к новому серверу…"</string>
+    <string name="l10n_4e37e0871c06acd5" formatted="false">"✓ Готово: сервер установлен и подключён"</string>
+    <string name="l10n_e5f58095ac293859" formatted="false">"Запуск…"</string>
+    <string name="l10n_7d345f2097fd3957" formatted="false">"Осталось выбрать модель и ключ провайдера: откройте WebUI в браузере или «Настройки → Провайдеры»."</string>
+    <string name="l10n_a485031f2d09928b" formatted="false">"Открыть чаты"</string>
+    <string name="l10n_9250ef1055ba642b" formatted="false">"Установка Hermes Agent занимает 3–10 минут. Если связь прервётся, установка на сервере продолжится, а MURF переподключится."</string>
+    <string name="l10n_9e521ddf4692c286" formatted="false">"Прекратить наблюдение"</string>
+    <string name="l10n_1d3323301bd5131f" formatted="false">"Установить на %1$s?"</string>
+    <string name="l10n_f261fcd24000ff83" formatted="false">"Ключ сервера (сверьте с панелью хостинга):"</string>
+    <string name="l10n_4ff88aaddbd209d8" formatted="false">"свободно"</string>
+    <string name="l10n_199a05b72a8d2e38" formatted="false">"⚠ Мало места на диске"</string>
+    <string name="l10n_104c5f904b706b00" formatted="false">"MURF уже установлен — обновить Hermes и WebUI"</string>
+    <string name="l10n_fd6c3ebf7befca9f" formatted="false">"Установить"</string>
+    <string name="l10n_df485c871329671f" formatted="false">"Устройства"</string>
+    <string name="l10n_fa5a6dd9d2493c6f" formatted="false">"Это устройство"</string>
+    <string name="l10n_61cbf9f0ae3cc310" formatted="false">"✓ Привязано по QR: при истечении сессии MURF войдёт сам, пароль не хранится."</string>
+    <string name="l10n_567d3e4e19f7eef9" formatted="false">"Вход выполнен паролем. Привяжите устройство, чтобы не вводить пароль снова (сессия будет обновляться по токену устройства из Keystore)."</string>
+    <string name="l10n_6c1e57867c0eb370" formatted="false">"Устройство привязано"</string>
+    <string name="l10n_86da655d32883615" formatted="false">"Привязать это устройство"</string>
+    <string name="l10n_cfe8d9bd5d314988" formatted="false">"Подключить другое устройство"</string>
+    <string name="l10n_5ca097da607c7d5f" formatted="false">"Покажите QR второму телефону или планшету: MURF → «QR-код» на экране входа. Код одноразовый и живёт 3 минуты. Можно и на сервере: «murf pair»."</string>
+    <string name="l10n_cfbac6ae49cf397c" formatted="false">"Показать QR"</string>
+    <string name="l10n_23e62c5ef47111da" formatted="false">"QR привязки"</string>
+    <string name="l10n_f357d551421d0e5b" formatted="false">"Осталось %1$d с"</string>
+    <string name="l10n_9559df71ea129d14" formatted="false">"Привязанные устройства"</string>
+    <string name="l10n_d1d9020977fa10e2" formatted="false">"Список недоступен"</string>
+    <string name="l10n_611aa7f97f2ba1a0" formatted="false">"Пока нет устройств, привязанных по QR."</string>
+    <string name="l10n_dfe0b8754aca7e61" formatted="false">" (это устройство)"</string>
+    <string name="l10n_8c22841ff00d43cd" formatted="false">"последний вход "</string>
+    <string name="l10n_0be720759ff04d13" formatted="false">"Отозвать"</string>
+    <string name="l10n_3813cd5fb1ff76d7" formatted="false">"⚠ На сервере не задан пароль WebUI для relay: выполните «murf set-webui-password», иначе привязанные устройства не смогут войти."</string>
+    <string name="l10n_791a2395ec76abf6" formatted="false">"Вход по паролю остаётся запасным способом. Отзыв сразу закрывает сессии устройства."</string>
+    <string name="l10n_ee04339fc02cf1fc" formatted="false">"Отозвать доступ?"</string>
+    <string name="l10n_89291bd813c406b9" formatted="false">"Это устройство потеряет вход по QR и будет разлогинено."</string>
+    <string name="l10n_4875ca6109cd56bc" formatted="false">"«%1$s» больше не сможет войти без нового QR."</string>
+    <string name="l10n_7d420ec72f6548eb" formatted="false">"Доступ отозван"</string>
+    <string name="l10n_309e30fcefff42a5" formatted="false">"Код привязки"</string>
+    <string name="l10n_7093c602ce1d6e9e" formatted="false">"MURF: «murf pair» + адрес и код. Harness: ссылка с ?auth= или адрес и 8-символьный код."</string>
+    <string name="l10n_b06792894d4464c3" formatted="false">"Адрес сервера"</string>
+    <string name="l10n_fd0bc192c8d295c1" formatted="false">"Будут установлены пакеты (git, python3, nginx, certbot), создан пользователь «murf», службы murf-webui и murf-relay, сайт nginx для %1$s. Существующие сайты nginx не изменяются."</string>
 </resources>

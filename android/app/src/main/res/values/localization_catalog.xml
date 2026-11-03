@@ -1650,4 +1650,59 @@
     <string name="l10n_1abe1aae9537fce8" formatted="false">"Typed %1$d characters"</string>
     <string name="l10n_61994cec8ef1489d" formatted="false">"Field rejected input"</string>
     <string name="l10n_6995587b8d7981b5" formatted="false">"Keys: back, home, recents, notifications"</string>
+    <string name="l10n_0462da52204f15b1" formatted="false">"Install server"</string>
+    <string name="l10n_8f0194c9fc28b417" formatted="false">"MURF installs Hermes Agent, hermes-webui, nginx with HTTPS (Let\'s Encrypt), systemd services and the QR sign-in relay on your VDS, then connects by itself. Needs a clean Ubuntu 22.04/24.04 or Debian 12+, 2 GB RAM and 5 GB disk."</string>
+    <string name="l10n_92bc829809befd8c" formatted="false">"Address (IP or host)"</string>
+    <string name="l10n_fe035157cda20b36" formatted="false">"Port"</string>
+    <string name="l10n_9f8a2389a20ca075" formatted="false">"User"</string>
+    <string name="l10n_aab2dc75614335a2" formatted="false">"SSH key"</string>
+    <string name="l10n_6da4e91f92e0a2bb" formatted="false">"sudo password"</string>
+    <string name="l10n_64c36a83888f3e36" formatted="false">"SSH password"</string>
+    <string name="l10n_62d5e98ba9614173" formatted="false">"Private key (OpenSSH/PEM, RSA or ECDSA)"</string>
+    <string name="l10n_7b347372ca8a6098" formatted="false">"Key passphrase (if any)"</string>
+    <string name="l10n_a897f4b38000f1d2" formatted="false">"Domain (optional)"</string>
+    <string name="l10n_55b66546f23a1ae8" formatted="false">"The domain\'s A record must point to the server. Without one — &lt;ip&gt;.sslip.io."</string>
+    <string name="l10n_80a4798cc4772bd9" formatted="false">"E-mail for Let\'s Encrypt (optional)"</string>
+    <string name="l10n_8c8443f419d6cd4b" formatted="false">"The password and key are used only for this installation, never stored, and wiped from memory afterwards."</string>
+    <string name="l10n_e375e2b9f19b40cf" formatted="false">"Check server"</string>
+    <string name="l10n_8eda302c8edbeb1a" formatted="false">"Connecting to the new server…"</string>
+    <string name="l10n_4e37e0871c06acd5" formatted="false">"✓ Done: server installed and connected"</string>
+    <string name="l10n_e5f58095ac293859" formatted="false">"Starting…"</string>
+    <string name="l10n_7d345f2097fd3957" formatted="false">"One step left: pick a model and provider key in WebUI or Settings → Providers."</string>
+    <string name="l10n_a485031f2d09928b" formatted="false">"Open chats"</string>
+    <string name="l10n_9250ef1055ba642b" formatted="false">"Installing Hermes Agent takes 3–10 minutes. If the connection drops, the server keeps installing and MURF reconnects."</string>
+    <string name="l10n_9e521ddf4692c286" formatted="false">"Stop watching"</string>
+    <string name="l10n_1d3323301bd5131f" formatted="false">"Install on %1$s?"</string>
+    <string name="l10n_f261fcd24000ff83" formatted="false">"Server key (compare with your hosting panel):"</string>
+    <string name="l10n_4ff88aaddbd209d8" formatted="false">"free"</string>
+    <string name="l10n_199a05b72a8d2e38" formatted="false">"⚠ Low disk space"</string>
+    <string name="l10n_104c5f904b706b00" formatted="false">"MURF is already installed — update Hermes and WebUI"</string>
+    <string name="l10n_fd6c3ebf7befca9f" formatted="false">"Install"</string>
+    <string name="l10n_df485c871329671f" formatted="false">"Devices"</string>
+    <string name="l10n_fa5a6dd9d2493c6f" formatted="false">"This device"</string>
+    <string name="l10n_61cbf9f0ae3cc310" formatted="false">"✓ Paired by QR: when the session expires MURF signs in by itself; no password is stored."</string>
+    <string name="l10n_567d3e4e19f7eef9" formatted="false">"Signed in with a password. Pair this device so you never type it again (the session is renewed with a device token kept in Keystore)."</string>
+    <string name="l10n_6c1e57867c0eb370" formatted="false">"Device paired"</string>
+    <string name="l10n_86da655d32883615" formatted="false">"Pair this device"</string>
+    <string name="l10n_cfe8d9bd5d314988" formatted="false">"Connect another device"</string>
+    <string name="l10n_5ca097da607c7d5f" formatted="false">"Show this QR to another phone or tablet: MURF → “Scan QR” on the sign-in screen. The code is single-use and lives 3 minutes. On the server: `murf pair`."</string>
+    <string name="l10n_cfbac6ae49cf397c" formatted="false">"Show QR"</string>
+    <string name="l10n_23e62c5ef47111da" formatted="false">"Pairing QR"</string>
+    <string name="l10n_f357d551421d0e5b" formatted="false">"%1$d s left"</string>
+    <string name="l10n_9559df71ea129d14" formatted="false">"Paired devices"</string>
+    <string name="l10n_d1d9020977fa10e2" formatted="false">"List unavailable"</string>
+    <string name="l10n_611aa7f97f2ba1a0" formatted="false">"No QR-paired devices yet."</string>
+    <string name="l10n_dfe0b8754aca7e61" formatted="false">" (this device)"</string>
+    <string name="l10n_8c22841ff00d43cd" formatted="false">"last used "</string>
+    <string name="l10n_0be720759ff04d13" formatted="false">"Revoke"</string>
+    <string name="l10n_3813cd5fb1ff76d7" formatted="false">"⚠ The relay has no WebUI password: run `murf set-webui-password` on the server, otherwise paired devices can\'t sign in."</string>
+    <string name="l10n_791a2395ec76abf6" formatted="false">"Password sign-in stays as a fallback. Revoking closes the device\'s sessions immediately."</string>
+    <string name="l10n_ee04339fc02cf1fc" formatted="false">"Revoke access?"</string>
+    <string name="l10n_89291bd813c406b9" formatted="false">"This device will lose QR sign-in and will be signed out."</string>
+    <string name="l10n_4875ca6109cd56bc" formatted="false">"“%1$s” won\'t be able to sign in without a new QR."</string>
+    <string name="l10n_7d420ec72f6548eb" formatted="false">"Access revoked"</string>
+    <string name="l10n_309e30fcefff42a5" formatted="false">"Pairing code"</string>
+    <string name="l10n_7093c602ce1d6e9e" formatted="false">"MURF: `murf pair` + address and code. Harness: a ?auth= link, or address + 8-char code."</string>
+    <string name="l10n_b06792894d4464c3" formatted="false">"Server address"</string>
+    <string name="l10n_fd0bc192c8d295c1" formatted="false">"Packages (git, python3, nginx, certbot), user “murf”, services murf-webui and murf-relay and an nginx site for %1$s will be installed. Existing nginx sites are not changed."</string>
 </resources>
