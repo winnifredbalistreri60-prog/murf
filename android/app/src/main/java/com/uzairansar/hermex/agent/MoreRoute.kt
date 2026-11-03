@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
@@ -127,19 +128,19 @@ fun MoreRoute(
     }
     Scaffold(topBar = {
         TopAppBar(title = { Text(stringResource(R.string.nav_more)) }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) }
+            IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) }
         })
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                 Column {
-                    MoreRow(tr("Модель", "Model"), listOfNotNull(currentModel, currentProvider).joinToString(" · ").ifBlank { tr("Неизвестно", "Unknown") }, R.drawable.ic_hermex_sparkles) { sheet = true }
-                    MoreRow(tr("Навыки", "Skills"), skillCount?.toString() ?: "—", R.drawable.ic_lucide_hammer) { onOpenPanel("skills") }
+                    MoreRow(localizedString("Model"), listOfNotNull(currentModel, currentProvider).joinToString(" · ").let { if (it.isBlank()) localizedString("Unknown") else it }, R.drawable.ic_hermex_sparkles) { sheet = true }
+                    MoreRow(localizedString("Skills"), skillCount?.toString() ?: "—", R.drawable.ic_lucide_hammer) { onOpenPanel("skills") }
                 }
             }
             MurfMoreNav.groups().forEachIndexed { index, group ->
-                if (index < 3) Text(tr(group.titleRu, group.titleEn), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 4.dp))
+                if (index < 3) Text(localizedString(group.titleEn), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 4.dp))
                 androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                     Column {
                         if (index == 3) MoreRow(tr(group.titleRu, group.titleEn), if (expanded) "−" else "+", R.drawable.ic_hermex_tools_wrench) { expanded = !expanded }
@@ -155,20 +156,20 @@ fun MoreRoute(
                 }
             }
             androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                MoreRow(tr("Настройки", "Settings"), null, R.drawable.ic_hermex_tools_wrench) { onOpenRoute("settings") }
+                MoreRow(localizedString("Settings"), null, R.drawable.ic_hermex_tools_wrench) { onOpenRoute("settings") }
             }
         }
     }
     if (sheet) {
         androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = false }) {
             Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(tr("Настройки модели", "Model settings"), style = MaterialTheme.typography.titleLarge)
-                Text(listOfNotNull(currentModel, currentProvider).joinToString(" · ").ifBlank { tr("Модель не выбрана", "No model selected") }, modifier = Modifier.padding(vertical = 12.dp))
-                val reasoningDescription = tr("Глубина размышлений", "Reasoning effort")
+                Text(localizedString("Model settings"), style = MaterialTheme.typography.titleLarge)
+                Text(listOfNotNull(currentModel, currentProvider).joinToString(" · ").let { if (it.isBlank()) localizedString("No model selected") else it }, modifier = Modifier.padding(vertical = 12.dp))
+                val reasoningDescription = localizedString("Reasoning effort")
                 val efforts = reasoning?.supportedEfforts.orEmpty().distinct()
                 val effortIndex = efforts.indexOf(reasoning?.effectiveEffort)
                 if (reasoning?.supportsReasoningEffort == true && efforts.size > 1 && effortIndex >= 0) {
-                    Text(tr("Глубина размышлений", "Reasoning effort") + ": " + efforts[effortIndex])
+                    Text(localizedString("Reasoning effort") + ": " + efforts[effortIndex])
                     androidx.compose.material3.Slider(
                         value = effortIndex.toFloat(),
                         onValueChange = { index ->
@@ -189,11 +190,11 @@ fun MoreRoute(
                         modifier = Modifier.semantics { contentDescription = reasoningDescription },
                     )
                 }
-                if (error) Text(tr("Не удалось загрузить модели", "Could not load models"), color = MaterialTheme.colorScheme.error)
+                if (error) Text(localizedString("Could not load models"), color = MaterialTheme.colorScheme.error)
                 val models = catalog?.flattenedModels.orEmpty().filter { it.modelIdentifier != null }
                 val favoriteModels = models.visibleFavoriteModels(favorites)
                 if (favoriteModels.isNotEmpty()) {
-                    Text(tr("Избранное", "Favorites"), style = MaterialTheme.typography.titleSmall)
+                    Text(localizedString("Favorites"), style = MaterialTheme.typography.titleSmall)
                     favoriteModels.forEach { model ->
                         ModelSheetRow(model, true, saving, onFavorite = { scope.launch { localSettingsRepository.toggleFavoriteModel(model) } }) {
                             scope.launch {
@@ -210,7 +211,7 @@ fun MoreRoute(
                         }
                     }
                 }
-                if (models.isNotEmpty()) Text(tr("Все модели", "All models"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+                if (models.isNotEmpty()) Text(localizedString("All models"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
                 models.forEach { model ->
                     ModelSheetRow(model, model.favoriteKeyOrNull() in favorites, saving, onFavorite = { scope.launch { localSettingsRepository.toggleFavoriteModel(model) } }) {
                         scope.launch {
@@ -242,7 +243,7 @@ private fun MoreRow(label: String, value: String?, @DrawableRes icon: Int, onCli
 
 @Composable
 private fun ModelSheetRow(model: com.uzairansar.hermex.core.model.ModelSummary, favorite: Boolean, saving: Boolean, onFavorite: () -> Unit, onSelect: () -> Unit) {
-    val favoriteDescription = if (favorite) tr("Удалить из избранного", "Remove favorite") else tr("Добавить в избранное", "Add favorite")
+    val favoriteDescription = if (favorite) localizedString("Remove favorite") else localizedString("Add favorite")
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).heightIn(min = 48.dp).clickable(enabled = !saving, onClick = onSelect).padding(vertical = 8.dp)) {
             Text(model.displayModelTitle)

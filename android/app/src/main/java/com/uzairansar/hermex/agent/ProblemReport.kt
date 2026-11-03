@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -119,7 +120,7 @@ fun ProblemReportDialog(server: HttpUrl?, jar: CookieJar?, onDismiss: () -> Unit
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text(tr("Сообщить о проблеме", "Report a problem")) },
+        title = { Text(localizedString("Report a problem")) },
         text = {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (result != null) {
@@ -127,22 +128,21 @@ fun ProblemReportDialog(server: HttpUrl?, jar: CookieJar?, onDismiss: () -> Unit
                     if (sentOk) return@Column
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("bug" to tr("Ошибка", "Bug"), "freeze" to tr("Зависание", "Freeze"), "idea" to tr("Идея", "Idea")).forEach { (k, l) ->
+                    listOf("bug" to localizedString("Bug"), "freeze" to localizedString("Freeze"), "idea" to localizedString("Idea")).forEach { (k, l) ->
                         FilterChip(selected = category == k, onClick = { category = k }, label = { Text(l) })
                     }
                 }
                 OutlinedTextField(
                     value = text, onValueChange = { text = it.take(8000) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp).testTag("report_text"),
-                    placeholder = { Text(tr("Что случилось? Что делали перед этим?", "What happened? What were you doing?")) },
+                    placeholder = { Text(localizedString("What happened? What were you doing?")) },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = withLog, onCheckedChange = { withLog = it })
-                    Text(tr("Приложить журнал приложения", "Attach the app log"), fontSize = 14.sp)
+                    Text(localizedString("Attach the app log"), fontSize = 14.sp)
                 }
                 Text(
-                    tr("Пароли, токены, ключи, cookie, адреса серверов, IP и e-mail вычищаются до отправки. Отчёт уходит только на ваш сервер, его читает бот «MURF Отзывы».",
-                        "Passwords, tokens, keys, cookies, server addresses, IPs and e-mails are removed before sending. The report goes only to your server, where the “MURF Feedback” bot reads it."),
+                    localizedString("Passwords, tokens, keys, cookies, server addresses, IPs and e-mails are removed before sending. The report goes only to your server, where the “MURF Feedback” bot reads it."),
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 TextButton(onClick = {
@@ -151,7 +151,7 @@ fun ProblemReportDialog(server: HttpUrl?, jar: CookieJar?, onDismiss: () -> Unit
                         preview = withContext(Dispatchers.IO) { buildReport().toString(2) }
                         busy = false
                     }
-                }, enabled = !busy) { Text(if (preview == null) tr("Посмотреть, что отправится", "Preview what is sent") else tr("Обновить просмотр", "Refresh preview")) }
+                }, enabled = !busy) { Text(if (preview == null) localizedString("Preview what is sent") else localizedString("Refresh preview")) }
                 preview?.let {
                     SelectionContainer {
                         Text(it.take(20_000), fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()))
@@ -171,15 +171,15 @@ fun ProblemReportDialog(server: HttpUrl?, jar: CookieJar?, onDismiss: () -> Unit
                             val r = withContext(Dispatchers.IO) { runCatching { ProblemReport.send(server, jar, buildReport()) } }
                             busy = false
                             r.onSuccess { j ->
-                                if (j.optBoolean("ok")) { sentOk = true; result = tr("Отправлено, номер ${j.optString("id")}. Спасибо!", "Sent, id ${j.optString("id")}. Thank you!") }
-                                else result = tr("Сервер не принял отчёт: ", "The server rejected the report: ") + j.optString("error", "?")
-                            }.onFailure { result = tr("Не удалось отправить: ${it.message}. Можно скопировать отчёт.", "Could not send: ${it.message}. You can copy the report.") }
+                                if (j.optBoolean("ok")) { sentOk = true; result = context.localizedStringFormat("Sent, id %1\$s. Thank you!", j.optString("id")) }
+                                else result = context.localizedString("The server rejected the report: ") + j.optString("error", "?")
+                            }.onFailure { result = context.localizedStringFormat("Could not send: %1\$s. You can copy the report.", it.message) }
                         }
                     },
                     modifier = Modifier.testTag("report_send"),
-                ) { Text(if (busy) tr("Отправка…", "Sending…") else tr("Отправить", "Send")) }
+                ) { Text(if (busy) localizedString("Sending…") else localizedString("Send")) }
             } else {
-                Text(tr("Нет входа на сервер", "Not signed in"), fontSize = 12.sp, modifier = Modifier.padding(8.dp))
+                Text(localizedString("Not signed in"), fontSize = 12.sp, modifier = Modifier.padding(8.dp))
             }
         },
         dismissButton = {
@@ -189,11 +189,14 @@ fun ProblemReportDialog(server: HttpUrl?, jar: CookieJar?, onDismiss: () -> Unit
                         val s = withContext(Dispatchers.IO) { buildReport().toString(2) }
                         val cm = context.getSystemService(ClipboardManager::class.java)
                         cm?.setPrimaryClip(ClipData.newPlainText("MURF report", s))
-                        result = tr("Отчёт скопирован (без секретов).", "Report copied (secrets removed).")
+                        result = context.localizedString("Report copied (secrets removed).")
                     }
-                }, enabled = !busy) { Text(tr("Копировать", "Copy")) }
-                TextButton(onClick = onDismiss, enabled = !busy) { Text(tr("Отмена", "Cancel")) }
+                }, enabled = !busy) { Text(localizedString("Copy")) }
+                TextButton(onClick = onDismiss, enabled = !busy) { Text(localizedString("Cancel")) }
             }
         },
     )
 }
+
+private fun Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    localizedString(template).format(*args)

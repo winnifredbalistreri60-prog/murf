@@ -1503,4 +1503,56 @@
     <string name="l10n_7fab0f68ffe68db1">"Загрузки/Agent/%1$s"</string>
     <string name="l10n_00192fd8ee195cdd">"Идёт: %1$d · завершено: %2$d"</string>
     <string name="l10n_0f9183d0b1615d43">"Так будет выглядеть текст в чате, меню и настройках %1$s."</string>
+    <string name="l10n_d2179a7c441cf2d6" formatted="false">"Настройки модели"</string>
+    <string name="l10n_f0f9cb152ba772de" formatted="false">"Модель не выбрана"</string>
+    <string name="l10n_3236aeec43e563ca" formatted="false">"Глубина размышлений"</string>
+    <string name="l10n_8849eaf405f12959" formatted="false">"Не удалось загрузить модели"</string>
+    <string name="l10n_0f589c19cd5c9c86" formatted="false">"Все модели"</string>
+    <string name="l10n_5bc0aa08d678c50e" formatted="false">"Удалить из избранного"</string>
+    <string name="l10n_65b52e8c6521a21d" formatted="false">"Добавить в избранное"</string>
+    <string name="l10n_53de38dec81e7ec0" formatted="false">"Сообщить о проблеме"</string>
+    <string name="l10n_703a5028367b34d8" formatted="false">"Ошибка"</string>
+    <string name="l10n_509b1035c55fa2eb" formatted="false">"Зависание"</string>
+    <string name="l10n_b202bcb90ca5c615" formatted="false">"Идея"</string>
+    <string name="l10n_80a0c61e9e06b0d4" formatted="false">"Что случилось? Что делали перед этим?"</string>
+    <string name="l10n_3aafbe8f105994b7" formatted="false">"Приложить журнал приложения"</string>
+    <string name="l10n_bce0f555577a625b" formatted="false">"Пароли, токены, ключи, cookie, адреса серверов, IP и e-mail вычищаются до отправки. Отчёт уходит только на ваш сервер, его читает бот «MURF Отзывы»."</string>
+    <string name="l10n_fbb8a193457c6117" formatted="false">"Посмотреть, что отправится"</string>
+    <string name="l10n_5b529abadacc1d5d" formatted="false">"Обновить просмотр"</string>
+    <string name="l10n_25f8e11c3680173d" formatted="false">"Сервер не принял отчёт: "</string>
+    <string name="l10n_b8ed5279e897be5d" formatted="false">"Отправка…"</string>
+    <string name="l10n_491fc91cd76e5157" formatted="false">"Нет входа на сервер"</string>
+    <string name="l10n_24d742298706706c" formatted="false">"Отчёт скопирован (без секретов)."</string>
+    <string name="l10n_4ad85a98e1e305dc">"Отправлено, номер %1$s. Спасибо!"</string>
+    <string name="l10n_8260063cd7be3b33">"Не удалось отправить: %1$s. Можно скопировать отчёт."</string>
+    <string name="l10n_30b3ad036a2262f7" formatted="false">"Действует во всём приложении: чат, Markdown, блоки кода, шаги инструментов, меню. Быстро — из меню «…» в чате."</string>
+    <string name="l10n_f64718d6d933fe99" formatted="false">"Свайпы"</string>
+    <string name="l10n_df121f9806b67248" formatted="false">"Главное меню: влево/вправо — следующий/предыдущий раздел (Чаты → Экран → Телефон → Диск → панели). В чате: вправо от левой половины — к списку чатов, влево — экран агента; на экране агента вправо — закрыть."</string>
+    <string name="l10n_b6a24aaebe6a20d5" formatted="false">"Мини-превью экрана в чате"</string>
+    <string name="l10n_a69a54c2817ede45" formatted="false">"Выключено: экран агента открывается кнопкой с монитором в шапке чата (зелёная точка — агент работает). Включено: пока агент работает, в углу чата маленький экран — его можно перетащить или закрыть ×."</string>
+    <string name="l10n_7f7c330667649a84" formatted="false">"Анимации"</string>
+    <string name="l10n_13dbfd94e0b8daf2" formatted="false">"Плавное появление сообщений, индикатор работы агента и переходы между экранами. Если в Android включено «Удалить анимацию», анимаций не будет."</string>
+    <string name="l10n_2e06c96bf82bddd6" formatted="false">"Водяные коротышки у ботов"</string>
+    <string name="l10n_98681f0f37781432" formatted="false">"Объёмные прозрачные человечки из воды. Двигаются, только пока бот работает или ждёт подтверждения, и только если анимации включены. Выключено: простые нарисованные значки."</string>
+    <string name="l10n_4ac315c7e4802118" formatted="false">"журнал без секретов"</string>
+    <string name="l10n_f26f3275e735bdf6" formatted="false">"Проверить обновления"</string>
+    <string name="l10n_f76079be32485365" formatted="false">"Релизы GitHub"</string>
+    <string name="l10n_6defafa2caa65304" formatted="false">"Настроить"</string>
+    <string name="l10n_8f3724d378d66b66" formatted="false">"Сервер недоступен. Показан кэш. Проверьте сеть или адрес."</string>
+    <string name="l10n_b4935894c8ce16bd" formatted="false">"…"</string>
+    <string name="l10n_6d0dad068310cfcb" formatted="false">"Чаты недоступны в этом списке"</string>
+    <string name="l10n_5fc1932239b58121" formatted="false">"Проверьте подключение и потяните список вниз, чтобы обновить."</string>
+    <string name="l10n_5fbc6d3b49de64ca" formatted="false">"Ищем чаты…"</string>
+    <string name="l10n_943ba977e51cdf22" formatted="false">"Идёт поиск на сервере."</string>
+    <string name="l10n_27e7713cfeff4403" formatted="false">"Чаты не найдены"</string>
+    <string name="l10n_93645bcbdefd13a0" formatted="false">"Измените запрос, выберите все проекты или проверьте фильтры в настройках."</string>
+    <string name="l10n_4e783de483ec6b66" formatted="false">"Архив пуст"</string>
+    <string name="l10n_d70685b06aca8012" formatted="false">"Здесь появятся чаты, которые вы отправите в архив."</string>
+    <string name="l10n_cc666b69ca798a25" formatted="false">"Запусков по расписанию пока нет"</string>
+    <string name="l10n_e7617fb0f1fc4149" formatted="false">"Создайте задачу в разделе «Расписание» и дождитесь её запуска."</string>
+    <string name="l10n_269208e48532e4b9" formatted="false">"Чатов пока нет"</string>
+    <string name="l10n_fada1b23ae57868c" formatted="false">"Нажмите кнопку чата внизу и напишите, чем вам помочь."</string>
+    <string name="l10n_090512d93fcc3c0d" formatted="false">"Интеграции"</string>
+    <string name="l10n_104ab9213e28e4ff" formatted="false">"Работа"</string>
+    <string name="l10n_11b39c93777e8f1f" formatted="false">"Агент"</string>
 </resources>

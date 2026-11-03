@@ -1503,4 +1503,56 @@
     <string name="l10n_7fab0f68ffe68db1">"Downloads/Agent/%1$s"</string>
     <string name="l10n_00192fd8ee195cdd">"Running: %1$d · finished: %2$d"</string>
     <string name="l10n_0f9183d0b1615d43">"This is how text will look in chat, menus and settings of %1$s."</string>
+    <string name="l10n_d2179a7c441cf2d6" formatted="false">"Model settings"</string>
+    <string name="l10n_f0f9cb152ba772de" formatted="false">"No model selected"</string>
+    <string name="l10n_3236aeec43e563ca" formatted="false">"Reasoning effort"</string>
+    <string name="l10n_8849eaf405f12959" formatted="false">"Could not load models"</string>
+    <string name="l10n_0f589c19cd5c9c86" formatted="false">"All models"</string>
+    <string name="l10n_5bc0aa08d678c50e" formatted="false">"Remove favorite"</string>
+    <string name="l10n_65b52e8c6521a21d" formatted="false">"Add favorite"</string>
+    <string name="l10n_53de38dec81e7ec0" formatted="false">"Report a problem"</string>
+    <string name="l10n_703a5028367b34d8" formatted="false">"Bug"</string>
+    <string name="l10n_509b1035c55fa2eb" formatted="false">"Freeze"</string>
+    <string name="l10n_b202bcb90ca5c615" formatted="false">"Idea"</string>
+    <string name="l10n_80a0c61e9e06b0d4" formatted="false">"What happened? What were you doing?"</string>
+    <string name="l10n_3aafbe8f105994b7" formatted="false">"Attach the app log"</string>
+    <string name="l10n_bce0f555577a625b" formatted="false">"Passwords, tokens, keys, cookies, server addresses, IPs and e-mails are removed before sending. The report goes only to your server, where the “MURF Feedback” bot reads it."</string>
+    <string name="l10n_fbb8a193457c6117" formatted="false">"Preview what is sent"</string>
+    <string name="l10n_5b529abadacc1d5d" formatted="false">"Refresh preview"</string>
+    <string name="l10n_25f8e11c3680173d" formatted="false">"The server rejected the report: "</string>
+    <string name="l10n_b8ed5279e897be5d" formatted="false">"Sending…"</string>
+    <string name="l10n_491fc91cd76e5157" formatted="false">"Not signed in"</string>
+    <string name="l10n_24d742298706706c" formatted="false">"Report copied (secrets removed)."</string>
+    <string name="l10n_4ad85a98e1e305dc">"Sent, id %1$s. Thank you!"</string>
+    <string name="l10n_8260063cd7be3b33">"Could not send: %1$s. You can copy the report."</string>
+    <string name="l10n_30b3ad036a2262f7" formatted="false">"Applies to the whole app: chat, Markdown, code blocks, tool steps, menus. Quick access — from the “…” menu in chat."</string>
+    <string name="l10n_f64718d6d933fe99" formatted="false">"Swipes"</string>
+    <string name="l10n_df121f9806b67248" formatted="false">"Main menu: swipe left/right — next/previous section (Chats → Screen → Phone → Drive → panels). In chat: swipe right from the left half — to the chat list, left — agent screen; on the agent screen swipe right — close."</string>
+    <string name="l10n_b6a24aaebe6a20d5" formatted="false">"Mini screen preview in chat"</string>
+    <string name="l10n_a69a54c2817ede45" formatted="false">"Off: the agent screen opens with the monitor button in the chat header (green dot — the agent is working). On: while the agent works, a small screen sits in the chat corner — drag it or close it with ×."</string>
+    <string name="l10n_7f7c330667649a84" formatted="false">"Animations"</string>
+    <string name="l10n_13dbfd94e0b8daf2" formatted="false">"Smooth message appearance, the agent working indicator and screen transitions. If Android “Remove animations” is on, animations stay off."</string>
+    <string name="l10n_2e06c96bf82bddd6" formatted="false">"Water mascots for bots"</string>
+    <string name="l10n_98681f0f37781432" formatted="false">"Glossy see-through water characters. They move only while a bot is working or waiting for approval, and only with animations on. Off: simple drawn icons."</string>
+    <string name="l10n_4ac315c7e4802118" formatted="false">"log without secrets"</string>
+    <string name="l10n_f26f3275e735bdf6" formatted="false">"Check for updates"</string>
+    <string name="l10n_f76079be32485365" formatted="false">"GitHub Releases"</string>
+    <string name="l10n_6defafa2caa65304" formatted="false">"Configure"</string>
+    <string name="l10n_8f3724d378d66b66" formatted="false">"Server unreachable. Showing cache. Check network or address."</string>
+    <string name="l10n_b4935894c8ce16bd" formatted="false">"…"</string>
+    <string name="l10n_6d0dad068310cfcb" formatted="false">"Chats unavailable in this view"</string>
+    <string name="l10n_5fc1932239b58121" formatted="false">"Check the connection and pull down to refresh."</string>
+    <string name="l10n_5fbc6d3b49de64ca" formatted="false">"Searching chats…"</string>
+    <string name="l10n_943ba977e51cdf22" formatted="false">"Searching on the server."</string>
+    <string name="l10n_27e7713cfeff4403" formatted="false">"No matching chats"</string>
+    <string name="l10n_93645bcbdefd13a0" formatted="false">"Change the query, select all projects or check filters in settings."</string>
+    <string name="l10n_4e783de483ec6b66" formatted="false">"Archive is empty"</string>
+    <string name="l10n_d70685b06aca8012" formatted="false">"Chats you archive will appear here."</string>
+    <string name="l10n_cc666b69ca798a25" formatted="false">"No scheduled runs yet"</string>
+    <string name="l10n_e7617fb0f1fc4149" formatted="false">"Create a scheduled task and wait for it to run."</string>
+    <string name="l10n_269208e48532e4b9" formatted="false">"No chats yet"</string>
+    <string name="l10n_fada1b23ae57868c" formatted="false">"Tap the chat button below and describe what you need help with."</string>
+    <string name="l10n_090512d93fcc3c0d" formatted="false">"Integrations"</string>
+    <string name="l10n_104ab9213e28e4ff" formatted="false">"Work"</string>
+    <string name="l10n_11b39c93777e8f1f" formatted="false">"Agent"</string>
 </resources>
