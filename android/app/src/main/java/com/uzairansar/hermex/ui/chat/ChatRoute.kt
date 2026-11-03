@@ -141,6 +141,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uzairansar.hermex.core.runSuspendCatching
 import com.uzairansar.hermex.core.model.ApprovalChoice
@@ -333,14 +334,8 @@ fun ChatRoute(
     } else {
         systemLayoutDirection
     }
-    val sendButtonEnabled = if (state.isStreaming) true else state.draft.isNotBlank() && !state.isViewingCachedData
-    val primaryActionTintColor = remember(tintPrimaryActionsWithThemeColor, activeHeaderColorHex, sendButtonEnabled) {
-        if (primaryActionTintApplies(tintPrimaryActionsWithThemeColor, sendButtonEnabled)) {
-            hermexColorFromHex(activeHeaderColorHex)
-        } else {
-            null
-        }
-    }
+    // sendButtonEnabled и primaryActionTintColor вычисляются внутри ComposerSurface:
+    // они зависят от draft, который больше не входит в ChatUiState.
     val hapticView = LocalView.current
     val hapticsEnabled = LocalHermexHapticsEnabled.current
     val latestResponseCompletionNotificationsEnabled by rememberUpdatedState(responseCompletionNotificationsEnabled)
@@ -466,7 +461,7 @@ fun ChatRoute(
             isVoiceDictating && dictationRecorder.isRecording -> finishServerDictation()
             isVoiceDictating -> dictationController.stop()
             else -> {
-                voiceDictationBaseDraft = state.draft
+                voiceDictationBaseDraft = viewModel.draft.value
                 voiceDictationError = null
                 when (
                     DictationProviderPolicy.primaryProvider(
@@ -1256,7 +1251,9 @@ fun ChatRoute(
                             isVoiceDictationTranscribing = isVoiceDictationTranscribing,
                             voiceDictationError = voiceDictationError,
                             streamingSendBehavior = streamingSendBehavior,
-                            primaryActionTintColor = primaryActionTintColor,
+                            draftFlow = viewModel.draft,
+                            tintPrimaryActions = tintPrimaryActionsWithThemeColor,
+                            activeHeaderColorHex = activeHeaderColorHex,
                             showSecondaryBar = !isReadingOlderTranscript,
                             onDraftChange = viewModel::updateDraft,
                             onSend = {
@@ -2685,7 +2682,9 @@ private fun ComposerSurface(
     isVoiceDictationTranscribing: Boolean,
     voiceDictationError: String?,
     streamingSendBehavior: StreamingSendBehavior,
-    primaryActionTintColor: Color?,
+    draftFlow: StateFlow<String>,
+    tintPrimaryActions: Boolean,
+    activeHeaderColorHex: String?,
     showSecondaryBar: Boolean,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -2707,6 +2706,16 @@ private fun ComposerSurface(
     loadAttachmentImage: suspend (String) -> ByteArray?,
     loadAttachmentFile: suspend (String) -> FileResponse?,
 ) {
+    // Draft читается здесь, а не в ChatRoute: набор текста рекомпозирует только композер.
+    val draft by draftFlow.collectAsStateWithLifecycle()
+    val sendButtonEnabled = if (state.isStreaming) true else draft.isNotBlank() && !state.isViewingCachedData
+    val primaryActionTintColor = remember(tintPrimaryActions, activeHeaderColorHex, sendButtonEnabled) {
+        if (primaryActionTintApplies(tintPrimaryActions, sendButtonEnabled)) {
+            hermexColorFromHex(activeHeaderColorHex)
+        } else {
+            null
+        }
+    }
     var previewAttachment by remember { mutableStateOf<UploadResponse?>(null) }
     val messageDescription = localizedString("message").replaceFirstChar { character ->
         if (character.isLowerCase()) character.titlecase() else character.toString()
@@ -2727,11 +2736,11 @@ private fun ComposerSurface(
     ) {
         state.slashAutocompleteContext()
     }
-    val slashAutocompleteResult = remember(state.draft, slashAutocompleteContext) {
-        SlashAutocompletePolicy.evaluate(state.draft, slashAutocompleteContext)
+    val slashAutocompleteResult = remember(draft, slashAutocompleteContext) {
+        SlashAutocompletePolicy.evaluate(draft, slashAutocompleteContext)
     }
-    val slashWorkspaceQuery = remember(state.draft) {
-        SlashAutocompletePolicy.workspaceArgumentQuery(state.draft)
+    val slashWorkspaceQuery = remember(draft) {
+        SlashAutocompletePolicy.workspaceArgumentQuery(draft)
     }
     LaunchedEffect(slashWorkspaceQuery) {
         val query = slashWorkspaceQuery ?: return@LaunchedEffect
@@ -2779,7 +2788,7 @@ private fun ComposerSurface(
                 )
             }
             BasicTextField(
-                value = state.draft,
+                value = draft,
                 onValueChange = onDraftChange,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2800,7 +2809,7 @@ private fun ComposerSurface(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.TopStart,
                     ) {
-                        if (state.draft.isEmpty()) {
+                        if (draft.isEmpty()) {
                             Text(
                                 localizedString(if (state.isViewingCachedData) "Reconnect to send messages." else "Ask anything... /commands"),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -2860,7 +2869,7 @@ private fun ComposerSurface(
                     enabled = if (state.isStreaming) {
                         true
                     } else {
-                        state.draft.isNotBlank() &&
+                        draft.isNotBlank() &&
                             !state.isViewingCachedData &&
                             !state.isRunningSessionAction &&
                             !state.isUploadingAttachment &&
@@ -2869,25 +2878,25 @@ private fun ComposerSurface(
                     },
                     filled = true,
                     filledContainerColor = hermexPrimaryActionContainerColor(
-                        if (state.isStreaming) true else state.draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
+                        if (state.isStreaming) true else draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
                         primaryActionTintColor,
                     ),
                     filledContentColor = hermexPrimaryActionContentColor(
-                        if (state.isStreaming) true else state.draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
+                        if (state.isStreaming) true else draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
                         primaryActionTintColor,
                     ),
                     modifier = Modifier.size(48.dp),
                 )
             }
-            if (state.isStreaming && state.draft.isNotBlank()) {
+            if (state.isStreaming && draft.isNotBlank()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 ) {
-                    if (state.draft.trimStart().startsWith("/")) {
-                        if (state.draft.trimStart().startsWith("/queue", ignoreCase = true)) {
+                    if (draft.trimStart().startsWith("/")) {
+                        if (draft.trimStart().startsWith("/queue", ignoreCase = true)) {
                             HermexPillButton(localizedString("Queue"), onSend, enabled = !state.isRunningSessionAction, filled = true)
                         }
                         HermexPillButton(
