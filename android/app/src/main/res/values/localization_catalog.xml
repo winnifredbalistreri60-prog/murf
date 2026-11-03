@@ -1813,4 +1813,52 @@
     <string name="l10n_f4c57f30bd9f5cea" formatted="false">"Agent requests: %1$s"</string>
     <string name="l10n_0d42800306b7aa49" formatted="false">"download: HTTP %1$d"</string>
     <string name="l10n_5759b79328c6e381" formatted="false">"Copied %1$d characters"</string>
+    <string name="l10n_0b70075284a9cde7" formatted="false">"Phone &amp; Termux"</string>
+    <string name="l10n_4672cc9a8dc90b04" formatted="false">"When the bridge is on, the agent on the server can ask the phone to do something: a Termux command, a photo, location, file transfer. Each request is confirmed here or in a notification, except those allowed “always”."</string>
+    <string name="l10n_ad9ff9e8990b5876" formatted="false">"The agent can\'t see the phone."</string>
+    <string name="l10n_c5dba595e87a8239" formatted="false">"● Connected to %1$s — the agent sees the phone"</string>
+    <string name="l10n_8e76e7c3332020af" formatted="false">"○ Connecting… "</string>
+    <string name="l10n_0dedad366b5477ab" formatted="false">"On-phone agent (DeepSeek Harness)"</string>
+    <string name="l10n_00a4d3fded5af2aa" formatted="false">"● Bridge connected to the local environment"</string>
+    <string name="l10n_bc240276d97a3e64" formatted="false">"○ Local environment: bridge not connected"</string>
+    <string name="l10n_5d9748aaa4e2877a" formatted="false">" Screen control (accessibility): screenshot, screen contents, taps, swipes, typing"</string>
+    <string name="l10n_b36676103da2dc61" formatted="false">" Notification access (read for the agent)"</string>
+    <string name="l10n_d3368cbffe23c98d" formatted="false">"Accessibility"</string>
+    <string name="l10n_788011833a5a0f22" formatted="false">"Notifications"</string>
+    <string name="l10n_93375132850d6804" formatted="false">"Taps, swipes and typing in other apps are confirmed every time (no “Always”). Files outside Download/MURF, links, screenshots, clipboard, location and Termux commands need confirmation. SMS is off by default. “Take screen” or “Stop” in chat immediately blocks screen actions."</string>
+    <string name="l10n_9df38ebaf094748a" formatted="false">"Give the screen back to the agent"</string>
+    <string name="l10n_d0ae0b38eac639b9" formatted="false">"Awaiting confirmation"</string>
+    <string name="l10n_51462e704b8ae24d" formatted="false">"Termux: status"</string>
+    <string name="l10n_79843f46f438af4a" formatted="false">" Termux installed"</string>
+    <string name="l10n_0abf52a54b0c9179" formatted="false">" Termux:API installed (photo, location, clipboard, SMS)"</string>
+    <string name="l10n_27746731830bedbe" formatted="false">" “Run commands in Termux” permission"</string>
+    <string name="l10n_faf04ca4985bfb6f" formatted="false">"Grant permission"</string>
+    <string name="l10n_6e6ad42fa8c88f3d" formatted="false">"Termux setup (once)"</string>
+    <string name="l10n_a2efdb9a5bdf6927" formatted="false">"1. Install Termux and Termux:API from F-Droid (the Google Play version is outdated and won\'t work)."</string>
+    <string name="l10n_4520a62d9d61e184" formatted="false">"2. Open Termux and run (installs termux-api, curl, rclone, storage access and allows external commands):"</string>
+    <string name="l10n_2067c001b396d7d3" formatted="false">"3. Come back here, tap “Grant permission”, then “Check”. 4. Turn on the bridge above."</string>
+    <string name="l10n_31047ef6293da555" formatted="false">"Allowed without asking"</string>
+    <string name="l10n_5ce8a162cbe3d8b7" formatted="false">"better to confirm"</string>
+    <string name="l10n_65257dbb68e8279a" formatted="false">"Let the agent request SMS"</string>
+    <string name="l10n_b83a589f114af98c" formatted="false">"Recent requests"</string>
+    <string name="l10n_41f1f5e76a7c68f1" formatted="false">"Sending token to server…"</string>
+    <string name="l10n_d2b2d8737ba450f8" formatted="false">"✓ Google Drive connected to the agent"</string>
+    <string name="l10n_f16aa1760a6a2ba2" formatted="false">"✗ Error: "</string>
+    <string name="l10n_8fa2a663c601edc6" formatted="false">"✓ Agent is connected to Google Drive (remote gdrive:)"</string>
+    <string name="l10n_5d162a783d6e9a5f" formatted="false">"The agent is not connected to Google Drive yet"</string>
+    <string name="l10n_915ef4bad59a1329" formatted="false">"Google Drive"</string>
+    <string name="l10n_4faf4a5687402df8" formatted="false">"Saving from the app"</string>
+    <string name="l10n_818900be1175c5d3" formatted="false">"Any message, conversation (Markdown/PDF), workspace file or agent screenshot can be sent to Google Drive with “To Google Drive” — the Drive app opens, no login needed."</string>
+    <string name="l10n_9b36fcf037a06cd9" formatted="false">"Agent access to Drive (rclone)"</string>
+    <string name="l10n_98d850c2eda79a49" formatted="false">"The agent on the server works with your Drive via rclone. One Google authorization is needed — your password is never sent, only the rclone token goes to the server."</string>
+    <string name="l10n_98a9909e45ae8775" formatted="false">"Option A — on this phone (needs Termux with permission, see “Phone &amp; Termux”):"</string>
+    <string name="l10n_2c33448e40292f2d" formatted="false">"Set up Termux in “Phone” first"</string>
+    <string name="l10n_949ae4786afb21ae" formatted="false">"Termux will open a Google link. Sign in, allow access, then come back and tap “Send token”."</string>
+    <string name="l10n_ecc8a4e99d24d252" formatted="false">"1. Sign in to Google via Termux"</string>
+    <string name="l10n_fe14f3a7322dd676" formatted="false">"Token not found: finish signing in in Termux (step 1)."</string>
+    <string name="l10n_b383ccaef10d60d9" formatted="false">"2. Send token to the agent"</string>
+    <string name="l10n_d738af789d5f5af3" formatted="false">"Option B — on a computer: install rclone and run"</string>
+    <string name="l10n_46488322b5225ea3" formatted="false">"Copy the whole {…} block between “Paste the following” and “End paste” and paste it here:"</string>
+    <string name="l10n_7375318b7cb8df17" formatted="false">"rclone token {…}"</string>
+    <string name="l10n_c90be9c4ef88a2cc" formatted="false">"Send token"</string>
 </resources>

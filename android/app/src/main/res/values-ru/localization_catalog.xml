@@ -1813,4 +1813,52 @@
     <string name="l10n_f4c57f30bd9f5cea" formatted="false">"Агент просит: %1$s"</string>
     <string name="l10n_0d42800306b7aa49" formatted="false">"скачивание: HTTP %1$d"</string>
     <string name="l10n_5759b79328c6e381" formatted="false">"Скопировано %1$d символов"</string>
+    <string name="l10n_0b70075284a9cde7" formatted="false">"Телефон и Termux"</string>
+    <string name="l10n_4672cc9a8dc90b04" formatted="false">"Когда мост включён, агент на сервере может попросить телефон выполнить действие: команду в Termux, фото, геопозицию, передачу файлов. Каждый запрос подтверждается здесь или в уведомлении, кроме разрешённых «всегда»."</string>
+    <string name="l10n_ad9ff9e8990b5876" formatted="false">"Агент не видит телефон."</string>
+    <string name="l10n_c5dba595e87a8239" formatted="false">"● Подключено к %1$s — агент видит телефон"</string>
+    <string name="l10n_8e76e7c3332020af" formatted="false">"○ Подключение… "</string>
+    <string name="l10n_0dedad366b5477ab" formatted="false">"Агент на телефоне (DeepSeek Harness)"</string>
+    <string name="l10n_00a4d3fded5af2aa" formatted="false">"● Мост подключён к локальной среде (127.0.0.1)"</string>
+    <string name="l10n_bc240276d97a3e64" formatted="false">"○ Локальная среда: мост не подключён (запустите среду и включите мост)"</string>
+    <string name="l10n_5d9748aaa4e2877a" formatted="false">" Управление экраном (спец. возможности): снимок, что на экране, нажатия, свайпы, ввод"</string>
+    <string name="l10n_b36676103da2dc61" formatted="false">" Доступ к уведомлениям (чтение для агента)"</string>
+    <string name="l10n_d3368cbffe23c98d" formatted="false">"Спец. возможности"</string>
+    <string name="l10n_788011833a5a0f22" formatted="false">"Уведомления"</string>
+    <string name="l10n_93375132850d6804" formatted="false">"Нажатия, свайпы и ввод текста в других приложениях подтверждаются каждый раз (без «Всегда»). Чтение/запись файлов вне Download/MURF, ссылки, снимки экрана, буфер обмена, геопозиция и команды Termux — с подтверждением. SMS по умолчанию выключены. «Взять экран» или «Стоп» в чате сразу запрещают агенту действия на экране."</string>
+    <string name="l10n_9df38ebaf094748a" formatted="false">"Вернуть агенту доступ к экрану"</string>
+    <string name="l10n_d0ae0b38eac639b9" formatted="false">"Ждут подтверждения"</string>
+    <string name="l10n_51462e704b8ae24d" formatted="false">"Termux: состояние"</string>
+    <string name="l10n_79843f46f438af4a" formatted="false">" Termux установлен"</string>
+    <string name="l10n_0abf52a54b0c9179" formatted="false">" Termux:API установлен (фото, геопозиция, буфер, SMS)"</string>
+    <string name="l10n_27746731830bedbe" formatted="false">" Разрешение «Запуск команд в Termux»"</string>
+    <string name="l10n_faf04ca4985bfb6f" formatted="false">"Выдать разрешение"</string>
+    <string name="l10n_6e6ad42fa8c88f3d" formatted="false">"Настройка Termux (один раз)"</string>
+    <string name="l10n_a2efdb9a5bdf6927" formatted="false">"1. Установите Termux и Termux:API из F-Droid (версия из Google Play устарела и не подходит)."</string>
+    <string name="l10n_4520a62d9d61e184" formatted="false">"2. Откройте Termux и выполните (поставит termux-api, curl, rclone, доступ к памяти и разрешит внешние команды):"</string>
+    <string name="l10n_2067c001b396d7d3" formatted="false">"3. Вернитесь сюда, нажмите «Выдать разрешение», затем «Проверить». 4. Включите мост выше."</string>
+    <string name="l10n_31047ef6293da555" formatted="false">"Что разрешено без вопроса"</string>
+    <string name="l10n_5ce8a162cbe3d8b7" formatted="false">"лучше подтверждать"</string>
+    <string name="l10n_65257dbb68e8279a" formatted="false">"Разрешить агенту запрашивать SMS"</string>
+    <string name="l10n_b83a589f114af98c" formatted="false">"Последние запросы"</string>
+    <string name="l10n_41f1f5e76a7c68f1" formatted="false">"Отправляю токен на сервер…"</string>
+    <string name="l10n_d2b2d8737ba450f8" formatted="false">"✓ Google Диск подключён к агенту"</string>
+    <string name="l10n_f16aa1760a6a2ba2" formatted="false">"✗ Ошибка: "</string>
+    <string name="l10n_8fa2a663c601edc6" formatted="false">"✓ Агент подключён к Google Диску (remote gdrive:)"</string>
+    <string name="l10n_5d162a783d6e9a5f" formatted="false">"Агент ещё не подключён к Google Диску"</string>
+    <string name="l10n_915ef4bad59a1329" formatted="false">"Google Диск"</string>
+    <string name="l10n_4faf4a5687402df8" formatted="false">"Сохранение из приложения"</string>
+    <string name="l10n_818900be1175c5d3" formatted="false">"Любое сообщение, беседу (Markdown/PDF), файл из рабочей папки или снимок экрана агента можно отправить в Google Диск кнопкой «В Google Диск» — откроется окно приложения Диск, вход не нужен."</string>
+    <string name="l10n_9b36fcf037a06cd9" formatted="false">"Доступ агента к Диску (rclone)"</string>
+    <string name="l10n_98d850c2eda79a49" formatted="false">"Агент на сервере работает с вашим Диском через rclone. Нужна одна авторизация Google — пароль никуда не передаётся, на сервер уходит только токен rclone."</string>
+    <string name="l10n_98a9909e45ae8775" formatted="false">"Вариант А — на этом телефоне (нужен Termux с разрешением, см. «Телефон и Termux»):"</string>
+    <string name="l10n_2c33448e40292f2d" formatted="false">"Сначала настройте Termux в разделе «Телефон»"</string>
+    <string name="l10n_949ae4786afb21ae" formatted="false">"В Termux откроется ссылка Google. Войдите, разрешите доступ, затем вернитесь и нажмите «Отправить токен»."</string>
+    <string name="l10n_ecc8a4e99d24d252" formatted="false">"1. Войти в Google через Termux"</string>
+    <string name="l10n_fe14f3a7322dd676" formatted="false">"Токен не найден: завершите вход в Termux (шаг 1)."</string>
+    <string name="l10n_b383ccaef10d60d9" formatted="false">"2. Отправить токен агенту"</string>
+    <string name="l10n_d738af789d5f5af3" formatted="false">"Вариант Б — на компьютере: установите rclone и выполните"</string>
+    <string name="l10n_46488322b5225ea3" formatted="false">"Скопируйте весь блок {…} между «Paste the following» и «End paste» и вставьте сюда:"</string>
+    <string name="l10n_7375318b7cb8df17" formatted="false">"Токен rclone {…}"</string>
+    <string name="l10n_c90be9c4ef88a2cc" formatted="false">"Отправить токен"</string>
 </resources>
