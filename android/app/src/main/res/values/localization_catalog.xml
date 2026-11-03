@@ -1477,4 +1477,30 @@
     <string name="l10n_9500beffe7383ed0" formatted="false">"Failed: "</string>
     <string name="l10n_f6927596badc2251" formatted="false">"Use phone"</string>
     <string name="l10n_ae768f766f75b0f4" formatted="false">"Stay"</string>
+    <string name="l10n_c8864e27d32de6c4" formatted="false">"Share file"</string>
+    <string name="l10n_0ed7cecc460105a1" formatted="false">"Google Drive app not found — choose where to save"</string>
+    <string name="l10n_48bcdb308cd89d75" formatted="false">"Could not create file in Downloads"</string>
+    <string name="l10n_f9ff38fb6a53805e" formatted="false">"Run in Termux?"</string>
+    <string name="l10n_aca5b1167f2690ef" formatted="false">"Copy and open Termux"</string>
+    <string name="l10n_d71b9ad85c478639" formatted="false">"Termux required"</string>
+    <string name="l10n_0219372ffd624edb" formatted="false">"Install Termux: see “Phone &amp; Termux”"</string>
+    <string name="l10n_6d784d95c63833e6" formatted="false">"Font size"</string>
+    <string name="l10n_510bfb2fd31dad93" formatted="false">"Sample message"</string>
+    <string name="l10n_c8c63c83794580c2" formatted="false">"print(\"hello\")  # code"</string>
+    <string name="l10n_aa506df47deb346e" formatted="false">"👁 View"</string>
+    <string name="l10n_11247ee957967860" formatted="false">"✋ You have control"</string>
+    <string name="l10n_3b16556adc4d688e" formatted="false">"✋ Take over"</string>
+    <string name="l10n_db0053cd0196f0c6" formatted="false">"Take over the screen?"</string>
+    <string name="l10n_81221874b46d38ef" formatted="false">"The agent is working. While you have the screen, it won\'t click or take screenshots (it waits). When done, tap “I\'m done” to hand control back."</string>
+    <string name="l10n_66abfef02cd8305f" formatted="false">"Take over"</string>
+    <string name="l10n_c071cf5f5ed6f884" formatted="false">"running"</string>
+    <string name="l10n_80cfa3e7f28dde4d" formatted="false">"waiting"</string>
+    <string name="l10n_a4c3ed04a95a3da1" formatted="false">"done"</string>
+    <string name="l10n_5d28a90f4498a814" formatted="false">"failed"</string>
+    <string name="l10n_8322e87d24582952" formatted="false">"stopped"</string>
+    <string name="l10n_5a42c47802eecd20" formatted="false">"Chat tasks"</string>
+    <string name="l10n_309f68e6434faff6" formatted="false">"No subtasks in this chat yet."</string>
+    <string name="l10n_7fab0f68ffe68db1">"Downloads/Agent/%1$s"</string>
+    <string name="l10n_00192fd8ee195cdd">"Running: %1$d · finished: %2$d"</string>
+    <string name="l10n_0f9183d0b1615d43">"This is how text will look in chat, menus and settings of %1$s."</string>
 </resources>
