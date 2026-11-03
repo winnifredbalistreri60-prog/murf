@@ -1861,4 +1861,66 @@
     <string name="l10n_46488322b5225ea3" formatted="false">"Copy the whole {…} block between “Paste the following” and “End paste” and paste it here:"</string>
     <string name="l10n_7375318b7cb8df17" formatted="false">"rclone token {…}"</string>
     <string name="l10n_c90be9c4ef88a2cc" formatted="false">"Send token"</string>
+    <string name="l10n_03fcdc75a4541ea8" formatted="false">"Choose a provider and model"</string>
+    <string name="l10n_83a55ce8eb860b19" formatted="false">"Not logged in to the local environment"</string>
+    <string name="l10n_cfd245391fda7e5e" formatted="false">"Harness agent"</string>
+    <string name="l10n_97bca8a4e4168753" formatted="false">"On phone"</string>
+    <string name="l10n_0ec88fb8f01e93ae" formatted="false">"On server"</string>
+    <string name="l10n_ac1141af1ff08934" formatted="false">"Phone connected"</string>
+    <string name="l10n_2bdda11093b85421" formatted="false">"Local environment is not running. Tap below — MURF starts services in the background (no Termux window) and signs in."</string>
+    <string name="l10n_e90a0de2e178711f" formatted="false">"Retry start and sign-in"</string>
+    <string name="l10n_7b7fe3e4f12cfbad" formatted="false">"Start and sign in on phone"</string>
+    <string name="l10n_ec075d0aadac734c" formatted="false">"Open “Local environment”"</string>
+    <string name="l10n_75c6616b40f7e734" formatted="false">"Not logged in to the local environment — sign in once (Phone profile)."</string>
+    <string name="l10n_c66b2adcc5fc9f59" formatted="false">"Signing in…"</string>
+    <string name="l10n_b5ab681069360527" formatted="false">"Retry sign-in"</string>
+    <string name="l10n_da415a444421c8fa" formatted="false">"Sign in on phone"</string>
+    <string name="l10n_a5f5d3a5ab0bd9f6" formatted="false">"Installed dsh "</string>
+    <string name="l10n_f5a021743d680bb8" formatted="false">" · phone bridge: "</string>
+    <string name="l10n_c5e23457aa7c2b39" formatted="false">"connected"</string>
+    <string name="l10n_394b08fe417b0b6b" formatted="false">"not connected"</string>
+    <string name="l10n_fa742a357dd12d24" formatted="false">"DeepSeek Harness is not installed yet (~350 MB: Node.js 22 + dsh 0.2.1-rc.2)."</string>
+    <string name="l10n_17d0c23f4b4de233" formatted="false">"npm can take 5–20 min. Keep Wi‑Fi on; progress stays in MURF — the bar moves about every 20s."</string>
+    <string name="l10n_2d4f3a77b1d205e4" formatted="false">"Retry install"</string>
+    <string name="l10n_352b58479f8cee90" formatted="false">"All providers"</string>
+    <string name="l10n_009bf6b90cde5e60" formatted="false">"New chat"</string>
+    <string name="l10n_2e7c924c07612fa8" formatted="false">"DeepSeek Harness is DeepSeek\'s open agent (MIT). On phone: authorize with an API token (like “Paste a key” upstream); token is encrypted in MURF. DSH OAuth/device-code flows — later. dsh telemetry is off."</string>
+    <string name="l10n_4eb965750c5d6a35" formatted="false">"turns "</string>
+    <string name="l10n_7e7169f4780042af" formatted="false">"Need a Harness ?auth= link or address + 8-character code"</string>
+    <string name="l10n_33c0e4529e7ca253" formatted="false">"Harness client paired (cookie on phone). Open the client below — no screen streaming."</string>
+    <string name="l10n_00570375e2a09356" formatted="false">"Harness on server"</string>
+    <string name="l10n_7cba16005803c77c" formatted="false">"Remote DeepSeek Harness client inside MURF: pair with a link/?auth= or address + code, then chat and agent in-app. Agent Screen / VNC is not required."</string>
+    <string name="l10n_dae7f103559afb01" formatted="false">"Client session: "</string>
+    <string name="l10n_a8fe651cefd8f995" formatted="false">"Open Harness client"</string>
+    <string name="l10n_b37db1d11b3ec7ae" formatted="false">"Remembered address: "</string>
+    <string name="l10n_d3eaf7b0b48d4c2c" formatted="false">"No session yet — enter the code again (prefer the permanent one)."</string>
+    <string name="l10n_3c188e7e45a1f56b" formatted="false">"Top up DeepSeek"</string>
+    <string name="l10n_79b3b90ed38c5ab8" formatted="false">"Payment opens platform.deepseek.com/top_up (card / PayPal / G Pay). Sign in to DeepSeek in the browser."</string>
+    <string name="l10n_5cca28b75fc0d9c9" formatted="false">"Pairing"</string>
+    <string name="l10n_95d19cbc168c6f16" formatted="false">"In Desktop Harness: Remote access → code / QR. Paste the ?auth= link or address + 8 characters here. Save the permanent code once."</string>
+    <string name="l10n_4e4d48f172f1fae5" formatted="false">"Address or ?auth= link"</string>
+    <string name="l10n_bb8c7c617f20413f" formatted="false">"Code (8 chars if not in the link)"</string>
+    <string name="l10n_fd3e796994266a53" formatted="false">"Connecting…"</string>
+    <string name="l10n_4bc4f35ad382d8fc" formatted="false">"Pair and open client"</string>
+    <string name="l10n_600cbf675ada307e" formatted="false">"Devices (Hermes QR)"</string>
+    <string name="l10n_67fb66448bbd4b02" formatted="false">"Related screens"</string>
+    <string name="l10n_3bb7c81568a34a0b" formatted="false">"Local environment"</string>
+    <string name="l10n_477169bbb4fdc6bb" formatted="false">"Model providers"</string>
+    <string name="l10n_588238da800d6b82" formatted="false">"Harness client"</string>
+    <string name="l10n_91d42a8b742abdae" formatted="false">"Top up"</string>
+    <string name="l10n_54a2cf5e634dbba0" formatted="false">"Browser"</string>
+    <string name="l10n_a35bc7ae8f9a2813" formatted="false">"Invalid client address"</string>
+    <string name="l10n_fecc2f407db51966" formatted="false">"New DSH chat"</string>
+    <string name="l10n_69a493a5a1f98118" formatted="false">"DSH chat"</string>
+    <string name="l10n_d75549129c036a4d" formatted="false">"Agent asks: "</string>
+    <string name="l10n_77064d5265236e0a" formatted="false">"Phone"</string>
+    <string name="l10n_49d6468370699086" formatted="false">"I have the screen"</string>
+    <string name="l10n_2e15e6b401d6d572" formatted="false">"Take screen"</string>
+    <string name="l10n_49173effeab5515a" formatted="false">"model?"</string>
+    <string name="l10n_08eb686dd4adb401" formatted="false">"Task for the agent…"</string>
+    <string name="l10n_27e495364f9d922a" formatted="false">"Installed dsh %1$s · phone bridge: %2$s"</string>
+    <string name="l10n_457cce9631022a2f" formatted="false">"turns %1$d"</string>
+    <string name="l10n_85138174c21cde19" formatted="false">"Client session: %1$s"</string>
+    <string name="l10n_674824c97e45babc" formatted="false">"Remembered address: %1$s"</string>
+    <string name="l10n_a792d481144366d1" formatted="false">"Agent asks: %1$s"</string>
 </resources>

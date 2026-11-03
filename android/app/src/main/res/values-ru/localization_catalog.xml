@@ -1861,4 +1861,66 @@
     <string name="l10n_46488322b5225ea3" formatted="false">"Скопируйте весь блок {…} между «Paste the following» и «End paste» и вставьте сюда:"</string>
     <string name="l10n_7375318b7cb8df17" formatted="false">"Токен rclone {…}"</string>
     <string name="l10n_c90be9c4ef88a2cc" formatted="false">"Отправить токен"</string>
+    <string name="l10n_03fcdc75a4541ea8" formatted="false">"Выберите провайдера и модель"</string>
+    <string name="l10n_83a55ce8eb860b19" formatted="false">"Нет входа в локальную среду (войдите в «Телефон (локально)» один раз)"</string>
+    <string name="l10n_cfd245391fda7e5e" formatted="false">"Агент Harness"</string>
+    <string name="l10n_97bca8a4e4168753" formatted="false">"На телефоне"</string>
+    <string name="l10n_0ec88fb8f01e93ae" formatted="false">"На сервере"</string>
+    <string name="l10n_ac1141af1ff08934" formatted="false">"Телефон подключён"</string>
+    <string name="l10n_2bdda11093b85421" formatted="false">"Локальная среда не запущена. Нажмите ниже — MURF запустит службы в фоне (без окна Termux) и войдёт."</string>
+    <string name="l10n_e90a0de2e178711f" formatted="false">"Повторить запуск и вход"</string>
+    <string name="l10n_7b7fe3e4f12cfbad" formatted="false">"Запустить и войти на телефон"</string>
+    <string name="l10n_ec075d0aadac734c" formatted="false">"Открыть «Локальная среда»"</string>
+    <string name="l10n_75c6616b40f7e734" formatted="false">"Нет входа в локальную среду — войдите один раз (профиль «Телефон»)."</string>
+    <string name="l10n_c66b2adcc5fc9f59" formatted="false">"Вход…"</string>
+    <string name="l10n_b5ab681069360527" formatted="false">"Повторить вход"</string>
+    <string name="l10n_da415a444421c8fa" formatted="false">"Войти на телефон"</string>
+    <string name="l10n_a5f5d3a5ab0bd9f6" formatted="false">"Установлен dsh "</string>
+    <string name="l10n_f5a021743d680bb8" formatted="false">" · мост телефона: "</string>
+    <string name="l10n_c5e23457aa7c2b39" formatted="false">"подключён"</string>
+    <string name="l10n_394b08fe417b0b6b" formatted="false">"не подключён"</string>
+    <string name="l10n_fa742a357dd12d24" formatted="false">"DeepSeek Harness ещё не установлен в Ubuntu на телефоне (~350 МБ: Node.js 22 + dsh 0.2.1-rc.2)."</string>
+    <string name="l10n_17d0c23f4b4de233" formatted="false">"npm может идти 5–20 мин. Не отключайте Wi‑Fi; прогресс здесь в MURF — полоска двигается раз в ~20 с."</string>
+    <string name="l10n_2d4f3a77b1d205e4" formatted="false">"Повторить установку"</string>
+    <string name="l10n_352b58479f8cee90" formatted="false">"Все провайдеры"</string>
+    <string name="l10n_009bf6b90cde5e60" formatted="false">"Новый чат"</string>
+    <string name="l10n_2e7c924c07612fa8" formatted="false">"DeepSeek Harness — открытый агент DeepSeek (MIT). На телефоне: авторизация API-токеном (как «Paste a key» в оригинале); токен шифруется в MURF. OAuth/device-code провайдеров DSH — позже. Телеметрия dsh отключена."</string>
+    <string name="l10n_4eb965750c5d6a35" formatted="false">"ходов "</string>
+    <string name="l10n_7e7169f4780042af" formatted="false">"Нужна ссылка Harness с ?auth= или адрес + 8‑символьный код"</string>
+    <string name="l10n_33c0e4529e7ca253" formatted="false">"Клиент Harness привязан (cookie на телефоне). Откройте клиент ниже — без трансляции экрана."</string>
+    <string name="l10n_00570375e2a09356" formatted="false">"Harness на сервере"</string>
+    <string name="l10n_7cba16005803c77c" formatted="false">"Удалённый клиент DeepSeek Harness (remote UI) внутри MURF: сопряжение по ссылке/?auth= или адресу + коду, затем чат и агент в приложении. Экран агента / VNC не нужен."</string>
+    <string name="l10n_dae7f103559afb01" formatted="false">"Сессия клиента: "</string>
+    <string name="l10n_a8fe651cefd8f995" formatted="false">"Открыть клиент Harness"</string>
+    <string name="l10n_b37db1d11b3ec7ae" formatted="false">"Запомнен адрес: "</string>
+    <string name="l10n_d3eaf7b0b48d4c2c" formatted="false">"Сессии ещё нет — введите код ещё раз (лучше постоянный)."</string>
+    <string name="l10n_3c188e7e45a1f56b" formatted="false">"Пополнить DeepSeek"</string>
+    <string name="l10n_79b3b90ed38c5ab8" formatted="false">"Оплата открывается на platform.deepseek.com/top_up (карта / PayPal / G Pay). Вход в аккаунт DeepSeek — в браузере."</string>
+    <string name="l10n_5cca28b75fc0d9c9" formatted="false">"Сопряжение"</string>
+    <string name="l10n_95d19cbc168c6f16" formatted="false">"В Desktop Harness: Удалённый доступ → код / QR. Вставьте сюда ссылку ?auth= или адрес + 8 символов. Один раз сохраните постоянный код."</string>
+    <string name="l10n_4e4d48f172f1fae5" formatted="false">"Адрес или ссылка ?auth="</string>
+    <string name="l10n_bb8c7c617f20413f" formatted="false">"Код (8 символов, если не в ссылке)"</string>
+    <string name="l10n_fd3e796994266a53" formatted="false">"Подключение…"</string>
+    <string name="l10n_4bc4f35ad382d8fc" formatted="false">"Привязать и открыть клиент"</string>
+    <string name="l10n_600cbf675ada307e" formatted="false">"Устройства (Hermes QR)"</string>
+    <string name="l10n_67fb66448bbd4b02" formatted="false">"Связанные экраны"</string>
+    <string name="l10n_3bb7c81568a34a0b" formatted="false">"Локальная среда"</string>
+    <string name="l10n_477169bbb4fdc6bb" formatted="false">"Провайдеры моделей"</string>
+    <string name="l10n_588238da800d6b82" formatted="false">"Клиент Harness"</string>
+    <string name="l10n_91d42a8b742abdae" formatted="false">"Пополнить"</string>
+    <string name="l10n_54a2cf5e634dbba0" formatted="false">"Браузер"</string>
+    <string name="l10n_a35bc7ae8f9a2813" formatted="false">"Некорректный адрес клиента"</string>
+    <string name="l10n_fecc2f407db51966" formatted="false">"Новый чат DSH"</string>
+    <string name="l10n_69a493a5a1f98118" formatted="false">"Чат DSH"</string>
+    <string name="l10n_d75549129c036a4d" formatted="false">"Агент просит: "</string>
+    <string name="l10n_77064d5265236e0a" formatted="false">"Телефон"</string>
+    <string name="l10n_49d6468370699086" formatted="false">"Экран у меня"</string>
+    <string name="l10n_2e15e6b401d6d572" formatted="false">"Взять экран"</string>
+    <string name="l10n_49173effeab5515a" formatted="false">"модель?"</string>
+    <string name="l10n_08eb686dd4adb401" formatted="false">"Задача для агента…"</string>
+    <string name="l10n_27e495364f9d922a" formatted="false">"Установлен dsh %1$s · мост телефона: %2$s"</string>
+    <string name="l10n_457cce9631022a2f" formatted="false">"ходов %1$d"</string>
+    <string name="l10n_85138174c21cde19" formatted="false">"Сессия клиента: %1$s"</string>
+    <string name="l10n_674824c97e45babc" formatted="false">"Запомнен адрес: %1$s"</string>
+    <string name="l10n_a792d481144366d1" formatted="false">"Агент просит: %1$s"</string>
 </resources>
