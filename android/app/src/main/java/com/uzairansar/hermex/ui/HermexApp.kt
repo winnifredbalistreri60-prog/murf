@@ -357,15 +357,15 @@ fun HermexApp(
                             selectedSessionId = selectedSessionId.takeIf { usesRegularWidthLayout },
                             onOpenChat = { sessionId ->
                                 if (usesRegularWidthLayout) selectSession(sessionId, false, false)
-                                else navController.navigateSingleTop("chat/$sessionId")
+                                else navController.navigateSingleTop("chat/${Uri.encode(sessionId)}")
                             },
                             onOpenVoiceChat = { sessionId ->
                                 if (usesRegularWidthLayout) selectSession(sessionId, false, true)
-                                else navController.navigateSingleTop("chat/$sessionId?autoStartVoice=true")
+                                else navController.navigateSingleTop("chat/${Uri.encode(sessionId)}?autoStartVoice=true")
                             },
                             onOpenSharedDraft = { sessionId ->
                                 if (usesRegularWidthLayout) selectSession(sessionId, true, false)
-                                else navController.navigateSingleTop("chat/$sessionId?consumeShare=true")
+                                else navController.navigateSingleTop("chat/${Uri.encode(sessionId)}?consumeShare=true")
                             },
                             onOpenPanels = { navController.navigateSingleTop("panels") },
                             onOpenPanel = { section -> navController.navigateSingleTop("panels?section=$section") },
@@ -459,7 +459,7 @@ fun HermexApp(
                             sharedDraftStore = container.sharedDraftStore,
                             consumeSharedDraft = entry.arguments?.getBoolean("consumeShare") == true,
                             autoStartVoice = entry.arguments?.getBoolean("autoStartVoice") == true,
-                            onOpenChat = { sessionId -> navController.navigateSingleTop("chat/$sessionId") },
+                            onOpenChat = { sessionId -> navController.navigateSingleTop("chat/${Uri.encode(sessionId)}") },
                             onBack = { navController.popBackStack() },
                             onOpenWorkspace = {
                                 navController.navigate("workspace/${requireNotNull(entry.arguments?.getString("sessionId"))}")

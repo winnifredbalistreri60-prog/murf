@@ -21,7 +21,7 @@ PUBLIC_BASE = os.environ.get("PUBLIC_BASE", "https://your-server.example")
 FILES_DIR = os.environ.get("PHONE_FILES_DIR", os.path.join(HOME, "phone-files"))
 MAX_UPLOAD = int(os.environ.get("PHONE_MAX_UPLOAD", str(50 * 1024 * 1024)))
 RCLONE_CONF = os.environ.get("RCLONE_CONFIG", os.path.join(HOME, ".config/rclone/rclone.conf"))
-os.makedirs(FILES_DIR, exist_ok=True)
+os.makedirs(FILES_DIR, mode=0o700, exist_ok=True)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import murf_pairing as pairing  # noqa: E402  (QR-привязка устройств)
 import murf_reports as reports  # noqa: E402  («Сообщить о проблеме»)
@@ -53,10 +53,19 @@ def phone_online():
 
 def gc_tokens():
     now = time.time()
-    for t in [t for t, v in up_tokens.items() if v["expires"] < now]:
-        up_tokens.pop(t, None)
-    for t in [t for t, v in dl_tokens.items() if v["expires"] < now]:
-        dl_tokens.pop(t, None)
+    with lock:
+        for t in [t for t, v in up_tokens.items() if v["expires"] < now]:
+            up_tokens.pop(t, None)
+        for t in [t for t, v in dl_tokens.items() if v["expires"] < now]:
+            dl_tokens.pop(t, None)
+
+
+def _safe_int(value, default):
+    """Число из параметра запроса; при мусоре — значение по умолчанию, а не обрыв соединения."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def make_call(tool, args, timeout):
@@ -64,20 +73,20 @@ def make_call(tool, args, timeout):
     rid = uuid.uuid4().hex[:12]
     req = {"id": rid, "tool": tool, "args": args or {}, "created": time.time(), "timeout": timeout}
     # для файловых операций заранее выдаём одноразовые токены
-    if tool in ("pull_file", "take_photo"):
-        tok = secrets.token_urlsafe(24)
-        up_tokens[tok] = {"request_id": rid, "expires": time.time() + timeout + 60, "name": None}
-        req["upload_url"] = f"{PUBLIC_BASE}/phone/up/{tok}"
-    if tool == "push_file":
-        src = os.path.realpath(os.path.expanduser(args.get("local_path", "")))
-        if not os.path.isfile(src):
-            return {"ok": False, "error": f"Файл на сервере не найден: {src}"}
-        tok = secrets.token_urlsafe(24)
-        nm = safe_name(args.get("name") or os.path.basename(src))
-        dl_tokens[tok] = {"path": src, "expires": time.time() + timeout + 60, "name": nm}
-        req["download_url"] = f"{PUBLIC_BASE}/phone/api/dl/{tok}"
-        req["args"] = dict(args, name=nm, size=os.path.getsize(src))
     with lock:
+        if tool in ("pull_file", "take_photo"):
+            tok = secrets.token_urlsafe(24)
+            up_tokens[tok] = {"request_id": rid, "expires": time.time() + timeout + 60, "name": None}
+            req["upload_url"] = f"{PUBLIC_BASE}/phone/up/{tok}"
+        if tool == "push_file":
+            src = os.path.realpath(os.path.expanduser(args.get("local_path", "")))
+            if not os.path.isfile(src):
+                return {"ok": False, "error": f"Файл на сервере не найден: {src}"}
+            tok = secrets.token_urlsafe(24)
+            nm = safe_name(args.get("name") or os.path.basename(src))
+            dl_tokens[tok] = {"path": src, "expires": time.time() + timeout + 60, "name": nm}
+            req["download_url"] = f"{PUBLIC_BASE}/phone/api/dl/{tok}"
+            req["args"] = dict(args, name=nm, size=os.path.getsize(src))
         if not phone_online():
             return {"ok": False, "error": "Телефон не подключён: включите «Телефон → Мост» в приложении «Агент»."}
         pending.append(req)
@@ -100,11 +109,12 @@ def make_call(tool, args, timeout):
             if h["id"] == rid:
                 h["state"] = "ok" if res.get("ok") else "error"
     # если телефон загрузил файл — добавим путь
-    for t, v in list(up_tokens.items()):
-        if v["request_id"] == rid:
-            if v.get("saved"):
-                res["saved_path"] = v["saved"]
-            up_tokens.pop(t, None)
+    with lock:
+        for t, v in list(up_tokens.items()):
+            if v["request_id"] == rid:
+                if v.get("saved"):
+                    res["saved_path"] = v["saved"]
+                up_tokens.pop(t, None)
     return res
 
 
@@ -172,6 +182,9 @@ def _job_running(st):
 
 def start_agent_check():
     global _check_proc
+    if not os.path.isfile(UPD_SCRIPT):
+        log("agent-update script missing", UPD_SCRIPT)
+        return False
     if _check_proc is not None and _check_proc.poll() is None:
         return False
     _check_proc = subprocess.Popen(["/usr/bin/python3", UPD_SCRIPT, "--check"], stdout=subprocess.DEVNULL,
@@ -571,7 +584,7 @@ class PhoneHandler(Base):
             return self.proxy_bots("GET")
         if p == "/phone/api/poll":
             dev = (q.get("device") or ["phone"])[0][:64]
-            wait = min(int((q.get("wait") or ["25"])[0]), 50)
+            wait = min(_safe_int((q.get("wait") or ["25"])[0], 25), 50)
             with lock:
                 d = devices.setdefault(dev, {})
                 d["last_seen"] = time.time()
@@ -606,7 +619,8 @@ class PhoneHandler(Base):
             return
         if p.startswith("/phone/api/dl/"):
             gc_tokens()
-            v = dl_tokens.pop(p.rsplit("/", 1)[-1], None)
+            with lock:
+                v = dl_tokens.pop(p.rsplit("/", 1)[-1], None)
             if not v or not os.path.isfile(v["path"]):
                 return self.send_json(404, {"error": "нет файла"})
             size = os.path.getsize(v["path"])
@@ -755,14 +769,19 @@ class PhoneHandler(Base):
                 return self.pair_call(pairing.revoke, j.get("device_id"))
             return self.send_json(404, {"error": "not found"})
         if p == "/phone/api/drive-token":
+            if self.headers.get("X-Agent-App") != "1":
+                # Анти-CSRF-заголовок, как у всех остальных POST /phone/api/*:
+                # эндпоинт перезаписывает rclone-конфиг (токен Google Drive).
+                return self.send_json(403, {"ok": False, "error": "нужен заголовок X-Agent-App"})
             j = self.jbody()
             return self.send_json(200, drive_set_token(str(j.get("token", ""))))
         if p.startswith("/phone/up/"):
             gc_tokens()
             tok = p.rsplit("/", 1)[-1]
-            v = up_tokens.get(tok)
-            if not v or v.get("saved"):
-                return self.send_json(403, {"error": "токен недействителен"})
+            with lock:
+                v = up_tokens.get(tok)
+                if not v or v.get("saved") or v["expires"] < time.time():
+                    return self.send_json(403, {"error": "токен недействителен"})
             n = int(self.headers.get("Content-Length") or 0)
             if n <= 0 or n > MAX_UPLOAD:
                 return self.send_json(413, {"error": f"размер 1..{MAX_UPLOAD} байт"})
@@ -776,7 +795,10 @@ class PhoneHandler(Base):
                         break
                     f.write(chunk)
                     left -= len(chunk)
-            v["saved"] = dst
+            with lock:
+                v2 = up_tokens.get(tok)
+                if v2 is not None and not v2.get("saved"):
+                    v2["saved"] = dst
             log("upload", dst, n)
             return self.send_json(200, {"ok": True, "path": dst, "size": n})
         self.send_json(404, {"error": "not found"})
@@ -801,7 +823,7 @@ class AgentHandler(Base):
             return self.pair_call(pairing.revoke, self.jbody().get("device_id"))
         if urlparse(self.path).path == "/call":
             j = self.jbody()
-            timeout = max(10, min(int(j.get("timeout", 120)), 600))
+            timeout = max(10, min(_safe_int(j.get("timeout"), 120), 600))
             res = make_call(str(j.get("tool")), j.get("args") or {}, timeout)
             return self.send_json(200, res)
         self.send_json(404, {"error": "not found"})

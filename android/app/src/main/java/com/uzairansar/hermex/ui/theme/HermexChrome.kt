@@ -452,7 +452,7 @@ fun HermexIconButton(
     val iconResource = iconRes ?: hermexIconResource(label, symbol)
     val displaySymbol = normalizedHermexIconSymbol(label, symbol)
     val baseModifier = modifier
-        .defaultMinSize(minWidth = 44.dp, minHeight = 44.dp)
+        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
         .semantics { contentDescription = label }
     val styledModifier = when {
         filled -> baseModifier

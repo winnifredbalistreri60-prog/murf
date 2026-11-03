@@ -86,7 +86,12 @@ def _gc_codes():
 def _check_rate(ip):
     now = _now()
     hits = [t for t in _fails.get(ip, []) if now - t < FAIL_WINDOW]
-    _fails[ip] = hits
+    if hits:
+        _fails[ip] = hits
+    else:
+        # Пустая история — удаляем ключ, иначе при брутфорсе с подменёнными IP
+        # словарь растёт бесконечно (утечка памяти).
+        _fails.pop(ip, None)
     if len(hits) >= FAIL_LIMIT:
         raise PairError(429, "слишком много неудачных попыток, подождите несколько минут")
 

@@ -125,7 +125,9 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -2531,7 +2533,11 @@ private fun StreamRecoveryStatusPill(label: String) {
     Row(
         modifier = Modifier
             .hermexGlass(shape = CircleShape, castsShadow = false)
-            .semantics { contentDescription = label }
+            .semantics {
+                contentDescription = label
+                // TalkBack озвучивает смену статуса (восстановление стрима) без фокуса.
+                liveRegion = LiveRegionMode.Polite
+            }
             .padding(horizontal = 11.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2566,6 +2572,8 @@ private fun InlineNotice(
         modifier = Modifier
             .fillMaxWidth()
             .hermexGlass(shape = HermexCardShape, castsShadow = false)
+            // Ошибки и статусы озвучиваются TalkBack автоматически (live region).
+            .semantics { liveRegion = LiveRegionMode.Polite }
             .padding(horizontal = 10.dp, vertical = 8.dp),
     )
 }
@@ -5056,7 +5064,8 @@ private fun TranscriptMediaDownloadButton(
                 createDocument.launch(reference.exportFilename(extension))
             }
         },
-        modifier = modifier.size(38.dp),
+        // Зона нажатия остаётся >= 48dp (defaultMinSize в HermexIconButton); не сжимаем её до 38dp.
+        modifier = modifier,
     )
 }
 

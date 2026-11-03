@@ -33,10 +33,14 @@ class ReportsTest(unittest.TestCase):
     def test_empty_and_rate(self):
         with self.assertRaises(R.ReportError):
             R.save_report({"description": " ", "log": ""})
-        R._rate[:] = [__import__("time").time()] * R.RATE_N
+        # Лимит per-IP: исчерпанная квота у одного клиента не блокирует остальных.
+        R._rate["203.0.113.7"] = [__import__("time").time()] * R.RATE_N
         with self.assertRaises(R.ReportError) as c:
-            R.save_report({"description": "x"})
+            R.save_report({"description": "x"}, client_ip="203.0.113.7")
         self.assertEqual(c.exception.status, 429)
+        # Другой IP не задет чужим лимитом.
+        res = R.save_report({"description": "y"}, client_ip="203.0.113.8")
+        self.assertTrue(res["ok"])
         R._rate.clear()
 
 

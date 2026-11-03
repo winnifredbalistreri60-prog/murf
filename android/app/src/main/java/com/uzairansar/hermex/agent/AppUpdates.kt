@@ -55,7 +55,9 @@ object AppUpdates {
     const val MANIFEST_URL = "https://github.com/winnifredbalistreri60-prog/murf/releases/latest/download/murf-version.json"
     const val ALLOWED_PREFIX = "https://github.com/winnifredbalistreri60-prog/murf/releases/download/"
     private const val CHECK_EVERY_MS = 6 * 3600_000L
-    private const val RETRY_MS = 60_000L
+    private const val RETRY_BASE_MS = 60_000L
+    private const val RETRY_MAX_MS = 30 * 60_000L
+    private const val AUTO_CHECK_MAX_RETRIES = 5
     private const val MANIFEST_MAX_BYTES = 64 * 1024L
 
     data class Info(val versionCode: Int, val versionName: String, val url: String, val sha256: String, val size: Long, val notes: String)
@@ -116,6 +118,8 @@ object AppUpdates {
         )
 
     private val checkGeneration = AtomicLong(0)
+    /** Число подряд идущих неудачных автопроверок (для экспоненциального backoff). */
+    private var autoCheckFailures = 0
 
     private fun fetchManifestText(): String {
         val req = Request.Builder()
@@ -147,17 +151,27 @@ object AppUpdates {
         if (auto && now - p.getLong("update_checked_at", 0) < CHECK_EVERY_MS) return
         if (_phase.value is Phase.Downloading || _phase.value is Phase.Installing) return
         val gen = checkGeneration.incrementAndGet()
+        if (!auto) autoCheckFailures = 0 // ручная проверка сбрасывает серию неудач
         _phase.value = Phase.Checking
         scope.launch {
             val result = runCatching { fetchManifestText() }
             if (gen != checkGeneration.get()) return@launch // superseded by a newer check
             // Only stamp the throttle after a completed attempt for this generation.
-            if (result.isSuccess) p.edit().putLong("update_checked_at", System.currentTimeMillis()).apply()
+            if (result.isSuccess) {
+                autoCheckFailures = 0
+                p.edit().putLong("update_checked_at", System.currentTimeMillis()).apply()
+            }
             result.onFailure {
                 android.util.Log.w("MURF-update", "manifest check failed: ${it.message}")
                 if (auto && it is java.io.IOException) {
-                    delay(RETRY_MS)
-                    if (gen == checkGeneration.get()) check(context.applicationContext, auto = true)
+                    // Экспоненциальный backoff вместо одной фиксированной паузы:
+                    // при длительном оффлайне не долбим сервер каждую минуту бесконечно.
+                    autoCheckFailures++
+                    if (autoCheckFailures <= AUTO_CHECK_MAX_RETRIES) {
+                        val backoffMs = minOf(RETRY_BASE_MS shl (autoCheckFailures - 1), RETRY_MAX_MS)
+                        delay(backoffMs)
+                        if (gen == checkGeneration.get()) check(context.applicationContext, auto = true)
+                    }
                     return@launch
                 }
                 if (gen != checkGeneration.get()) return@launch

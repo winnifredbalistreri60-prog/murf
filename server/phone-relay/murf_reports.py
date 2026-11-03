@@ -16,7 +16,7 @@ REPORTS_DIR = os.environ.get("MURF_REPORTS_DIR", os.path.join(HOME, "agent-phone
 MAX_LOG = 400 * 1024
 MAX_TEXT = 8000
 RATE_N, RATE_WINDOW = 10, 3600
-_rate = []
+_rate = {}  # ip -> [timestamps]
 _lock = threading.Lock()
 
 
@@ -56,10 +56,14 @@ def _clip(s, n):
 def save_report(j, client_ip=""):
     now = time.time()
     with _lock:
-        _rate[:] = [t for t in _rate if now - t < RATE_WINDOW]
-        if len(_rate) >= RATE_N:
+        # Лимит per-IP: раньше один клиент исчерпывал общую квоту 10/час для всех устройств.
+        _rate.setdefault(client_ip, [])[:] = [t for t in _rate.get(client_ip, []) if now - t < RATE_WINDOW]
+        if len(_rate[client_ip]) >= RATE_N:
             raise ReportError(429, "слишком много отчётов, попробуйте позже")
-        _rate.append(now)
+        _rate[client_ip].append(now)
+        # Не копим записи об ушедших клиентах.
+        for ip in [ip for ip, ts in _rate.items() if not ts]:
+            _rate.pop(ip, None)
     desc = redact(_clip(j.get("description"), MAX_TEXT)).strip()
     log = redact(_clip(j.get("log"), MAX_LOG))
     if not desc and not log.strip():
