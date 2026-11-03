@@ -1705,4 +1705,53 @@
     <string name="l10n_7093c602ce1d6e9e" formatted="false">"MURF: `murf pair` + address and code. Harness: a ?auth= link, or address + 8-char code."</string>
     <string name="l10n_b06792894d4464c3" formatted="false">"Server address"</string>
     <string name="l10n_fd0bc192c8d295c1" formatted="false">"Packages (git, python3, nginx, certbot), user “murf”, services murf-webui and murf-relay and an nginx site for %1$s will be installed. Existing nginx sites are not changed."</string>
+    <string name="l10n_2fcee3de765c7b0b" formatted="false">"Usage "</string>
+    <string name="l10n_a683c5c5349f6f7f" formatted="false">"n/a"</string>
+    <string name="l10n_5e1ecee06a7fc06f" formatted="false">"cache"</string>
+    <string name="l10n_6e164fee67ba3788" formatted="false">"Turn usage"</string>
+    <string name="l10n_51686a90ea974c90" formatted="false">"Provider / model"</string>
+    <string name="l10n_b7a1d430b23fe6df" formatted="false">"The provider did not report usage for at least one attempt."</string>
+    <string name="l10n_36229775740f8bee" formatted="false">"Cache hit"</string>
+    <string name="l10n_5062c025b2379082" formatted="false">"Uncached input"</string>
+    <string name="l10n_0008ce30b97d72fb" formatted="false">"Cache read"</string>
+    <string name="l10n_e7fc264359d68205" formatted="false">"Cache write"</string>
+    <string name="l10n_0d4a690d109073b1" formatted="false">"  of which reasoning"</string>
+    <string name="l10n_c9b3c38247f744e1" formatted="false">"Total"</string>
+    <string name="l10n_d6a479c1a90c1cdf" formatted="false">"Cost (approx.)"</string>
+    <string name="l10n_1de3df70ddf4faab" formatted="false">"Steps"</string>
+    <string name="l10n_f04fa4afdaab4c73" formatted="false">"Model / tool time"</string>
+    <string name="l10n_0cec400f147f0f13" formatted="false">"Time to first token"</string>
+    <string name="l10n_3fa11119e3112768" formatted="false">"Timing is measured by MURF from the event stream (approximate). Cost uses MURF\'s price table, not the provider\'s bill."</string>
+    <string name="l10n_045aa4cb19546f51" formatted="false">"%1$d turns · %2$d steps"</string>
+    <string name="l10n_856f36baa5f6a5c8" formatted="false">"Session statistics"</string>
+    <string name="l10n_8261fc90fba44013" formatted="false">"Turns / steps"</string>
+    <string name="l10n_4f9125d21004d21d" formatted="false">"LLM time"</string>
+    <string name="l10n_ee804f4527946eea" formatted="false">"Tool time"</string>
+    <string name="l10n_1a2a2e3009ebd751" formatted="false">"Avg TTFT"</string>
+    <string name="l10n_89ec3e12b1a6dd29" formatted="false">"Output speed"</string>
+    <string name="l10n_eae0608d4c964ea4" formatted="false">"subagent running"</string>
+    <string name="l10n_c8c26aa7d2e1152c" formatted="false">"## 🧑 You\n\n"</string>
+    <string name="l10n_ca9380ca9fc568b8" formatted="false">"Share conversation"</string>
+    <string name="l10n_94762d6fb052df6f" formatted="false">"Conversation copied"</string>
+    <string name="l10n_c30979e1aced66cd" formatted="false">"Export failed: %1$s"</string>
+    <string name="l10n_13b243ab14dcfa74" formatted="false">"Share conversation (Markdown)"</string>
+    <string name="l10n_617f429c1f2969f8" formatted="false">"Conversation to Google Drive"</string>
+    <string name="l10n_1c7d7ef5df2f9735" formatted="false">"Conversation as PDF (Downloads)"</string>
+    <string name="l10n_32b99482a9c81dfe" formatted="false">"Conversation as Markdown (Downloads)"</string>
+    <string name="l10n_011a240d8516e0b4" formatted="false">"Copy conversation"</string>
+    <string name="l10n_27b80374e1151af6" formatted="false">"Reconnecting…"</string>
+    <string name="l10n_0ab1a4912ec07864" formatted="false">"No network. Messages will be sent when the connection returns."</string>
+    <string name="l10n_588032878324b5e6" formatted="false">"Send now"</string>
+    <string name="l10n_851a8dfc6ad3bfe3" formatted="false">"Cancel sending"</string>
+    <string name="l10n_2ad6947dd336df87" formatted="false">"⏳ will be sent when connected"</string>
+    <string name="l10n_9f4d18aa19bd0381" formatted="false">"📎 attachments: %1$d"</string>
+    <string name="l10n_c05aad929b3ac4fd" formatted="false">"Steer into current response"</string>
+    <string name="l10n_5f1c79d36d925679" formatted="false">"Send first"</string>
+    <string name="l10n_c0b9d9e9ac1df5dc" formatted="false">"Remove from queue"</string>
+    <string name="l10n_865826bca58aed1f" formatted="false">"🕓 queued #%1$d · sent after the response"</string>
+    <string name="l10n_94a168d2da574b00" formatted="false">"subagent"</string>
+    <string name="l10n_51fc2d24df51a2c3" formatted="false">"Share…"</string>
+    <string name="l10n_9133c72b8c01e3ea" formatted="false">"PDF to Downloads"</string>
+    <string name="l10n_164793048f7f5ae4" formatted="false">"MURF — message"</string>
+    <string name="l10n_eba7bab6c47453b8" formatted="false">"Run code in Termux"</string>
 </resources>

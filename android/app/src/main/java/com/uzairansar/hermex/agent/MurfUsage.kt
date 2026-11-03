@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.uzairansar.hermex.ui.localization.localizedString
+import com.uzairansar.hermex.ui.localization.localizedStringFormat
 import java.util.Locale
 
 /**
@@ -174,32 +176,31 @@ fun TurnUsageChip(turn: TurnStats) {
     val u = turn.usage
     Surface(shape = MaterialTheme.shapes.small, tonalElevation = 2.dp, modifier = Modifier.clickable { open = true }) {
         Text(
-            tr("Использовано ", "Usage ") + (u?.let { fmtTokens(it.sum) } ?: tr("н/д", "n/a")) +
-                (u?.cacheHitPct?.let { String.format(Locale.ROOT, " · " + tr("кэш", "cache") + " %.0f%%", it) } ?: ""),
+            localizedString("Usage ") + (u?.let { fmtTokens(it.sum) } ?: localizedString("n/a")) +
+                (u?.cacheHitPct?.let { String.format(Locale.ROOT, " · " + localizedString("cache") + " %.0f%%", it) } ?: ""),
             Modifier.padding(horizontal = 8.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall,
         )
     }
     if (open) AlertDialog(onDismissRequest = { open = false }, confirmButton = { TextButton({ open = false }) { Text("OK") } },
-        title = { Text(tr("Использование за ход", "Turn usage")) },
+        title = { Text(localizedString("Turn usage")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Kv(tr("Провайдер / модель", "Provider / model"), "${turn.provider} / ${turn.model}")
-                if (u == null) Text(tr("Провайдер не сообщил расход хотя бы для одной попытки — точных цифр нет.", "The provider did not report usage for at least one attempt."), style = MaterialTheme.typography.bodySmall)
+                Kv(localizedString("Provider / model"), "${turn.provider} / ${turn.model}")
+                if (u == null) Text(localizedString("The provider did not report usage for at least one attempt."), style = MaterialTheme.typography.bodySmall)
                 else {
-                    Kv(tr("Попадание в кэш", "Cache hit"), u.cacheHitPct?.let { String.format(Locale.ROOT, "%.1f%%", it) } ?: tr("н/д", "n/a"))
-                    Kv(tr("Некэшированный ввод", "Uncached input"), fmtExact(u.input))
-                    Kv(tr("Чтение кэша", "Cache read"), fmtExact(u.cacheRead))
-                    Kv(tr("Запись в кэш", "Cache write"), fmtExact(u.cacheWrite))
-                    Kv(tr("Вывод", "Output"), fmtExact(u.output))
-                    Kv(tr("  из них рассуждения", "  of which reasoning"), fmtExact(u.reasoning))
-                    Kv(tr("Всего", "Total"), fmtExact(u.sum))
-                    Kv(tr("Стоимость (примерно)", "Cost (approx.)"), fmtCost(MurfPrices.cost(turn.model, u)))
+                    Kv(localizedString("Cache hit"), u.cacheHitPct?.let { String.format(Locale.ROOT, "%.1f%%", it) } ?: localizedString("n/a"))
+                    Kv(localizedString("Uncached input"), fmtExact(u.input))
+                    Kv(localizedString("Cache read"), fmtExact(u.cacheRead))
+                    Kv(localizedString("Cache write"), fmtExact(u.cacheWrite))
+                    Kv(localizedString("Output"), fmtExact(u.output))
+                    Kv(localizedString("  of which reasoning"), fmtExact(u.reasoning))
+                    Kv(localizedString("Total"), fmtExact(u.sum))
+                    Kv(localizedString("Cost (approx.)"), fmtCost(MurfPrices.cost(turn.model, u)))
                 }
-                Kv(tr("Шагов", "Steps"), turn.steps.toString())
-                Kv(tr("Время модели / инструментов", "Model / tool time"), fmtMs(turn.modelMs) + " / " + fmtMs(turn.toolMs))
-                Kv(tr("Первый токен (TTFT)", "Time to first token"), fmtMs(turn.ttftMs))
-                Text(tr("Время меряет MURF по потоку событий — приблизительно. Цена — по таблице MURF, не счёт провайдера.",
-                    "Timing is measured by MURF from the event stream (approximate). Cost uses MURF's price table, not the provider's bill."),
+                Kv(localizedString("Steps"), turn.steps.toString())
+                Kv(localizedString("Model / tool time"), fmtMs(turn.modelMs) + " / " + fmtMs(turn.toolMs))
+                Kv(localizedString("Time to first token"), fmtMs(turn.ttftMs))
+                Text(localizedString("Timing is measured by MURF from the event stream (approximate). Cost uses MURF's price table, not the provider's bill."),
                     style = MaterialTheme.typography.labelSmall)
             }
         })
@@ -212,28 +213,28 @@ fun SessionStatsBar(stats: SessionStats, model: String) {
     val u = stats.usage
     Surface(tonalElevation = 1.dp, modifier = Modifier.fillMaxWidth().clickable { open = true }) {
         Text(
-            tr("${stats.turns.size} ход. · ${stats.steps} шаг.", "${stats.turns.size} turns · ${stats.steps} steps") +
+            localizedStringFormat("%1\$d turns · %2\$d steps", stats.turns.size, stats.steps) +
                 (u?.let { " · " + fmtTokens(it.sum) + " tok" } ?: "") +
-                (u?.cacheHitPct?.let { String.format(Locale.ROOT, " · " + tr("кэш", "cache") + " %.0f%%", it) } ?: "") +
+                (u?.cacheHitPct?.let { String.format(Locale.ROOT, " · " + localizedString("cache") + " %.0f%%", it) } ?: "") +
                 (u?.let { " · " + fmtCost(MurfPrices.cost(model, it)) } ?: ""),
             Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall,
         )
     }
     if (open) AlertDialog(onDismissRequest = { open = false }, confirmButton = { TextButton({ open = false }) { Text("OK") } },
-        title = { Text(tr("Статистика сессии", "Session statistics")) },
+        title = { Text(localizedString("Session statistics")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Kv(tr("Ходов / шагов", "Turns / steps"), "${stats.turns.size} / ${stats.steps}")
-                Kv(tr("Попадание в кэш", "Cache hit"), u?.cacheHitPct?.let { String.format(Locale.ROOT, "%.1f%%", it) } ?: tr("н/д", "n/a"))
-                Kv(tr("Некэшированный ввод", "Uncached input"), fmtExact(u?.input))
-                Kv(tr("Чтение кэша", "Cache read"), fmtExact(u?.cacheRead))
-                Kv(tr("Запись в кэш", "Cache write"), fmtExact(u?.cacheWrite))
-                Kv(tr("Вывод", "Output"), fmtExact(u?.output))
-                Kv(tr("Время модели", "LLM time"), fmtMs(stats.modelMs))
-                Kv(tr("Время инструментов", "Tool time"), fmtMs(stats.toolMs))
-                Kv(tr("Первый токен, в среднем", "Avg TTFT"), fmtMs(stats.avgTtftMs))
-                Kv(tr("Скорость вывода", "Output speed"), stats.tokensPerSec?.let { String.format(Locale.ROOT, "%.1f tok/s", it) } ?: tr("н/д", "n/a"))
-                Kv(tr("Стоимость (примерно)", "Cost (approx.)"), u?.let { fmtCost(MurfPrices.cost(model, it)) } ?: tr("н/д", "n/a"))
+                Kv(localizedString("Turns / steps"), "${stats.turns.size} / ${stats.steps}")
+                Kv(localizedString("Cache hit"), u?.cacheHitPct?.let { String.format(Locale.ROOT, "%.1f%%", it) } ?: localizedString("n/a"))
+                Kv(localizedString("Uncached input"), fmtExact(u?.input))
+                Kv(localizedString("Cache read"), fmtExact(u?.cacheRead))
+                Kv(localizedString("Cache write"), fmtExact(u?.cacheWrite))
+                Kv(localizedString("Output"), fmtExact(u?.output))
+                Kv(localizedString("LLM time"), fmtMs(stats.modelMs))
+                Kv(localizedString("Tool time"), fmtMs(stats.toolMs))
+                Kv(localizedString("Avg TTFT"), fmtMs(stats.avgTtftMs))
+                Kv(localizedString("Output speed"), stats.tokensPerSec?.let { String.format(Locale.ROOT, "%.1f tok/s", it) } ?: localizedString("n/a"))
+                Kv(localizedString("Cost (approx.)"), u?.let { fmtCost(MurfPrices.cost(model, it)) } ?: localizedString("n/a"))
             }
         })
 }

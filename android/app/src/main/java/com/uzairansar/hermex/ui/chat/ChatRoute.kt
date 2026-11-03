@@ -226,6 +226,9 @@ import com.uzairansar.hermex.ui.localization.localizedString
 import com.uzairansar.hermex.ui.workspace.WorkspaceManagerDialog
 import com.uzairansar.hermex.ui.localization.localizedStringFormat
 
+private fun android.content.Context.localizedStringFormat(template: String, vararg arguments: Any?): String =
+    String.format(localizedString(template), *arguments)
+
 private data class TurnDiffPresentation(
     val files: List<GitFileChange>,
     val initialPath: String? = null,
@@ -1124,7 +1127,7 @@ fun ChatRoute(
                                 title = task.title,
                                 status = task.status,
                                 startedAtMs = task.startedAtMs,
-                                subtitle = com.uzairansar.hermex.agent.tr("подагент работает", "subagent running"),
+                                subtitle = localizedString("subagent running"),
                                 stateKey = "live-${task.id}",
                                 body = if (task.goals.size > 1) {
                                     { task.goals.forEachIndexed { n, g -> SubtaskDetailText("${n + 1}. $g") } }
@@ -1353,7 +1356,7 @@ fun ChatRoute(
                     state.messages.forEach { m ->
                         val body = m.displayText.trim()
                         if (body.isEmpty() || (m.role != "user" && m.role != "assistant")) return@forEach
-                        append(if (m.role == "user") tr("## 🧑 Вы\n\n", "## 🧑 You\n\n") else "## 🤖 MURF\n\n")
+                        append(if (m.role == "user") context.localizedString("## 🧑 You\n\n") else "## 🤖 MURF\n\n")
                         append(body).append("\n\n")
                     }
                 }
@@ -1361,13 +1364,13 @@ fun ChatRoute(
                 val share = com.uzairansar.hermex.agent.AgentShare
                 runCatching {
                     when (kind) {
-                        "share" -> share.shareFile(context, share.writeExport(context, "$base.md", md.toByteArray()), "text/markdown", tr("Поделиться беседой", "Share conversation"))
+                        "share" -> share.shareFile(context, share.writeExport(context, "$base.md", md.toByteArray()), "text/markdown", context.localizedString("Share conversation"))
                         "drive" -> share.saveTextToDrive(context, md, base)
-                        "pdf" -> share.toast(context, tr("Сохранено: ", "Saved: ") + share.saveToDownloads(context, "$base.pdf", "application/pdf", share.textToPdf(context, title, md).readBytes()))
-                        "md" -> share.toast(context, tr("Сохранено: ", "Saved: ") + share.saveToDownloads(context, "$base.md", "text/markdown", md.toByteArray()))
-                        "copy" -> { share.copy(context, md); share.toast(context, tr("Беседа скопирована", "Conversation copied")) }
+                        "pdf" -> share.toast(context, context.localizedString("Saved: ") + share.saveToDownloads(context, "$base.pdf", "application/pdf", share.textToPdf(context, title, md).readBytes()))
+                        "md" -> share.toast(context, context.localizedString("Saved: ") + share.saveToDownloads(context, "$base.md", "text/markdown", md.toByteArray()))
+                        "copy" -> { share.copy(context, md); share.toast(context, context.localizedString("Conversation copied")) }
                     }
-                }.onFailure { share.toast(context, tr("Ошибка экспорта: ${it.message}", "Export failed: ${it.message}")) }
+                }.onFailure { share.toast(context, context.localizedStringFormat("Export failed: %1\$s", it.message)) }
             },
             showsScreenButton = screenServer != null,
             screenLive = state.isStreaming,
@@ -2026,7 +2029,7 @@ private fun ChatTopBar(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text(tr("Размер шрифта", "Font size")) },
+                        text = { Text(localizedString("Font size")) },
                         modifier = Modifier.testTag("chat_menu_font_size"),
                         onClick = {
                             actionsExpanded = false
@@ -2042,11 +2045,11 @@ private fun ChatTopBar(
                         },
                     )
                     listOf(
-                        "share" to tr("Поделиться беседой (Markdown)", "Share conversation (Markdown)"),
-                        "drive" to tr("Беседа в Google Диск", "Conversation to Google Drive"),
-                        "pdf" to tr("Беседа в PDF (Загрузки)", "Conversation as PDF (Downloads)"),
-                        "md" to tr("Беседа в Markdown (Загрузки)", "Conversation as Markdown (Downloads)"),
-                        "copy" to tr("Копировать беседу", "Copy conversation"),
+                        "share" to localizedString("Share conversation (Markdown)"),
+                        "drive" to localizedString("Conversation to Google Drive"),
+                        "pdf" to localizedString("Conversation as PDF (Downloads)"),
+                        "md" to localizedString("Conversation as Markdown (Downloads)"),
+                        "copy" to localizedString("Copy conversation"),
                     ).forEach { (kind, label) ->
                         DropdownMenuItem(
                             text = { Text(label) },
@@ -2062,7 +2065,7 @@ private fun ChatTopBar(
         if (tasksCount > 0) {
             Box {
                 HermexIconButton(
-                    label = tr("Задачи чата", "Chat tasks"),
+                    label = localizedString("Chat tasks"),
                     symbol = "\u2442",
                     iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_lightning_bolt,
                     onClick = onOpenTasks,
@@ -2082,7 +2085,7 @@ private fun ChatTopBar(
         if (showsScreenButton) {
             Box {
                 HermexIconButton(
-                    label = tr("Экран агента", "Agent screen"),
+                    label = localizedString("Agent screen"),
                     symbol = "\u25ad",
                     iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_monitor,
                     onClick = onOpenScreen,
@@ -2124,17 +2127,14 @@ private fun ChatStatusStack(
         val showsRecovery = rememberGraceVisibility(state.isRecoveringStream, RECONNECT_BANNER_GRACE_MILLIS)
         if (showsRecovery) {
             state.activeStreamRecoveryLabel?.let {
-                StreamRecoveryStatusPill(com.uzairansar.hermex.agent.tr("Подключение…", "Reconnecting…"))
+                StreamRecoveryStatusPill(localizedString("Reconnecting…"))
             }
         }
         val online by com.uzairansar.hermex.agent.NetworkMonitor.online.collectAsState()
         val showsOffline = rememberGraceVisibility(!online, RECONNECT_BANNER_GRACE_MILLIS)
         if (showsOffline) {
             InlineNotice(
-                com.uzairansar.hermex.agent.tr(
-                    "Нет сети. Сообщения отправятся при подключении.",
-                    "No network. Messages will be sent when the connection returns.",
-                ),
+                localizedString("No network. Messages will be sent when the connection returns."),
             )
         }
         if (state.isReadOnlySession) {
@@ -2426,21 +2426,21 @@ private fun OutboxMessageRow(
             }
             DropdownMenu(expanded = showsMenu, onDismissRequest = { showsMenu = false }) {
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Отправить сейчас", "Send now")) },
+                    text = { Text(localizedString("Send now")) },
                     onClick = { showsMenu = false; onRetry() },
                 )
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Изменить", "Edit")) },
+                    text = { Text(localizedString("Edit")) },
                     onClick = { showsMenu = false; onEdit() },
                 )
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Отменить отправку", "Cancel sending"), color = MaterialTheme.colorScheme.error) },
+                    text = { Text(localizedString("Cancel sending"), color = MaterialTheme.colorScheme.error) },
                     onClick = { showsMenu = false; onCancel() },
                 )
             }
         }
         Text(
-            com.uzairansar.hermex.agent.tr("⏳ отправится при подключении", "⏳ will be sent when connected"),
+            localizedString("⏳ will be sent when connected"),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -2488,7 +2488,7 @@ private fun QueuedMessageRow(
                 )
                 if (item.attachments.isNotEmpty()) {
                     Text(
-                        com.uzairansar.hermex.agent.tr("📎 вложений: ${item.attachments.size}", "📎 attachments: ${item.attachments.size}"),
+                        localizedStringFormat("📎 attachments: %1\$d", item.attachments.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -2497,28 +2497,28 @@ private fun QueuedMessageRow(
             DropdownMenu(expanded = showsMenu, onDismissRequest = { showsMenu = false }) {
                 if (canSteer) {
                     DropdownMenuItem(
-                        text = { Text(com.uzairansar.hermex.agent.tr("Steer — в текущий ответ", "Steer into current response")) },
+                        text = { Text(localizedString("Steer into current response")) },
                         onClick = { showsMenu = false; onSteer() },
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Изменить", "Edit")) },
+                    text = { Text(localizedString("Edit")) },
                     onClick = { showsMenu = false; onEdit() },
                 )
                 if (onMoveFirst != null) {
                     DropdownMenuItem(
-                        text = { Text(com.uzairansar.hermex.agent.tr("Отправить первым", "Send first")) },
+                        text = { Text(localizedString("Send first")) },
                         onClick = { showsMenu = false; onMoveFirst() },
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Удалить из очереди", "Remove from queue"), color = MaterialTheme.colorScheme.error) },
+                    text = { Text(localizedString("Remove from queue"), color = MaterialTheme.colorScheme.error) },
                     onClick = { showsMenu = false; onDelete() },
                 )
             }
         }
         Text(
-            com.uzairansar.hermex.agent.tr("🕓 в очереди #$position · отправится после ответа", "🕓 queued #$position · sent after the response"),
+            localizedStringFormat("🕓 queued #%1\$d · sent after the response", position),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -2911,7 +2911,7 @@ private fun ComposerSurface(
                             HermexPillButton(streamingSendBehavior.actionLabel, onStreamingSend, enabled = !state.isRunningSessionAction)
                         }
                         HermexPillButton(
-                            com.uzairansar.hermex.agent.tr("В очередь", "Queue"),
+                            localizedString("Queue"),
                             onQueueDraft,
                             enabled = !state.isRunningSessionAction,
                             filled = streamingSendBehavior == StreamingSendBehavior.Queue,
@@ -5804,7 +5804,7 @@ private fun CompletedToolActivityCard(
                 startedAtMs = live?.startedAtMs,
                 endedAtMs = live?.endedAtMs,
                 durationSec = live?.durationSec,
-                subtitle = com.uzairansar.hermex.agent.tr("подагент", "subagent"),
+                subtitle = localizedString("subagent"),
                 stateKey = "sub-${group.afterMessageIndex}-$i-${tool.id}",
                 body = if (goals.size > 1 || result != null) {
                     {
@@ -6435,23 +6435,23 @@ private fun MessageActionSheet(
             )
             val androidContext = LocalContext.current
             val text = context.copyText
-            MessageActionSheetRow(title = tr("Поделиться…", "Share…"), symbol = "\u21aa", onClick = {
+            MessageActionSheetRow(title = localizedString("Share…"), symbol = "\u21aa", onClick = {
                 onDismiss(); com.uzairansar.hermex.agent.AgentShare.shareText(androidContext, text)
             })
-            MessageActionSheetRow(title = tr("В Google Диск", "To Google Drive"), symbol = "\u2601", onClick = {
+            MessageActionSheetRow(title = localizedString("To Google Drive"), symbol = "\u2601", onClick = {
                 onDismiss(); com.uzairansar.hermex.agent.AgentShare.saveTextToDrive(androidContext, text, "agent-message-${com.uzairansar.hermex.agent.AgentShare.stamp()}")
             })
-            MessageActionSheetRow(title = tr("PDF в Загрузки", "PDF to Downloads"), symbol = "\u2193", onClick = {
+            MessageActionSheetRow(title = localizedString("PDF to Downloads"), symbol = "\u2193", onClick = {
                 onDismiss()
                 runCatching {
-                    val pdf = com.uzairansar.hermex.agent.AgentShare.textToPdf(androidContext, tr("MURF — сообщение", "MURF — message"), text)
+                    val pdf = com.uzairansar.hermex.agent.AgentShare.textToPdf(androidContext, androidContext.localizedString("MURF — message"), text)
                     com.uzairansar.hermex.agent.AgentShare.saveToDownloads(androidContext, "agent-message-${com.uzairansar.hermex.agent.AgentShare.stamp()}.pdf", "application/pdf", pdf.readBytes())
-                }.onSuccess { com.uzairansar.hermex.agent.AgentShare.toast(androidContext, tr("Сохранено: $it", "Saved: $it")) }
-                    .onFailure { com.uzairansar.hermex.agent.AgentShare.toast(androidContext, tr("Ошибка: ${it.message}", "Error: ${it.message}")) }
+                }.onSuccess { com.uzairansar.hermex.agent.AgentShare.toast(androidContext, androidContext.localizedStringFormat("Saved: %1\$s", it)) }
+                    .onFailure { com.uzairansar.hermex.agent.AgentShare.toast(androidContext, androidContext.localizedStringFormat("Error: %1\$s", it.message)) }
             })
             val code = remember(text) { com.uzairansar.hermex.agent.AgentShare.extractCode(text) }
             if (code != null) {
-                MessageActionSheetRow(title = tr("Выполнить код в Termux", "Run code in Termux"), symbol = ">_", onClick = {
+                MessageActionSheetRow(title = localizedString("Run code in Termux"), symbol = ">_", onClick = {
                     onDismiss()
                     com.uzairansar.hermex.agent.confirmRunInTermux(androidContext, code)
                 })

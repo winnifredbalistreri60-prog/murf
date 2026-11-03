@@ -1705,4 +1705,53 @@
     <string name="l10n_7093c602ce1d6e9e" formatted="false">"MURF: «murf pair» + адрес и код. Harness: ссылка с ?auth= или адрес и 8-символьный код."</string>
     <string name="l10n_b06792894d4464c3" formatted="false">"Адрес сервера"</string>
     <string name="l10n_fd0bc192c8d295c1" formatted="false">"Будут установлены пакеты (git, python3, nginx, certbot), создан пользователь «murf», службы murf-webui и murf-relay, сайт nginx для %1$s. Существующие сайты nginx не изменяются."</string>
+    <string name="l10n_2fcee3de765c7b0b" formatted="false">"Использовано "</string>
+    <string name="l10n_a683c5c5349f6f7f" formatted="false">"н/д"</string>
+    <string name="l10n_5e1ecee06a7fc06f" formatted="false">"кэш"</string>
+    <string name="l10n_6e164fee67ba3788" formatted="false">"Использование за ход"</string>
+    <string name="l10n_51686a90ea974c90" formatted="false">"Провайдер / модель"</string>
+    <string name="l10n_b7a1d430b23fe6df" formatted="false">"Провайдер не сообщил расход хотя бы для одной попытки — точных цифр нет."</string>
+    <string name="l10n_36229775740f8bee" formatted="false">"Попадание в кэш"</string>
+    <string name="l10n_5062c025b2379082" formatted="false">"Некэшированный ввод"</string>
+    <string name="l10n_0008ce30b97d72fb" formatted="false">"Чтение кэша"</string>
+    <string name="l10n_e7fc264359d68205" formatted="false">"Запись в кэш"</string>
+    <string name="l10n_0d4a690d109073b1" formatted="false">"  из них рассуждения"</string>
+    <string name="l10n_c9b3c38247f744e1" formatted="false">"Всего"</string>
+    <string name="l10n_d6a479c1a90c1cdf" formatted="false">"Стоимость (примерно)"</string>
+    <string name="l10n_1de3df70ddf4faab" formatted="false">"Шагов"</string>
+    <string name="l10n_f04fa4afdaab4c73" formatted="false">"Время модели / инструментов"</string>
+    <string name="l10n_0cec400f147f0f13" formatted="false">"Первый токен (TTFT)"</string>
+    <string name="l10n_3fa11119e3112768" formatted="false">"Время меряет MURF по потоку событий — приблизительно. Цена — по таблице MURF, не счёт провайдера."</string>
+    <string name="l10n_045aa4cb19546f51" formatted="false">"%1$d ход. · %2$d шаг."</string>
+    <string name="l10n_856f36baa5f6a5c8" formatted="false">"Статистика сессии"</string>
+    <string name="l10n_8261fc90fba44013" formatted="false">"Ходов / шагов"</string>
+    <string name="l10n_4f9125d21004d21d" formatted="false">"Время модели"</string>
+    <string name="l10n_ee804f4527946eea" formatted="false">"Время инструментов"</string>
+    <string name="l10n_1a2a2e3009ebd751" formatted="false">"Первый токен, в среднем"</string>
+    <string name="l10n_89ec3e12b1a6dd29" formatted="false">"Скорость вывода"</string>
+    <string name="l10n_eae0608d4c964ea4" formatted="false">"подагент работает"</string>
+    <string name="l10n_c8c26aa7d2e1152c" formatted="false">"## 🧑 Вы\n\n"</string>
+    <string name="l10n_ca9380ca9fc568b8" formatted="false">"Поделиться беседой"</string>
+    <string name="l10n_94762d6fb052df6f" formatted="false">"Беседа скопирована"</string>
+    <string name="l10n_c30979e1aced66cd" formatted="false">"Ошибка экспорта: %1$s"</string>
+    <string name="l10n_13b243ab14dcfa74" formatted="false">"Поделиться беседой (Markdown)"</string>
+    <string name="l10n_617f429c1f2969f8" formatted="false">"Беседа в Google Диск"</string>
+    <string name="l10n_1c7d7ef5df2f9735" formatted="false">"Беседа в PDF (Загрузки)"</string>
+    <string name="l10n_32b99482a9c81dfe" formatted="false">"Беседа в Markdown (Загрузки)"</string>
+    <string name="l10n_011a240d8516e0b4" formatted="false">"Копировать беседу"</string>
+    <string name="l10n_27b80374e1151af6" formatted="false">"Подключение…"</string>
+    <string name="l10n_0ab1a4912ec07864" formatted="false">"Нет сети. Сообщения отправятся при подключении."</string>
+    <string name="l10n_588032878324b5e6" formatted="false">"Отправить сейчас"</string>
+    <string name="l10n_851a8dfc6ad3bfe3" formatted="false">"Отменить отправку"</string>
+    <string name="l10n_2ad6947dd336df87" formatted="false">"⏳ отправится при подключении"</string>
+    <string name="l10n_9f4d18aa19bd0381" formatted="false">"📎 вложений: %1$d"</string>
+    <string name="l10n_c05aad929b3ac4fd" formatted="false">"Steer — в текущий ответ"</string>
+    <string name="l10n_5f1c79d36d925679" formatted="false">"Отправить первым"</string>
+    <string name="l10n_c0b9d9e9ac1df5dc" formatted="false">"Удалить из очереди"</string>
+    <string name="l10n_865826bca58aed1f" formatted="false">"🕓 в очереди #%1$d · отправится после ответа"</string>
+    <string name="l10n_94a168d2da574b00" formatted="false">"подагент"</string>
+    <string name="l10n_51fc2d24df51a2c3" formatted="false">"Поделиться…"</string>
+    <string name="l10n_9133c72b8c01e3ea" formatted="false">"PDF в Загрузки"</string>
+    <string name="l10n_164793048f7f5ae4" formatted="false">"MURF — сообщение"</string>
+    <string name="l10n_eba7bab6c47453b8" formatted="false">"Выполнить код в Termux"</string>
 </resources>
