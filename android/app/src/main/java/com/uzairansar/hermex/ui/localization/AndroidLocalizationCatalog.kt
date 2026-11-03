@@ -7,6 +7,8 @@ import com.uzairansar.hermex.R
 
 internal object AndroidLocalizationCatalog {
     private val resourcesByEnglishText: Map<String, Int> = mapOf(
+        "Agent is working" to R.string.l10n_508e429c23a8a111,
+        "queued: %1\$d" to R.string.l10n_5166d2d19f8d6974,
         "Point the camera at the QR from `murf pair` or from MURF on another device" to R.string.l10n_b89b2aed6c6c2f10,
         "Screen log" to R.string.l10n_bfe484148d59f946,
         "Full check: “Local environment” → “Diagnostics”." to R.string.l10n_4f9ab93b0ff7d06d,

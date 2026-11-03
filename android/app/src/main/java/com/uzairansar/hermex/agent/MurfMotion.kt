@@ -2,6 +2,8 @@ package com.uzairansar.hermex.agent
 
 import android.content.Context
 import android.provider.Settings
+import com.uzairansar.hermex.ui.localization.localizedString
+import com.uzairansar.hermex.ui.localization.localizedStringFormat
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -153,11 +155,13 @@ fun AgentWorkingStrip(startedAtMs: Long?, activity: String?, queued: Int, modifi
         while (true) { now = System.currentTimeMillis(); delay(1000) }
     }
     val accent = MaterialTheme.colorScheme.primary
+    val workingLabel = localizedString("Agent is working")
+    val queuedLabel = localizedStringFormat("queued: %1\$d", queued)
     val label = buildString {
-        append(tr("Агент работает", "Agent is working"))
+        append(workingLabel)
         if (startedAtMs != null) append(" · ").append(formatElapsed(now - startedAtMs))
         activity?.trim()?.takeIf { it.isNotEmpty() }?.let { append(" · ").append(it.lineSequence().first().take(60)) }
-        if (queued > 0) append(" · ").append(tr("в очереди: $queued", "queued: $queued"))
+        if (queued > 0) append(" · ").append(queuedLabel)
     }
     androidx.compose.foundation.layout.Column(
         modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 2.dp).semantics { contentDescription = label },

@@ -1408,4 +1408,6 @@
     <string name="l10n_4f9ab93b0ff7d06d">Полная проверка: «Локальная среда» → «Диагностика».</string>
     <string name="l10n_bfe484148d59f946">Журнал экрана</string>
     <string name="l10n_b89b2aed6c6c2f10">Наведите камеру на QR из «murf pair» или из MURF на другом устройстве</string>
+    <string name="l10n_508e429c23a8a111">Агент работает</string>
+    <string name="l10n_5166d2d19f8d6974">в очереди: %1$d</string>
 </resources>
