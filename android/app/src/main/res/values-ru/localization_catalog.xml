@@ -1555,4 +1555,57 @@
     <string name="l10n_090512d93fcc3c0d" formatted="false">"Интеграции"</string>
     <string name="l10n_104ab9213e28e4ff" formatted="false">"Работа"</string>
     <string name="l10n_11b39c93777e8f1f" formatted="false">"Агент"</string>
+    <string name="l10n_91e6c620a5977f57" formatted="false">"моделей "</string>
+    <string name="l10n_27b4de4141dba41e" formatted="false">"Модели на телефоне"</string>
+    <string name="l10n_aedfd037f19766b0" formatted="false">"Ключи хранятся на телефоне в зашифрованном виде (Android Keystore) и передаются только провайдеру и агенту в локальной среде. Список моделей берётся с API провайдера."</string>
+    <string name="l10n_1220400034cc8a41" formatted="false">"Модели ещё не настроены"</string>
+    <string name="l10n_9eca2c5d61512c20" formatted="false">"Нажмите «Добавить провайдера», сохраните ключ API и выберите модель. Эти настройки используются агентом на телефоне."</string>
+    <string name="l10n_ee91b86cbff7eb77" formatted="false">"ключ сохранён"</string>
+    <string name="l10n_31eb2159f79db066" formatted="false">"без ключа"</string>
+    <string name="l10n_6e20ab1f66aa4bcc" formatted="false">"моделей: "</string>
+    <string name="l10n_fc75c0f284dc4ba0" formatted="false">"Список моделей пуст. Нажмите «Обновить модели»; если запрос не удастся, проверьте ключ через «Изменить»."</string>
+    <string name="l10n_ba6da3f2d367c46c" formatted="false">"Обновить модели"</string>
+    <string name="l10n_519221629b8cbe57" formatted="false">"Добавить провайдера"</string>
+    <string name="l10n_6cbc3e3cca203d3c" formatted="false">"Цены для оценки стоимости — ориентировочная таблица MURF, не счёт провайдера."</string>
+    <string name="l10n_7c2e6e0e920977f5" formatted="false">"Новый провайдер"</string>
+    <string name="l10n_b4172363144c5f53" formatted="false">"Адрес API"</string>
+    <string name="l10n_419ffa47f7370bea" formatted="false">"Новый ключ (пусто — оставить)"</string>
+    <string name="l10n_141b6510bafd2e47" formatted="false">"Ключ API "</string>
+    <string name="l10n_c75c126046810f12" formatted="false">"Сохранить и загрузить модели"</string>
+    <string name="l10n_55cd26e4b1a8f321" formatted="false">"Вставьте ключ API провайдера"</string>
+    <string name="l10n_35bcbb41a22c0dad" formatted="false">"Неверный адрес API"</string>
+    <string name="l10n_5fb82c2545c5104d" formatted="false">"Провайдер не вернул моделей"</string>
+    <string name="l10n_0d82a1d5c0336bdb" formatted="false">"Моделей с API: "</string>
+    <string name="l10n_842fcfd0f3e7f6f8" formatted="false">"Авторизация (API-токен)"</string>
+    <string name="l10n_73cd00ac076b4301" formatted="false">"Как «Paste a key» в DeepSeek Harness: вставьте API-токен провайдера. Он шифруется на телефоне и уходит только в локальный dsh / API провайдера. Модели подтягиваются живым запросом."</string>
+    <string name="l10n_ae3c35bce94a300d" formatted="false">"Выбрано: "</string>
+    <string name="l10n_753e1c1460ebcc25" formatted="false">" · обновлено "</string>
+    <string name="l10n_12dccc77f213b96a" formatted="false">" · авторизован"</string>
+    <string name="l10n_d1c89574a1d39b55" formatted="false">" · нет токена"</string>
+    <string name="l10n_8df8a3d49f21fcb0" formatted="false">"Сменить токен / модели"</string>
+    <string name="l10n_a5bf8426fc6e4552" formatted="false">"Вставить токен и загрузить модели"</string>
+    <string name="l10n_f7562b9db5f6b3cb" formatted="false">"Новый токен (пусто — оставить сохранённый)"</string>
+    <string name="l10n_f4bd336e49788d99" formatted="false">"API-токен / ключ "</string>
+    <string name="l10n_079500762603355c" formatted="false">"Проверка токена…"</string>
+    <string name="l10n_29e479634599b1c4" formatted="false">"Авторизовать и загрузить модели"</string>
+    <string name="l10n_f804a154b42a508e" formatted="false">"Выберите модель"</string>
+    <string name="l10n_0e55d2028a1c4338" formatted="false">"Файл версии на сервере повреждён."</string>
+    <string name="l10n_b6c75101923dbce7" formatted="false">"файл слишком большой"</string>
+    <string name="l10n_fbf41d398c33d912" formatted="false">"контрольная сумма не совпала — файл повреждён или подменён"</string>
+    <string name="l10n_f17fc7f2ee1bd02e" formatted="false">"размер файла не совпал"</string>
+    <string name="l10n_c0951851690d28f7" formatted="false">"файл не похож на APK"</string>
+    <string name="l10n_ad128ebda6181abb" formatted="false">"APK другого приложения"</string>
+    <string name="l10n_dbad58981be87a53" formatted="false">"версия в APK не совпала"</string>
+    <string name="l10n_90eb46bbabadddf6" formatted="false">"не удалось прочитать сертификаты подписи"</string>
+    <string name="l10n_46edc7939c90f8dd" formatted="false">"подпись APK отличается от установленного приложения"</string>
+    <string name="l10n_c3822a8532363253" formatted="false">"Установка отменена."</string>
+    <string name="l10n_c76d18079a076ee3" formatted="false">"Обновления"</string>
+    <string name="l10n_820d6004b0378e43" formatted="false">"Проверяю…"</string>
+    <string name="l10n_eaed5f0c8d57ac5f" formatted="false">"У вас последняя версия."</string>
+    <string name="l10n_9b0298e2debef2ad" formatted="false">"Проверено (sha256, подпись). Подтвердите установку в окне Android."</string>
+    <string name="l10n_4b2069116a708580" formatted="false">"Разрешите MURF устанавливать приложения: откроются настройки, включите «Разрешить из этого источника» и вернитесь."</string>
+    <string name="l10n_fd7108f8312a91ba" formatted="false">"Открыть настройки"</string>
+    <string name="l10n_56e2f5d3634ea4aa" formatted="false">"Позже"</string>
+    <string name="l10n_f53127fe116a9cfe" formatted="false">"Не удалось проверить обновления: %1$s"</string>
+    <string name="l10n_db85dd80547326d2" formatted="false">"Android не установил обновление: %1$s"</string>
 </resources>

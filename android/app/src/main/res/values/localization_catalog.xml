@@ -1555,4 +1555,57 @@
     <string name="l10n_090512d93fcc3c0d" formatted="false">"Integrations"</string>
     <string name="l10n_104ab9213e28e4ff" formatted="false">"Work"</string>
     <string name="l10n_11b39c93777e8f1f" formatted="false">"Agent"</string>
+    <string name="l10n_91e6c620a5977f57" formatted="false">"models "</string>
+    <string name="l10n_27b4de4141dba41e" formatted="false">"On-phone models"</string>
+    <string name="l10n_aedfd037f19766b0" formatted="false">"Keys are stored encrypted on the phone (Android Keystore) and sent only to the provider and the local agent. Model lists come live from the provider API."</string>
+    <string name="l10n_1220400034cc8a41" formatted="false">"No models configured yet"</string>
+    <string name="l10n_9eca2c5d61512c20" formatted="false">"Tap “Add provider”, save an API key and choose a model. These settings are used by the on-phone agent."</string>
+    <string name="l10n_ee91b86cbff7eb77" formatted="false">"key saved"</string>
+    <string name="l10n_31eb2159f79db066" formatted="false">"no key"</string>
+    <string name="l10n_6e20ab1f66aa4bcc" formatted="false">"models: "</string>
+    <string name="l10n_fc75c0f284dc4ba0" formatted="false">"The model list is empty. Tap “Refresh models”; if the request fails, check the key under “Edit”."</string>
+    <string name="l10n_ba6da3f2d367c46c" formatted="false">"Refresh models"</string>
+    <string name="l10n_519221629b8cbe57" formatted="false">"Add provider"</string>
+    <string name="l10n_6cbc3e3cca203d3c" formatted="false">"Cost estimates use MURF\'s approximate price table, not the provider\'s bill."</string>
+    <string name="l10n_7c2e6e0e920977f5" formatted="false">"New provider"</string>
+    <string name="l10n_b4172363144c5f53" formatted="false">"API URL"</string>
+    <string name="l10n_419ffa47f7370bea" formatted="false">"New key (empty — keep)"</string>
+    <string name="l10n_141b6510bafd2e47" formatted="false">"API key "</string>
+    <string name="l10n_c75c126046810f12" formatted="false">"Save &amp; load models"</string>
+    <string name="l10n_55cd26e4b1a8f321" formatted="false">"Paste the provider API key"</string>
+    <string name="l10n_35bcbb41a22c0dad" formatted="false">"Invalid API URL"</string>
+    <string name="l10n_5fb82c2545c5104d" formatted="false">"Provider returned no models"</string>
+    <string name="l10n_0d82a1d5c0336bdb" formatted="false">"Models from API: "</string>
+    <string name="l10n_842fcfd0f3e7f6f8" formatted="false">"Authorization (API token)"</string>
+    <string name="l10n_73cd00ac076b4301" formatted="false">"Like “Paste a key” in DeepSeek Harness: paste the provider API token. It stays encrypted on the phone and only goes to local dsh / the provider API. Models are fetched live."</string>
+    <string name="l10n_ae3c35bce94a300d" formatted="false">"Selected: "</string>
+    <string name="l10n_753e1c1460ebcc25" formatted="false">" · fetched "</string>
+    <string name="l10n_12dccc77f213b96a" formatted="false">" · authorized"</string>
+    <string name="l10n_d1c89574a1d39b55" formatted="false">" · no token"</string>
+    <string name="l10n_8df8a3d49f21fcb0" formatted="false">"Change token / models"</string>
+    <string name="l10n_a5bf8426fc6e4552" formatted="false">"Paste token &amp; load models"</string>
+    <string name="l10n_f7562b9db5f6b3cb" formatted="false">"New token (empty — keep saved)"</string>
+    <string name="l10n_f4bd336e49788d99" formatted="false">"API token / key "</string>
+    <string name="l10n_079500762603355c" formatted="false">"Verifying token…"</string>
+    <string name="l10n_29e479634599b1c4" formatted="false">"Authorize &amp; load models"</string>
+    <string name="l10n_f804a154b42a508e" formatted="false">"Pick a model"</string>
+    <string name="l10n_0e55d2028a1c4338" formatted="false">"The version file on the server is invalid."</string>
+    <string name="l10n_b6c75101923dbce7" formatted="false">"file too large"</string>
+    <string name="l10n_fbf41d398c33d912" formatted="false">"checksum mismatch — the file is damaged or tampered with"</string>
+    <string name="l10n_f17fc7f2ee1bd02e" formatted="false">"file size mismatch"</string>
+    <string name="l10n_c0951851690d28f7" formatted="false">"not an APK"</string>
+    <string name="l10n_ad128ebda6181abb" formatted="false">"APK of another app"</string>
+    <string name="l10n_dbad58981be87a53" formatted="false">"APK version mismatch"</string>
+    <string name="l10n_90eb46bbabadddf6" formatted="false">"could not read signing certificates"</string>
+    <string name="l10n_46edc7939c90f8dd" formatted="false">"APK signature differs from the installed app"</string>
+    <string name="l10n_c3822a8532363253" formatted="false">"Installation cancelled."</string>
+    <string name="l10n_c76d18079a076ee3" formatted="false">"Updates"</string>
+    <string name="l10n_820d6004b0378e43" formatted="false">"Checking…"</string>
+    <string name="l10n_eaed5f0c8d57ac5f" formatted="false">"You have the latest version."</string>
+    <string name="l10n_9b0298e2debef2ad" formatted="false">"Verified (sha256, signature). Confirm the installation in the Android dialog."</string>
+    <string name="l10n_4b2069116a708580" formatted="false">"Allow MURF to install apps: settings will open; enable “Allow from this source” and come back."</string>
+    <string name="l10n_fd7108f8312a91ba" formatted="false">"Open settings"</string>
+    <string name="l10n_56e2f5d3634ea4aa" formatted="false">"Later"</string>
+    <string name="l10n_f53127fe116a9cfe" formatted="false">"Could not check for updates: %1$s"</string>
+    <string name="l10n_db85dd80547326d2" formatted="false">"Android did not install the update: %1$s"</string>
 </resources>

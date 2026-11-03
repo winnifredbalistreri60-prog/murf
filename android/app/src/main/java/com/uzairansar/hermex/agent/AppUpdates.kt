@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -184,17 +185,14 @@ object AppUpdates {
                 }
                 if (gen != checkGeneration.get()) return@launch
                 _phase.value = if (auto) Phase.Idle else Phase.Failed(
-                    tr(
-                        "Не удалось проверить обновления: ${it.message}",
-                        "Could not check for updates: ${it.message}",
-                    ),
+                    context.localizedStringFormat("Could not check for updates: %1\$s", it.message),
                 )
             }.onSuccess { text ->
                 if (gen != checkGeneration.get()) return@launch
                 val info = parseManifest(text)
                 when {
                     info == null -> _phase.value = if (auto) Phase.Idle else Phase.Failed(
-                        tr("Файл версии на сервере повреждён.", "The version file on the server is invalid."),
+                        context.localizedString("The version file on the server is invalid."),
                     )
                     !isNewer(info, BuildConfig.VERSION_CODE) -> _phase.value = Phase.UpToDate(info)
                     else -> {
@@ -285,7 +283,7 @@ object AppUpdates {
                             val n = input.read(buf)
                             if (n < 0) break
                             out.write(buf, 0, n); md.update(buf, 0, n); done += n
-                            if (done > 200L * 1024 * 1024) error(tr("файл слишком большой", "file too large"))
+                            if (done > 200L * 1024 * 1024) error(context.localizedString("file too large"))
                             if (total > 0 && done - lastEmit > 256 * 1024) {
                                 lastEmit = done
                                 onProgress((done.toFloat() / total).coerceIn(0f, 1f))
@@ -294,8 +292,8 @@ object AppUpdates {
                     }
                 }
                 val sha = md.digest().joinToString("") { "%02x".format(it) }
-                if (sha != info.sha256) error(tr("контрольная сумма не совпала — файл повреждён или подменён", "checksum mismatch — the file is damaged or tampered with"))
-                if (info.size > 0 && done != info.size) error(tr("размер файла не совпал", "file size mismatch"))
+                if (sha != info.sha256) error(context.localizedString("checksum mismatch — the file is damaged or tampered with"))
+                if (info.size > 0 && done != info.size) error(context.localizedString("file size mismatch"))
             }
             verifyArchive(app, file, info)
         } catch (t: Throwable) {
@@ -313,19 +311,19 @@ object AppUpdates {
     private fun verifyArchive(context: Context, file: File, info: Info) {
         val pm = context.packageManager
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
-        val archive = pm.getPackageArchiveInfo(file.path, flags) ?: error(tr("файл не похож на APK", "not an APK"))
-        if (archive.packageName != context.packageName) error(tr("APK другого приложения", "APK of another app"))
+        val archive = pm.getPackageArchiveInfo(file.path, flags) ?: error(context.localizedString("not an APK"))
+        if (archive.packageName != context.packageName) error(context.localizedString("APK of another app"))
         val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.longVersionCode.toInt() else archive.versionCode
-        if (code != info.versionCode || code <= BuildConfig.VERSION_CODE) error(tr("версия в APK не совпала", "APK version mismatch"))
+        if (code != info.versionCode || code <= BuildConfig.VERSION_CODE) error(context.localizedString("APK version mismatch"))
         val installed = certDigests(pm.getPackageInfo(context.packageName, flags))
             .ifEmpty { certDigests(pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)) }
         // На части версий Android signingInfo у неустановленного APK пустой — тогда читаем старым способом.
         var fromApk = certDigests(archive)
         if (fromApk.isEmpty()) fromApk = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNATURES)?.let { certDigests(it) }.orEmpty()
         android.util.Log.i("MURF-update", "certs apk=${fromApk.map { it.take(8) }} installed=${installed.map { it.take(8) }}")
-        if (fromApk.isEmpty() || installed.isEmpty()) error(tr("не удалось прочитать сертификаты подписи", "could not read signing certificates"))
+        if (fromApk.isEmpty() || installed.isEmpty()) error(context.localizedString("could not read signing certificates"))
         if (fromApk.intersect(installed).isEmpty()) {
-            error(tr("подпись APK отличается от установленного приложения", "APK signature differs from the installed app"))
+            error(context.localizedString("APK signature differs from the installed app"))
         }
     }
 
@@ -369,8 +367,8 @@ object AppUpdates {
             else -> {
                 val info = (_phase.value as? Phase.Installing)?.info
                 _phase.value = Phase.Failed(
-                    if (status == PackageInstaller.STATUS_FAILURE_ABORTED) tr("Установка отменена.", "Installation cancelled.")
-                    else tr("Android не установил обновление: ${message ?: status}", "Android did not install the update: ${message ?: status}"),
+                    if (status == PackageInstaller.STATUS_FAILURE_ABORTED) context.localizedString("Installation cancelled.")
+                    else context.localizedStringFormat("Android did not install the update: %1\$s", message ?: status),
                     info,
                 )
                 File(context.cacheDir, "murf-update").listFiles()?.forEach { it.delete() }
@@ -409,21 +407,21 @@ fun AppUpdateDialog() {
     val busy = phase is AppUpdates.Phase.Downloading || phase is AppUpdates.Phase.Installing
     AlertDialog(
         onDismissRequest = { if (!busy) AppUpdates.dismissDialog(context, info) },
-        title = { Text(if (info != null) tr("Обновление MURF ${info.versionName}", "MURF update ${info.versionName}") else tr("Обновления", "Updates")) },
+        title = { Text(if (info != null) localizedStringFormat("MURF update %1\$s", info.versionName) else localizedString("Updates")) },
         text = {
             Column(Modifier.fillMaxWidth()) {
                 when (val p = phase) {
-                    is AppUpdates.Phase.Checking -> Text(tr("Проверяю…", "Checking…"))
+                    is AppUpdates.Phase.Checking -> Text(localizedString("Checking…"))
                     is AppUpdates.Phase.UpToDate -> Text(
-                        tr("У вас последняя версия.", "You have the latest version.") + "\n" +
+                        localizedString("You have the latest version.") + "\n" +
                             AppUpdates.versionCompareLabel(p.remote),
                     )
                     is AppUpdates.Phase.Downloading -> {
-                        Text(tr("Скачиваю… ${(p.progress * 100).toInt()}%", "Downloading… ${(p.progress * 100).toInt()}%"))
+                        Text(localizedStringFormat("Downloading… %1\$d%%", (p.progress * 100).toInt()))
                         LinearProgressIndicator(progress = { p.progress }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                     }
-                    is AppUpdates.Phase.Installing -> Text(tr("Проверено (sha256, подпись). Подтвердите установку в окне Android.", "Verified (sha256, signature). Confirm the installation in the Android dialog."))
-                    is AppUpdates.Phase.NeedsPermission -> Text(tr("Разрешите MURF устанавливать приложения: откроются настройки, включите «Разрешить из этого источника» и вернитесь.", "Allow MURF to install apps: settings will open; enable “Allow from this source” and come back."))
+                    is AppUpdates.Phase.Installing -> Text(localizedString("Verified (sha256, signature). Confirm the installation in the Android dialog."))
+                    is AppUpdates.Phase.NeedsPermission -> Text(localizedString("Allow MURF to install apps: settings will open; enable “Allow from this source” and come back."))
                     is AppUpdates.Phase.Failed -> Text(p.message)
                     else -> {}
                 }
@@ -438,18 +436,25 @@ fun AppUpdateDialog() {
         },
         confirmButton = {
             when (val p = phase) {
-                is AppUpdates.Phase.Available -> TextButton(onClick = { AppUpdates.downloadAndInstall(context, p.info) }) { Text(tr("Обновить", "Update")) }
+                is AppUpdates.Phase.Available -> TextButton(onClick = { AppUpdates.downloadAndInstall(context, p.info) }) { Text(localizedString("Update")) }
                 is AppUpdates.Phase.NeedsPermission -> TextButton(onClick = {
                     if (AppUpdates.canInstallPackages(context)) AppUpdates.downloadAndInstall(context, p.info) else AppUpdates.openInstallPermissionSettings(context)
-                }) { Text(if (AppUpdates.canInstallPackages(context)) tr("Продолжить", "Continue") else tr("Открыть настройки", "Open settings")) }
-                is AppUpdates.Phase.Failed -> if (p.info != null) TextButton(onClick = { AppUpdates.downloadAndInstall(context, p.info) }) { Text(tr("Повторить", "Retry")) } else TextButton(onClick = { AppUpdates.dismissDialog(context, null) }) { Text("OK") }
+                }) { Text(if (AppUpdates.canInstallPackages(context)) localizedString("Continue") else localizedString("Open settings")) }
+                is AppUpdates.Phase.Failed -> if (p.info != null) TextButton(onClick = { AppUpdates.downloadAndInstall(context, p.info) }) { Text(localizedString("Retry")) } else TextButton(onClick = { AppUpdates.dismissDialog(context, null) }) { Text("OK") }
                 else -> TextButton(onClick = { AppUpdates.dismissDialog(context, null) }, enabled = !busy) { Text("OK") }
             }
         },
         dismissButton = {
             if (!busy && phase !is AppUpdates.Phase.UpToDate && phase !is AppUpdates.Phase.Checking) {
-                TextButton(onClick = { AppUpdates.dismissDialog(context, info) }) { Text(tr("Позже", "Later")) }
+                TextButton(onClick = { AppUpdates.dismissDialog(context, info) }) { Text(localizedString("Later")) }
             }
         },
     )
 }
+
+@Composable
+private fun localizedStringFormat(template: String, vararg args: Any?): String =
+    localizedString(template).format(*args)
+
+private fun Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)
