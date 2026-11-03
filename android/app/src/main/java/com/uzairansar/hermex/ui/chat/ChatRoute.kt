@@ -125,7 +125,9 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -139,6 +141,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.uzairansar.hermex.core.runSuspendCatching
 import com.uzairansar.hermex.core.model.ApprovalChoice
@@ -263,6 +266,7 @@ fun ChatRoute(
                 repository,
                 ChatPendingStateStore(context.applicationContext, "$serverId\u0000$sessionId"),
                 OfflineOutboxStore(File(context.applicationContext.filesDir, "murf-outbox"), "$serverId\u0000$sessionId"),
+                application = context.applicationContext,
             ) as T
         }
     })
@@ -331,14 +335,8 @@ fun ChatRoute(
     } else {
         systemLayoutDirection
     }
-    val sendButtonEnabled = if (state.isStreaming) true else state.draft.isNotBlank() && !state.isViewingCachedData
-    val primaryActionTintColor = remember(tintPrimaryActionsWithThemeColor, activeHeaderColorHex, sendButtonEnabled) {
-        if (primaryActionTintApplies(tintPrimaryActionsWithThemeColor, sendButtonEnabled)) {
-            hermexColorFromHex(activeHeaderColorHex)
-        } else {
-            null
-        }
-    }
+    // sendButtonEnabled и primaryActionTintColor вычисляются внутри ComposerSurface:
+    // они зависят от draft, который больше не входит в ChatUiState.
     val hapticView = LocalView.current
     val hapticsEnabled = LocalHermexHapticsEnabled.current
     val latestResponseCompletionNotificationsEnabled by rememberUpdatedState(responseCompletionNotificationsEnabled)
@@ -464,7 +462,7 @@ fun ChatRoute(
             isVoiceDictating && dictationRecorder.isRecording -> finishServerDictation()
             isVoiceDictating -> dictationController.stop()
             else -> {
-                voiceDictationBaseDraft = state.draft
+                voiceDictationBaseDraft = viewModel.draft.value
                 voiceDictationError = null
                 when (
                     DictationProviderPolicy.primaryProvider(
@@ -1127,7 +1125,7 @@ fun ChatRoute(
                                 title = task.title,
                                 status = task.status,
                                 startedAtMs = task.startedAtMs,
-                                subtitle = com.uzairansar.hermex.agent.tr("подагент работает", "subagent running"),
+                                subtitle = com.uzairansar.hermex.agent.localizedString("subagent running"),
                                 stateKey = "live-${task.id}",
                                 body = if (task.goals.size > 1) {
                                     { task.goals.forEachIndexed { n, g -> SubtaskDetailText("${n + 1}. $g") } }
@@ -1254,7 +1252,9 @@ fun ChatRoute(
                             isVoiceDictationTranscribing = isVoiceDictationTranscribing,
                             voiceDictationError = voiceDictationError,
                             streamingSendBehavior = streamingSendBehavior,
-                            primaryActionTintColor = primaryActionTintColor,
+                            draftFlow = viewModel.draft,
+                            tintPrimaryActions = tintPrimaryActionsWithThemeColor,
+                            activeHeaderColorHex = activeHeaderColorHex,
                             showSecondaryBar = !isReadingOlderTranscript,
                             onDraftChange = viewModel::updateDraft,
                             onSend = {
@@ -1354,7 +1354,7 @@ fun ChatRoute(
                     state.messages.forEach { m ->
                         val body = m.displayText.trim()
                         if (body.isEmpty() || (m.role != "user" && m.role != "assistant")) return@forEach
-                        append(if (m.role == "user") tr("## 🧑 Вы\n\n", "## 🧑 You\n\n") else "## 🤖 MURF\n\n")
+                        append(if (m.role == "user") localizedString("## 🧑 You\n\n") else "## 🤖 MURF\n\n")
                         append(body).append("\n\n")
                     }
                 }
@@ -1362,11 +1362,11 @@ fun ChatRoute(
                 val share = com.uzairansar.hermex.agent.AgentShare
                 runCatching {
                     when (kind) {
-                        "share" -> share.shareFile(context, share.writeExport(context, "$base.md", md.toByteArray()), "text/markdown", tr("Поделиться беседой", "Share conversation"))
+                        "share" -> share.shareFile(context, share.writeExport(context, "$base.md", md.toByteArray()), "text/markdown", localizedString("Share conversation"))
                         "drive" -> share.saveTextToDrive(context, md, base)
-                        "pdf" -> share.toast(context, tr("Сохранено: ", "Saved: ") + share.saveToDownloads(context, "$base.pdf", "application/pdf", share.textToPdf(context, title, md).readBytes()))
-                        "md" -> share.toast(context, tr("Сохранено: ", "Saved: ") + share.saveToDownloads(context, "$base.md", "text/markdown", md.toByteArray()))
-                        "copy" -> { share.copy(context, md); share.toast(context, tr("Беседа скопирована", "Conversation copied")) }
+                        "pdf" -> share.toast(context, localizedString("Saved: ") + share.saveToDownloads(context, "$base.pdf", "application/pdf", share.textToPdf(context, title, md).readBytes()))
+                        "md" -> share.toast(context, localizedString("Saved: ") + share.saveToDownloads(context, "$base.md", "text/markdown", md.toByteArray()))
+                        "copy" -> { share.copy(context, md); share.toast(context, localizedString("Conversation copied")) }
                     }
                 }.onFailure { share.toast(context, tr("Ошибка экспорта: ${it.message}", "Export failed: ${it.message}")) }
             },
@@ -2027,7 +2027,7 @@ private fun ChatTopBar(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text(tr("Размер шрифта", "Font size")) },
+                        text = { Text(localizedString("Font size")) },
                         modifier = Modifier.testTag("chat_menu_font_size"),
                         onClick = {
                             actionsExpanded = false
@@ -2043,11 +2043,11 @@ private fun ChatTopBar(
                         },
                     )
                     listOf(
-                        "share" to tr("Поделиться беседой (Markdown)", "Share conversation (Markdown)"),
-                        "drive" to tr("Беседа в Google Диск", "Conversation to Google Drive"),
-                        "pdf" to tr("Беседа в PDF (Загрузки)", "Conversation as PDF (Downloads)"),
-                        "md" to tr("Беседа в Markdown (Загрузки)", "Conversation as Markdown (Downloads)"),
-                        "copy" to tr("Копировать беседу", "Copy conversation"),
+                        "share" to localizedString("Share conversation (Markdown)"),
+                        "drive" to localizedString("Conversation to Google Drive"),
+                        "pdf" to localizedString("Conversation as PDF (Downloads)"),
+                        "md" to localizedString("Conversation as Markdown (Downloads)"),
+                        "copy" to localizedString("Copy conversation"),
                     ).forEach { (kind, label) ->
                         DropdownMenuItem(
                             text = { Text(label) },
@@ -2063,7 +2063,7 @@ private fun ChatTopBar(
         if (tasksCount > 0) {
             Box {
                 HermexIconButton(
-                    label = tr("Задачи чата", "Chat tasks"),
+                    label = localizedString("Chat tasks"),
                     symbol = "\u2442",
                     iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_lightning_bolt,
                     onClick = onOpenTasks,
@@ -2083,7 +2083,7 @@ private fun ChatTopBar(
         if (showsScreenButton) {
             Box {
                 HermexIconButton(
-                    label = tr("Экран агента", "Agent screen"),
+                    label = localizedString("Agent screen"),
                     symbol = "\u25ad",
                     iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_monitor,
                     onClick = onOpenScreen,
@@ -2125,7 +2125,7 @@ private fun ChatStatusStack(
         val showsRecovery = rememberGraceVisibility(state.isRecoveringStream, RECONNECT_BANNER_GRACE_MILLIS)
         if (showsRecovery) {
             state.activeStreamRecoveryLabel?.let {
-                StreamRecoveryStatusPill(com.uzairansar.hermex.agent.tr("Подключение…", "Reconnecting…"))
+                StreamRecoveryStatusPill(com.uzairansar.hermex.agent.localizedString("Reconnecting…"))
             }
         }
         val online by com.uzairansar.hermex.agent.NetworkMonitor.online.collectAsState()
@@ -2427,21 +2427,21 @@ private fun OutboxMessageRow(
             }
             DropdownMenu(expanded = showsMenu, onDismissRequest = { showsMenu = false }) {
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Отправить сейчас", "Send now")) },
+                    text = { Text(com.uzairansar.hermex.agent.localizedString("Send now")) },
                     onClick = { showsMenu = false; onRetry() },
                 )
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Изменить", "Edit")) },
+                    text = { Text(com.uzairansar.hermex.agent.localizedString("Edit")) },
                     onClick = { showsMenu = false; onEdit() },
                 )
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Отменить отправку", "Cancel sending"), color = MaterialTheme.colorScheme.error) },
+                    text = { Text(com.uzairansar.hermex.agent.localizedString("Cancel sending"), color = MaterialTheme.colorScheme.error) },
                     onClick = { showsMenu = false; onCancel() },
                 )
             }
         }
         Text(
-            com.uzairansar.hermex.agent.tr("⏳ отправится при подключении", "⏳ will be sent when connected"),
+            com.uzairansar.hermex.agent.localizedString("⏳ will be sent when connected"),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -2498,22 +2498,22 @@ private fun QueuedMessageRow(
             DropdownMenu(expanded = showsMenu, onDismissRequest = { showsMenu = false }) {
                 if (canSteer) {
                     DropdownMenuItem(
-                        text = { Text(com.uzairansar.hermex.agent.tr("Steer — в текущий ответ", "Steer into current response")) },
+                        text = { Text(com.uzairansar.hermex.agent.localizedString("Steer into current response")) },
                         onClick = { showsMenu = false; onSteer() },
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Изменить", "Edit")) },
+                    text = { Text(com.uzairansar.hermex.agent.localizedString("Edit")) },
                     onClick = { showsMenu = false; onEdit() },
                 )
                 if (onMoveFirst != null) {
                     DropdownMenuItem(
-                        text = { Text(com.uzairansar.hermex.agent.tr("Отправить первым", "Send first")) },
+                        text = { Text(com.uzairansar.hermex.agent.localizedString("Send first")) },
                         onClick = { showsMenu = false; onMoveFirst() },
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(com.uzairansar.hermex.agent.tr("Удалить из очереди", "Remove from queue"), color = MaterialTheme.colorScheme.error) },
+                    text = { Text(com.uzairansar.hermex.agent.localizedString("Remove from queue"), color = MaterialTheme.colorScheme.error) },
                     onClick = { showsMenu = false; onDelete() },
                 )
             }
@@ -2531,7 +2531,11 @@ private fun StreamRecoveryStatusPill(label: String) {
     Row(
         modifier = Modifier
             .hermexGlass(shape = CircleShape, castsShadow = false)
-            .semantics { contentDescription = label }
+            .semantics {
+                contentDescription = label
+                // TalkBack озвучивает смену статуса (восстановление стрима) без фокуса.
+                liveRegion = LiveRegionMode.Polite
+            }
             .padding(horizontal = 11.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2566,6 +2570,8 @@ private fun InlineNotice(
         modifier = Modifier
             .fillMaxWidth()
             .hermexGlass(shape = HermexCardShape, castsShadow = false)
+            // Ошибки и статусы озвучиваются TalkBack автоматически (live region).
+            .semantics { liveRegion = LiveRegionMode.Polite }
             .padding(horizontal = 10.dp, vertical = 8.dp),
     )
 }
@@ -2677,7 +2683,9 @@ private fun ComposerSurface(
     isVoiceDictationTranscribing: Boolean,
     voiceDictationError: String?,
     streamingSendBehavior: StreamingSendBehavior,
-    primaryActionTintColor: Color?,
+    draftFlow: StateFlow<String>,
+    tintPrimaryActions: Boolean,
+    activeHeaderColorHex: String?,
     showSecondaryBar: Boolean,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -2699,6 +2707,16 @@ private fun ComposerSurface(
     loadAttachmentImage: suspend (String) -> ByteArray?,
     loadAttachmentFile: suspend (String) -> FileResponse?,
 ) {
+    // Draft читается здесь, а не в ChatRoute: набор текста рекомпозирует только композер.
+    val draft by draftFlow.collectAsStateWithLifecycle()
+    val sendButtonEnabled = if (state.isStreaming) true else draft.isNotBlank() && !state.isViewingCachedData
+    val primaryActionTintColor = remember(tintPrimaryActions, activeHeaderColorHex, sendButtonEnabled) {
+        if (primaryActionTintApplies(tintPrimaryActions, sendButtonEnabled)) {
+            hermexColorFromHex(activeHeaderColorHex)
+        } else {
+            null
+        }
+    }
     var previewAttachment by remember { mutableStateOf<UploadResponse?>(null) }
     val messageDescription = localizedString("message").replaceFirstChar { character ->
         if (character.isLowerCase()) character.titlecase() else character.toString()
@@ -2719,11 +2737,11 @@ private fun ComposerSurface(
     ) {
         state.slashAutocompleteContext()
     }
-    val slashAutocompleteResult = remember(state.draft, slashAutocompleteContext) {
-        SlashAutocompletePolicy.evaluate(state.draft, slashAutocompleteContext)
+    val slashAutocompleteResult = remember(draft, slashAutocompleteContext) {
+        SlashAutocompletePolicy.evaluate(draft, slashAutocompleteContext)
     }
-    val slashWorkspaceQuery = remember(state.draft) {
-        SlashAutocompletePolicy.workspaceArgumentQuery(state.draft)
+    val slashWorkspaceQuery = remember(draft) {
+        SlashAutocompletePolicy.workspaceArgumentQuery(draft)
     }
     LaunchedEffect(slashWorkspaceQuery) {
         val query = slashWorkspaceQuery ?: return@LaunchedEffect
@@ -2771,7 +2789,7 @@ private fun ComposerSurface(
                 )
             }
             BasicTextField(
-                value = state.draft,
+                value = draft,
                 onValueChange = onDraftChange,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2792,7 +2810,7 @@ private fun ComposerSurface(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.TopStart,
                     ) {
-                        if (state.draft.isEmpty()) {
+                        if (draft.isEmpty()) {
                             Text(
                                 localizedString(if (state.isViewingCachedData) "Reconnect to send messages." else "Ask anything... /commands"),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -2852,7 +2870,7 @@ private fun ComposerSurface(
                     enabled = if (state.isStreaming) {
                         true
                     } else {
-                        state.draft.isNotBlank() &&
+                        draft.isNotBlank() &&
                             !state.isViewingCachedData &&
                             !state.isRunningSessionAction &&
                             !state.isUploadingAttachment &&
@@ -2861,25 +2879,25 @@ private fun ComposerSurface(
                     },
                     filled = true,
                     filledContainerColor = hermexPrimaryActionContainerColor(
-                        if (state.isStreaming) true else state.draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
+                        if (state.isStreaming) true else draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
                         primaryActionTintColor,
                     ),
                     filledContentColor = hermexPrimaryActionContentColor(
-                        if (state.isStreaming) true else state.draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
+                        if (state.isStreaming) true else draft.isNotBlank() && !state.isViewingCachedData && !state.isRunningSessionAction && !state.isUploadingAttachment && !state.isRecordingVoiceNote && !state.isTranscribingVoiceNote,
                         primaryActionTintColor,
                     ),
                     modifier = Modifier.size(48.dp),
                 )
             }
-            if (state.isStreaming && state.draft.isNotBlank()) {
+            if (state.isStreaming && draft.isNotBlank()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 ) {
-                    if (state.draft.trimStart().startsWith("/")) {
-                        if (state.draft.trimStart().startsWith("/queue", ignoreCase = true)) {
+                    if (draft.trimStart().startsWith("/")) {
+                        if (draft.trimStart().startsWith("/queue", ignoreCase = true)) {
                             HermexPillButton(localizedString("Queue"), onSend, enabled = !state.isRunningSessionAction, filled = true)
                         }
                         HermexPillButton(
@@ -2894,7 +2912,7 @@ private fun ComposerSurface(
                             HermexPillButton(streamingSendBehavior.actionLabel, onStreamingSend, enabled = !state.isRunningSessionAction)
                         }
                         HermexPillButton(
-                            com.uzairansar.hermex.agent.tr("В очередь", "Queue"),
+                            com.uzairansar.hermex.agent.localizedString("Queue"),
                             onQueueDraft,
                             enabled = !state.isRunningSessionAction,
                             filled = streamingSendBehavior == StreamingSendBehavior.Queue,
@@ -5056,7 +5074,8 @@ private fun TranscriptMediaDownloadButton(
                 createDocument.launch(reference.exportFilename(extension))
             }
         },
-        modifier = modifier.size(38.dp),
+        // Зона нажатия остаётся >= 48dp (defaultMinSize в HermexIconButton); не сжимаем её до 38dp.
+        modifier = modifier,
     )
 }
 
@@ -5786,7 +5805,7 @@ private fun CompletedToolActivityCard(
                 startedAtMs = live?.startedAtMs,
                 endedAtMs = live?.endedAtMs,
                 durationSec = live?.durationSec,
-                subtitle = com.uzairansar.hermex.agent.tr("подагент", "subagent"),
+                subtitle = com.uzairansar.hermex.agent.localizedString("subagent"),
                 stateKey = "sub-${group.afterMessageIndex}-$i-${tool.id}",
                 body = if (goals.size > 1 || result != null) {
                     {
@@ -6417,23 +6436,23 @@ private fun MessageActionSheet(
             )
             val androidContext = LocalContext.current
             val text = context.copyText
-            MessageActionSheetRow(title = tr("Поделиться…", "Share…"), symbol = "\u21aa", onClick = {
+            MessageActionSheetRow(title = localizedString("Share…"), symbol = "\u21aa", onClick = {
                 onDismiss(); com.uzairansar.hermex.agent.AgentShare.shareText(androidContext, text)
             })
-            MessageActionSheetRow(title = tr("В Google Диск", "To Google Drive"), symbol = "\u2601", onClick = {
+            MessageActionSheetRow(title = localizedString("To Google Drive"), symbol = "\u2601", onClick = {
                 onDismiss(); com.uzairansar.hermex.agent.AgentShare.saveTextToDrive(androidContext, text, "agent-message-${com.uzairansar.hermex.agent.AgentShare.stamp()}")
             })
-            MessageActionSheetRow(title = tr("PDF в Загрузки", "PDF to Downloads"), symbol = "\u2193", onClick = {
+            MessageActionSheetRow(title = localizedString("PDF to Downloads"), symbol = "\u2193", onClick = {
                 onDismiss()
                 runCatching {
-                    val pdf = com.uzairansar.hermex.agent.AgentShare.textToPdf(androidContext, tr("MURF — сообщение", "MURF — message"), text)
+                    val pdf = com.uzairansar.hermex.agent.AgentShare.textToPdf(androidContext, localizedString("MURF — message"), text)
                     com.uzairansar.hermex.agent.AgentShare.saveToDownloads(androidContext, "agent-message-${com.uzairansar.hermex.agent.AgentShare.stamp()}.pdf", "application/pdf", pdf.readBytes())
                 }.onSuccess { com.uzairansar.hermex.agent.AgentShare.toast(androidContext, tr("Сохранено: $it", "Saved: $it")) }
                     .onFailure { com.uzairansar.hermex.agent.AgentShare.toast(androidContext, tr("Ошибка: ${it.message}", "Error: ${it.message}")) }
             })
             val code = remember(text) { com.uzairansar.hermex.agent.AgentShare.extractCode(text) }
             if (code != null) {
-                MessageActionSheetRow(title = tr("Выполнить код в Termux", "Run code in Termux"), symbol = ">_", onClick = {
+                MessageActionSheetRow(title = localizedString("Run code in Termux"), symbol = ">_", onClick = {
                     onDismiss()
                     com.uzairansar.hermex.agent.confirmRunInTermux(androidContext, code)
                 })

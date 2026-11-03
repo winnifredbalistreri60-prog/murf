@@ -75,7 +75,7 @@ class StreamStatusNotifier(private val context: Context) {
                                 if (!StreamRecoveryService.start(context, serverId, sessionId, streamId)) {
                                     Toast.makeText(
                                         context,
-                                        context.localizedString("Background stream recovery could not start."),
+                                        context.context.localizedString("Background stream recovery could not start."),
                                         Toast.LENGTH_LONG,
                                     ).show()
                                 }
@@ -161,23 +161,23 @@ class StreamStatusNotifier(private val context: Context) {
         val normalizedRecoveryLabel = recoveryLabel?.takeIf { it.isNotBlank() }
         val title = if (normalizedRecoveryLabel != null) {
             if (normalizedRecoveryLabel.startsWith("Checking", ignoreCase = true)) {
-                context.localizedString("Checking stream")
+                context.context.localizedString("Checking stream")
             } else {
-                context.localizedString("Hermes is reconnecting the response stream")
+                context.context.localizedString("Hermes is reconnecting the response stream")
             }
         } else {
-            context.localizedString("Responding")
+            context.context.localizedString("Responding")
         }
         val content = normalizedRecoveryLabel?.let { label ->
             if (label.startsWith("Checking", ignoreCase = true)) {
-                context.localizedString("Checking stream")
+                context.context.localizedString("Checking stream")
             } else {
-                context.localizedString("Reconnecting stream")
+                context.context.localizedString("Reconnecting stream")
             }
         }
             ?: toolActivity
             ?: preview?.takeIf { it.isNotBlank() }?.take(120)
-            ?: context.localizedString("Streaming")
+            ?: context.context.localizedString("Streaming")
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hermex_launcher_monochrome)
             .setContentTitle(title)
@@ -201,8 +201,8 @@ class StreamStatusNotifier(private val context: Context) {
         if (!canPostNotifications(COMPLETION_CHANNEL_ID)) return
         val notification = NotificationCompat.Builder(context, COMPLETION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hermex_launcher_monochrome)
-            .setContentTitle(context.localizedString("Hermes response complete"))
-            .setContentText(context.localizedString("The assistant finished responding."))
+            .setContentTitle(context.context.localizedString("Hermes response complete"))
+            .setContentText(context.context.localizedString("The assistant finished responding."))
             .setAutoCancel(true)
             .setContentIntent(contentIntent(serverId, sessionId, complete = true))
             .build()
@@ -216,17 +216,17 @@ class StreamStatusNotifier(private val context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(APPROVAL_CHANNEL_ID) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(APPROVAL_CHANNEL_ID, tr("Подтверждения", "Approvals"), NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = tr("Агент ждёт разрешения на опасное действие", "The agent is waiting for approval of a risky action")
+                NotificationChannel(APPROVAL_CHANNEL_ID, context.localizedString("Approvals"), NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = context.localizedString("The agent is waiting for approval of a risky action")
                     setShowBadge(true)
                 },
             )
         }
         if (!canPostNotifications(APPROVAL_CHANNEL_ID)) return
-        val text = detail?.takeIf { it.isNotBlank() }?.take(300) ?: tr("Откройте чат, чтобы разрешить или запретить.", "Open the chat to allow or deny.")
+        val text = detail?.takeIf { it.isNotBlank() }?.take(300) ?: context.localizedString("Open the chat to allow or deny.")
         val notification = NotificationCompat.Builder(context, APPROVAL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hermex_launcher_monochrome)
-            .setContentTitle(tr("Агенту нужно подтверждение", "The agent needs approval"))
+            .setContentTitle(context.localizedString("The agent needs approval"))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -268,8 +268,8 @@ class StreamStatusNotifier(private val context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, context.localizedString("Streaming"), NotificationManager.IMPORTANCE_LOW).apply {
-                description = context.localizedString("Responding")
+            NotificationChannel(CHANNEL_ID, context.context.localizedString("Streaming"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = context.context.localizedString("Responding")
                 setShowBadge(false)
             },
         )
@@ -279,8 +279,8 @@ class StreamStatusNotifier(private val context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(COMPLETION_CHANNEL_ID) != null) return
         manager.createNotificationChannel(
-            NotificationChannel(COMPLETION_CHANNEL_ID, context.localizedString("Response complete"), NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = context.localizedString("The assistant finished responding.")
+            NotificationChannel(COMPLETION_CHANNEL_ID, context.context.localizedString("Response complete"), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = context.context.localizedString("The assistant finished responding.")
                 setShowBadge(true)
             },
         )

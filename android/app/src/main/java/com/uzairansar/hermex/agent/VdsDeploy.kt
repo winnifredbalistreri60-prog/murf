@@ -192,6 +192,39 @@ class VdsDeployer(private val connectTimeoutMs: Int = 15_000) {
         return session
     }
 
+    /**
+     * Анонимное соединение ТОЛЬКО для получения ключа хоста: без пароля и без ключа.
+     * Секреты никогда не отправляются до того, как ключ хоста зафиксирован (анти-MITM):
+     * ранее probe() уходил с StrictHostKeyChecking=no и сразу передавал пароль sudo,
+     * т.е. атакующий в середине мог получить root-пароль до показа отпечатка пользователю.
+     * Ожидаемо падает по «Auth fail» — это нормально: kex уже прошёл и ключ хоста захвачен.
+     * Возвращает (sha256-отпечаток, тип ключа).
+     */
+    private fun openAnonymous(c: VdsCredentials): Pair<String, String> {
+        val jsch = JSch()
+        val repo = PinnedHostKeys(null)
+        jsch.hostKeyRepository = repo
+        val session = jsch.getSession(c.user, c.host, c.port)
+        session.setConfig("StrictHostKeyChecking", "no")
+        session.setConfig("PreferredAuthentications", "none")
+        session.serverAliveInterval = 15_000
+        session.serverAliveCountMax = 4
+        try {
+            try {
+                session.connect(connectTimeoutMs)
+            } catch (e: JSchException) {
+                val hk = repo.seen ?: throw VdsDeployException(DeployProtocol.explain(e), e)
+                return sha256Fingerprint(java.util.Base64.getDecoder().decode(hk.key)) to hk.type
+            }
+            // Сервер неожиданно пустил без аутентификации — секретов мы всё равно не отправляли.
+            val hk = repo.seen ?: session.hostKey
+                ?: throw VdsDeployException(tr("Сервер не предоставил ключ хоста", "The server did not provide a host key"))
+            return sha256Fingerprint(java.util.Base64.getDecoder().decode(hk.key)) to hk.type
+        } finally {
+            runCatching { session.disconnect() }
+        }
+    }
+
     /** Выполнить команду; stdin — опционально (например, пароль для sudo -S). */
     private fun exec(session: Session, command: String, stdin: ByteArray? = null, onLine: ((String) -> Unit)? = null): Pair<Int, String> {
         val ch = session.openChannel("exec") as ChannelExec
@@ -201,6 +234,7 @@ class VdsDeployer(private val connectTimeoutMs: Int = 15_000) {
         val out = ch.inputStream
         val input = ch.outputStream
         ch.connect(connectTimeoutMs)
+        val closeDeadline = System.currentTimeMillis() + CHANNEL_CLOSE_TIMEOUT_MS
         if (stdin != null) { input.write(stdin); input.flush() }
         input.close()
         val collected = StringBuilder()
@@ -209,7 +243,14 @@ class VdsDeployer(private val connectTimeoutMs: Int = 15_000) {
                 if (onLine != null) onLine(line) else if (collected.length < 64_000) collected.append(line).append('\n')
             }
         }
-        while (!ch.isClosed) Thread.sleep(50)
+        while (!ch.isClosed) {
+            // Гарантированный выход: зависший канал больше не блокирует IO-поток навсегда.
+            if (System.currentTimeMillis() > closeDeadline) {
+                ch.disconnect()
+                throw VdsDeployException(tr("Сервер не закрыл канал команды (таймаут)", "The server did not close the command channel (timeout)"))
+            }
+            Thread.sleep(50)
+        }
         val status = ch.exitStatus
         ch.disconnect()
         if (collected.isEmpty() && err.size() > 0 && onLine == null) collected.append(err.toString(Charsets.UTF_8.name()).take(4000))
@@ -221,7 +262,10 @@ class VdsDeployer(private val connectTimeoutMs: Int = 15_000) {
         else "sudo -S -p '' sh -c ${DeployProtocol.shellQuote(command)}" to (c.password()?.plus('\n'.code.toByte()) ?: ByteArray(0))
 
     suspend fun probe(c: VdsCredentials): VdsProbe = withContext(Dispatchers.IO) {
-        val session = try { open(c, null) } catch (e: JSchException) { throw VdsDeployException(DeployProtocol.explain(e), e) }
+        // Шаг 1: анонимно фиксируем ключ хоста — секреты ещё не покидали приложение.
+        val (pinnedFp, _) = try { openAnonymous(c) } catch (e: JSchException) { throw VdsDeployException(DeployProtocol.explain(e), e) }
+        // Шаг 2: полноценный probe ТОЛЬКО по соединению с уже проверенным ключом.
+        val session = try { open(c, pinnedFp) } catch (e: JSchException) { throw VdsDeployException(DeployProtocol.explain(e), e) }
         try {
             val hk = session.hostKey
             val fp = sha256Fingerprint(java.util.Base64.getDecoder().decode(hk.key))
@@ -331,6 +375,9 @@ class VdsDeployer(private val connectTimeoutMs: Int = 15_000) {
     }
 
     companion object {
+        /** Сколько ждать закрытия exec-канала после EOF stdout, прежде чем считать канал зависшим. */
+        private const val CHANNEL_CLOSE_TIMEOUT_MS = 60_000L
+
         fun sha256Fingerprint(key: ByteArray): String {
             val digest = java.security.MessageDigest.getInstance("SHA-256").digest(key)
             return "SHA256:" + java.util.Base64.getEncoder().withoutPadding().encodeToString(digest)

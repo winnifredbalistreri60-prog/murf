@@ -56,6 +56,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
@@ -293,7 +294,6 @@ data class ChatUiState(
     val hasOlderMessages: Boolean = false,
     val compressionReferenceCard: CompressionReferenceCard? = null,
     val completedToolCallGroups: List<ToolCallGroup> = emptyList(),
-    val draft: String = "",
     val modelOptions: List<ModelSummary> = emptyList(),
     val agentCommands: List<AgentCommand> = emptyList(),
     val profileOptions: List<ProfileSummary> = emptyList(),
@@ -378,10 +378,13 @@ class ChatViewModel internal constructor(
     private val repository: ChatRepository,
     private val pendingStateStore: ChatPendingStateStore? = null,
     private val outboxStore: OfflineOutboxStore? = null,
+    private val application: android.app.Application,
 ) : ViewModel() {
     private val registryKey = "${repository.serverUrl}\u0000$sessionId"
     private val _state = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = _state
+    private val _draft = MutableStateFlow("")
+    val draft: StateFlow<String> = _draft.asStateFlow()
     private var streamJob: Job? = null
     private var streamPacingJob: Job? = null
     // MURF: streamed text buffer (O(1) append), UI publish throttled to ~80 ms, state commit ~1 s.
@@ -444,8 +447,8 @@ class ChatViewModel internal constructor(
         queuedSlashMessages.addAll(persisted?.queuedDrafts ?: QueuedDraftRegistry.load(registryKey))
         backgroundPromptsByTaskId.putAll(persisted?.backgroundTasks ?: BackgroundTaskRegistry.load(registryKey))
         pendingLocalUploads.putAll(persisted?.pendingLocalUploads.orEmpty().associateBy { it.id })
+        _draft.value = persisted?.draft.orEmpty()
         _state.value = _state.value.copy(
-            draft = persisted?.draft.orEmpty(),
             queuedMessages = queuedSlashMessages.toList(),
             pendingAttachments = persisted?.pendingAttachments.orEmpty(),
             attachmentUploadsInFlight = pendingLocalUploads.size,
@@ -468,13 +471,22 @@ class ChatViewModel internal constructor(
     }
 
     fun updateDraft(value: String) {
-        _state.update { it.copy(draft = value, error = null, notice = null) }
+        _draft.value = value
+        _state.update { it.copy(error = null, notice = null) }
         draftPersistenceJob?.cancel()
         draftPersistenceJob = viewModelScope.launch {
             delay(ChatDraftPersistencePolicy.DebounceMillis)
             persistPendingState()
             draftPersistenceJob = null
         }
+    }
+
+    private fun consumeDraft(consumedDraft: String?) {
+        if (consumedDraft != null) _draft.value = draftAfterConsuming(_draft.value, consumedDraft)
+    }
+
+    private fun restoreDraft(consumedDraft: String?) {
+        if (consumedDraft != null) _draft.value = draftAfterFailedConsumption(_draft.value, consumedDraft)
     }
     fun updateClarificationDraft(value: String) = _state.update { it.copy(clarificationDraft = value, error = null) }
     fun consumeOpenSession() = _state.update { it.copy(openSessionId = null) }
@@ -896,7 +908,8 @@ class ChatViewModel internal constructor(
         val currentProfileName = snapshot.selectedProfile?.name ?: snapshot.selectedProfile?.displayName
         if (profileName.equals(currentProfileName, ignoreCase = true)) {
             if (consumedDraft != null) {
-                _state.update { current -> current.copy(draft = draftAfterConsuming(current.draft, consumedDraft), error = null) }
+                consumeDraft(consumedDraft)
+                _state.update { current -> current.copy(error = null) }
             }
             return
         }
@@ -920,9 +933,9 @@ class ChatViewModel internal constructor(
     ) {
         val snapshot = _state.value
         val profileName = profile.name ?: profile.displayName ?: return
+        consumeDraft(consumedDraft)
         _state.update {
             it.copy(
-                draft = consumedDraft?.let { consumed -> draftAfterConsuming(it.draft, consumed) } ?: it.draft,
                 selectedProfile = profile,
                 activeProfileName = profileName,
                 sessionProfile = profileName,
@@ -991,6 +1004,7 @@ class ChatViewModel internal constructor(
                 }
                 .onFailure { error ->
                     if (error is CancellationException || generation != profileSwitchGeneration) return@onFailure
+                    restoreDraft(consumedDraft)
                     _state.update {
                         it.copy(
                             selectedProfile = if (profileWasSwitched) it.selectedProfile else snapshot.selectedProfile,
@@ -998,7 +1012,6 @@ class ChatViewModel internal constructor(
                             sessionProfile = if (profileWasSwitched) it.sessionProfile else snapshot.sessionProfile,
                             selectedWorkspacePath = if (profileWasSwitched) it.selectedWorkspacePath else snapshot.selectedWorkspacePath,
                             selectedModel = if (profileWasSwitched) it.selectedModel else snapshot.selectedModel,
-                            draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                             isRunningSessionAction = false,
                             error = error.message ?: "Could not switch profile.",
                         )
@@ -1023,15 +1036,16 @@ class ChatViewModel internal constructor(
         val previousEffort = snapshot.selectedReasoning
         if (effort.equals(previousEffort, ignoreCase = true)) {
             if (consumedDraft != null) {
-                _state.update { it.copy(draft = draftAfterConsuming(it.draft, consumedDraft), error = null) }
+                consumeDraft(consumedDraft)
+                _state.update { it.copy(error = null) }
             }
             return
         }
         val generation = ++reasoningSwitchGeneration
         reasoningSwitchJob?.cancel()
+        consumeDraft(consumedDraft)
         _state.update {
             it.copy(
-                draft = consumedDraft?.let { consumed -> draftAfterConsuming(it.draft, consumed) } ?: it.draft,
                 selectedReasoning = effort,
                 isRunningSessionAction = true,
                 error = null,
@@ -1047,10 +1061,10 @@ class ChatViewModel internal constructor(
                 throw error
             } catch (error: Throwable) {
                 if (generation != reasoningSwitchGeneration) return@launch
+                restoreDraft(consumedDraft)
                 _state.update {
                     it.copy(
                         selectedReasoning = previousEffort,
-                        draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                         isRunningSessionAction = false,
                         error = error.message ?: "Could not switch reasoning.",
                     )
@@ -1337,12 +1351,13 @@ class ChatViewModel internal constructor(
             val previousState = _state.value
             val previousImportedId = importedSharedDraftCreatedAtEpochMillis
             val previousRemainder = importedSharedDraftRemainder
-            val separator = if (previousState.draft.isBlank() || previousState.draft.endsWith("\n")) "" else "\n\n"
+            val currentDraft = _draft.value
+            val separator = if (currentDraft.isBlank() || currentDraft.endsWith("\n")) "" else "\n\n"
             preparedUploads.forEach { pendingLocalUploads[it.id] = it }
             importedSharedDraftCreatedAtEpochMillis = draft.createdAtEpochMillis
             importedSharedDraftRemainder = deferredAttachments
+            _draft.value = if (sharedText.isBlank()) currentDraft else "$currentDraft$separator$sharedText"
             _state.value = previousState.copy(
-                draft = if (sharedText.isBlank()) previousState.draft else "${previousState.draft}$separator$sharedText",
                 attachmentUploadsInFlight = previousState.attachmentUploadsInFlight + preparedUploads.size,
                 pendingLocalUploadCount = pendingLocalUploads.size,
                 notice = when {
@@ -1454,11 +1469,11 @@ class ChatViewModel internal constructor(
             }
                 .onSuccess { (transcript, upload) ->
                     if (_state.value.isStreaming) {
+                        _draft.value = listOf(_draft.value.trim(), transcript)
+                            .filter { part -> part.isNotEmpty() }
+                            .joinToString("\n\n")
                         _state.update {
                             it.copy(
-                                draft = listOf(it.draft.trim(), transcript)
-                                    .filter { part -> part.isNotEmpty() }
-                                    .joinToString("\n\n"),
                                 pendingAttachments = it.pendingAttachments + upload,
                                 isTranscribingVoiceNote = false,
                                 error = "The voice note is ready. Send it after the current response finishes.",
@@ -1468,7 +1483,6 @@ class ChatViewModel internal constructor(
                         return@onSuccess
                     }
                     val snapshot = _state.value.copy(
-                        draft = transcript,
                         pendingAttachments = listOf(upload),
                         isTranscribingVoiceNote = false,
                     )
@@ -1507,7 +1521,7 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = "Wait for attachments to finish uploading.") }
             return
         }
-        val text = _state.value.draft.trim()
+        val text = _draft.value.trim()
         if (text.isEmpty()) return
         val snapshot = _state.value
         if (handleSlashCommand(text, snapshot)) return
@@ -1529,10 +1543,10 @@ class ChatViewModel internal constructor(
     // ---- MURF: offline outbox -------------------------------------------------------------
 
     private fun enqueueOutbox(item: OutboxItem, snapshot: ChatUiState, atFront: Boolean = false) {
+        consumeDraft(item.text)
         _state.update {
             it.copy(
                 outboxItems = if (atFront) listOf(item) + it.outboxItems.filterNot { o -> o.id == item.id } else it.outboxItems + item,
-                draft = draftAfterConsuming(it.draft, snapshot.draft),
                 pendingAttachments = it.pendingAttachments - snapshot.pendingAttachments.toSet(),
                 error = null,
             )
@@ -1550,10 +1564,11 @@ class ChatViewModel internal constructor(
     /** Long-press → «Изменить»: the text goes back into the composer and leaves the outbox. */
     fun editOutboxItem(id: String) {
         val item = _state.value.outboxItems.firstOrNull { it.id == id } ?: return
+        val currentDraft = _draft.value
+        _draft.value = if (currentDraft.isBlank()) item.text else "${item.text}\n\n$currentDraft"
         _state.update {
             it.copy(
                 outboxItems = it.outboxItems.filterNot { o -> o.id == id },
-                draft = if (it.draft.isBlank()) item.text else "${item.text}\n\n${it.draft}",
                 pendingAttachments = (item.attachments + it.pendingAttachments).distinctBy { a -> a.path ?: a.filename },
             )
         }
@@ -1601,7 +1616,7 @@ class ChatViewModel internal constructor(
             try {
                 submitMessage(
                     next.text,
-                    _state.value.copy(draft = next.text, pendingAttachments = next.attachments, isStreaming = false),
+                    _state.value.copy(pendingAttachments = next.attachments, isStreaming = false),
                     queueOnConnectFailure = true,
                     outboxItem = next,
                 )
@@ -1655,7 +1670,7 @@ class ChatViewModel internal constructor(
     }
 
     fun steerDraft() {
-        val text = _state.value.draft.trim()
+        val text = _draft.value.trim()
         if (text.isEmpty()) {
             _state.update { it.copy(error = "Enter steering text.") }
             return
@@ -1665,7 +1680,7 @@ class ChatViewModel internal constructor(
 
     fun submitStreamingDraft(behavior: StreamingSendBehavior) {
         val snapshot = _state.value
-        val text = snapshot.draft.trim()
+        val text = _draft.value.trim()
         if (text.isEmpty()) return
         if (!snapshot.isStreaming) {
             send()
@@ -1680,7 +1695,6 @@ class ChatViewModel internal constructor(
                     submitMessage(
                         text = text,
                         snapshot = snapshot.copy(
-                            draft = text,
                             isStreaming = false,
                             activeStreamId = null,
                         ),
@@ -1737,7 +1751,6 @@ class ChatViewModel internal constructor(
                     submitMessage(
                         lastUserText,
                         _state.value.copy(
-                            draft = lastUserText,
                             pendingAttachments = emptyList(),
                             isStreaming = false,
                         ),
@@ -1760,11 +1773,11 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
+            _draft.value = ""
             _state.update {
                 it.copy(
                     isRunningSessionAction = true,
                     isForkingMessage = true,
-                    draft = "",
                     error = null,
                     notice = null,
                 )
@@ -1828,11 +1841,11 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
+            _draft.value = ""
             _state.update {
                 it.copy(
                     isRunningSessionAction = true,
                     isEditingMessage = true,
-                    draft = "",
                     error = null,
                     notice = null,
                 )
@@ -1848,7 +1861,6 @@ class ChatViewModel internal constructor(
                     submitMessage(
                         text = editedText,
                         snapshot = _state.value.copy(
-                            draft = editedText,
                             pendingAttachments = emptyList(),
                             isStreaming = false,
                         ),
@@ -1889,11 +1901,11 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
+            _draft.value = ""
             _state.update {
                 it.copy(
                     isRunningSessionAction = true,
                     isRegeneratingMessage = true,
-                    draft = "",
                     error = null,
                     notice = null,
                 )
@@ -1909,7 +1921,6 @@ class ChatViewModel internal constructor(
                     submitMessage(
                         text = userText,
                         snapshot = _state.value.copy(
-                            draft = userText,
                             pendingAttachments = emptyList(),
                             isStreaming = false,
                         ),
@@ -2007,12 +2018,12 @@ class ChatViewModel internal constructor(
             it.copy(
                 messages = optimisticMessages,
                 hasPersistedConversation = true,
-                draft = draftAfterConsuming(it.draft, snapshot.draft),
                 pendingAttachments = it.pendingAttachments - snapshot.pendingAttachments.toSet(),
                 isStreaming = true,
                 error = null,
             )
         }
+        consumeDraft(text)
         persistPendingState()
         var acceptedStreamId: String? = null
         return try {
@@ -2184,10 +2195,10 @@ class ChatViewModel internal constructor(
                     persistQueuedDrafts()
                     pendingStateStore?.clear()
                     isDrainingQueuedSlashMessage = false
+                    _draft.value = ""
                     applySessionSnapshot(clearedSnapshot, fromCache = false) {
                         it.copy(
                             isRunningSessionAction = false,
-                            draft = "",
                             pendingAttachments = emptyList(),
                             pendingApproval = null,
                             pendingApprovalCount = 0,
@@ -2316,12 +2327,16 @@ class ChatViewModel internal constructor(
         }
         when (command) {
             "help" -> {
-                _state.update { it.copy(draft = "", notice = null, error = null) }
+                _draft.value = ""
+                _state.update { it.copy(notice = null, error = null) }
                 appendLocalAssistant(slashHelpText(snapshot.agentCommands))
             }
-            "clear" -> _state.update { it.copy(messages = emptyList(), draft = "", notice = "Transcript cleared locally.", error = null) }
+            "clear" -> {
+                _draft.value = ""
+                _state.update { it.copy(messages = emptyList(), notice = "Transcript cleared locally.", error = null) }
+            }
             "stop" -> {
-                _state.update { it.copy(draft = "") }
+                _draft.value = ""
                 cancel()
             }
             "new" -> createSessionFromSlashCommand()
@@ -2340,7 +2355,7 @@ class ChatViewModel internal constructor(
                 } else {
                     viewModelScope.launch {
                         if (!cancelActiveStream(drainQueue = false)) return@launch
-                        submitMessage(args, snapshot.copy(draft = args, isStreaming = false))
+                        submitMessage(args, snapshot.copy(isStreaming = false))
                     }
                 }
             }
@@ -2358,12 +2373,14 @@ class ChatViewModel internal constructor(
                 when {
                     isKnownUnsupportedSlashCommand(command) -> {
                         val message = unsupportedSlashCommandMessage(command)
-                        _state.update { it.copy(draft = "", error = message) }
+                        _draft.value = ""
+                        _state.update { it.copy(error = message) }
                         appendLocalAssistant(message)
                     }
                     command == "skill" -> {
                         val message = "Use `/skills [query]` to search skills."
-                        _state.update { it.copy(draft = "", error = message) }
+                        _draft.value = ""
+                        _state.update { it.copy(error = message) }
                         appendLocalAssistant(message)
                     }
                     else -> return false
@@ -2389,14 +2406,14 @@ class ChatViewModel internal constructor(
                         ?.takeIf { it.isNotBlank() }
                         ?.replace('_', ' ')
                     if (accepted) onAccepted?.invoke() else onRejected?.invoke()
+                    if (accepted && consumeDraft) _draft.value = draftAfterConsuming(_draft.value, text)
                     _state.update {
                         it.copy(
-                            draft = if (accepted && consumeDraft) draftAfterConsuming(it.draft, text) else it.draft,
                             isRunningSessionAction = false,
-                            notice = if (accepted) com.uzairansar.hermex.agent.tr("Steer: агент учтёт сообщение на следующем шаге.", "Steer sent: the agent will see it at the next step.") else null,
+                            notice = if (accepted) application.localizedString("Steer sent: the agent will see it at the next step.") else null,
                             error = if (accepted) null else responseError ?: rejection?.let { reason ->
                                 com.uzairansar.hermex.agent.tr("Steer не принят: $reason. Сообщение можно оставить в очереди.", "Steering was not accepted: $reason.")
-                            } ?: com.uzairansar.hermex.agent.tr("Сервер не поддерживает Steer для этого ответа. Сообщение можно оставить в очереди.", "The active response could not be steered."),
+                            } ?: application.localizedString("The active response could not be steered."),
                         )
                     }
                 }
@@ -2413,8 +2430,9 @@ class ChatViewModel internal constructor(
         }
         viewModelScope.launch {
             val snapshot = _state.value
-            val consumedDraft = snapshot.draft
-            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null, draft = "") }
+            val consumedDraft = _draft.value
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching {
                 repository.submitGoal(
                     sessionId = sessionId,
@@ -2429,20 +2447,20 @@ class ChatViewModel internal constructor(
                     val responseError = response.error?.takeIf { it.isNotBlank() }
                     val responseSessionId = response.sessionId?.trim()?.takeIf { it.isNotBlank() }
                     if (!response.isConfirmedMutation()) {
+                        restoreDraft(consumedDraft)
                         _state.update {
                             it.copy(
                                 isRunningSessionAction = false,
-                                draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                                 error = responseError ?: response.message ?: "Goal request failed.",
                             )
                         }
                         return@onSuccess
                     }
                     if (responseSessionId != null && responseSessionId != sessionId) {
+                        restoreDraft(consumedDraft)
                         _state.update {
                             it.copy(
                                 isRunningSessionAction = false,
-                                draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                                 error = "The server started the goal in a different session.",
                             )
                         }
@@ -2460,10 +2478,10 @@ class ChatViewModel internal constructor(
                     }
                 }
                 .onFailure { error ->
+                    restoreDraft(consumedDraft)
                     _state.update {
                         it.copy(
                             isRunningSessionAction = false,
-                            draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                             error = error.message ?: "Could not submit goal.",
                         )
                     }
@@ -2481,7 +2499,7 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = "Model not found.") }
             return
         }
-        _state.update { it.copy(draft = "") }
+        _draft.value = ""
         selectModel(model)
     }
 
@@ -2500,14 +2518,14 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = "Profile not found.") }
             return
         }
-        requestProfileSwitch(profile, consumedDraft = state.draft)
+        requestProfileSwitch(profile, consumedDraft = _draft.value)
     }
 
     private fun switchReasoning(args: String) {
         val query = args.trim().lowercase()
         val state = _state.value
         if (query in REASONING_DISPLAY_ARGS) {
-            requestReasoningDisplaySwitch(query, consumedDraft = state.draft)
+            requestReasoningDisplaySwitch(query, consumedDraft = _draft.value)
             return
         }
         if (!state.showsReasoningControl) {
@@ -2519,7 +2537,7 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = "Reasoning level not found.") }
             return
         }
-        requestReasoningSwitch(effort, consumedDraft = state.draft)
+        requestReasoningSwitch(effort, consumedDraft = _draft.value)
     }
 
     private fun requestReasoningDisplaySwitch(display: String, consumedDraft: String) {
@@ -2531,9 +2549,9 @@ class ChatViewModel internal constructor(
         }
         val generation = ++reasoningSwitchGeneration
         reasoningSwitchJob?.cancel()
+        consumeDraft(consumedDraft)
         _state.update {
             it.copy(
-                draft = draftAfterConsuming(it.draft, consumedDraft),
                 isRunningSessionAction = true,
                 error = null,
                 notice = null,
@@ -2548,9 +2566,9 @@ class ChatViewModel internal constructor(
                 throw error
             } catch (error: Throwable) {
                 if (generation != reasoningSwitchGeneration) return@launch
+                restoreDraft(consumedDraft)
                 _state.update {
                     it.copy(
-                        draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                         isRunningSessionAction = false,
                         error = error.message ?: "Could not update reasoning display.",
                     )
@@ -2579,7 +2597,7 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = "Usage: /workspace <path>") }
             return
         }
-        _state.update { it.copy(draft = "") }
+        _draft.value = ""
         selectWorkspace(workspace)
     }
 
@@ -2588,25 +2606,26 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = streamingMessage) }
             return
         }
-        val consumedDraft = _state.value.draft
+        val consumedDraft = _draft.value
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { action() }
                 .onSuccess { result ->
+                    if (result.error != null) restoreDraft(consumedDraft)
                     _state.update {
                         it.copy(
                             isRunningSessionAction = false,
-                            draft = if (result.error == null) it.draft else draftAfterFailedConsumption(it.draft, consumedDraft),
                             error = result.error,
                             notice = if (result.error == null) result.notice else null,
                         )
                     }
                 }
                 .onFailure { error ->
+                    restoreDraft(consumedDraft)
                     _state.update {
                         it.copy(
                             isRunningSessionAction = false,
-                            draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                             error = error.message ?: "Session action failed.",
                         )
                     }
@@ -2634,8 +2653,9 @@ class ChatViewModel internal constructor(
         }
         if (!snapshot.isStreaming) {
             viewModelScope.launch {
-                _state.update { it.copy(draft = "", error = null, notice = null) }
-                submitMessage(message, snapshot.copy(draft = message, isStreaming = false))
+                _draft.value = ""
+                _state.update { it.copy(error = null, notice = null) }
+                submitMessage(message, snapshot.copy(isStreaming = false))
             }
             return
         }
@@ -2651,9 +2671,9 @@ class ChatViewModel internal constructor(
             queuedSlashMessages.addLast(queued)
         }
         persistQueuedDrafts()
+        _draft.value = ""
         _state.update {
             it.copy(
-                draft = "",
                 pendingAttachments = emptyList(),
                 error = null,
                 notice = "Queued for next turn (#${queuedSlashMessages.size}).",
@@ -2676,7 +2696,6 @@ class ChatViewModel internal constructor(
                 val sent = submitMessage(
                     next.text,
                     _state.value.copy(
-                        draft = next.text,
                         pendingAttachments = next.attachments,
                         isStreaming = false,
                     ),
@@ -2712,7 +2731,7 @@ class ChatViewModel internal constructor(
     /** Поставить текущий черновик в очередь (агент занят) или отправить сразу (агент свободен). */
     fun queueCurrentDraft() {
         val snapshot = _state.value
-        val text = snapshot.draft.trim()
+        val text = _draft.value.trim()
         if (text.isEmpty()) return
         if (!snapshot.isStreaming) { send(); return }
         queueDraft(text, snapshot)
@@ -2727,9 +2746,10 @@ class ChatViewModel internal constructor(
     fun editQueued(id: String) {
         val item = queuedSlashMessages.firstOrNull { it.id == id } ?: return
         setQueue(MurfQueueOps.remove(queuedSlashMessages.toList(), id))
+        val currentDraft = _draft.value
+        _draft.value = if (currentDraft.isBlank()) item.text else currentDraft.trimEnd() + "\n" + item.text
         _state.update {
             it.copy(
-                draft = if (it.draft.isBlank()) item.text else it.draft.trimEnd() + "\n" + item.text,
                 pendingAttachments = (it.pendingAttachments + item.attachments).distinct(),
             )
         }
@@ -2747,12 +2767,12 @@ class ChatViewModel internal constructor(
             steer(text, consumeDraft = false, onRejected = {
                 queuedSlashMessages.addFirst(QueuedDraft(text, emptyList()))
                 persistQueuedDrafts()
-                _state.update { it.copy(error = null, notice = com.uzairansar.hermex.agent.tr("«Продолжай» поставлено в очередь.", "“Continue” was queued.")) }
+                _state.update { it.copy(error = null, notice = application.localizedString("“Continue” was queued.")) }
             })
             return
         }
         viewModelScope.launch {
-            submitMessage(text, _state.value.copy(draft = text, pendingAttachments = emptyList(), isStreaming = false))
+            submitMessage(text, _state.value.copy(pendingAttachments = emptyList(), isStreaming = false))
         }
     }
 
@@ -2760,12 +2780,12 @@ class ChatViewModel internal constructor(
     fun steerQueued(id: String) {
         val item = queuedSlashMessages.firstOrNull { it.id == id } ?: return
         if (!_state.value.isStreaming) {
-            _state.update { it.copy(error = com.uzairansar.hermex.agent.tr("Агент сейчас не работает — сообщение уйдёт обычным порядком.", "The agent is idle; the message will be sent normally.")) }
+            _state.update { it.copy(error = application.localizedString("The agent is idle; the message will be sent normally.")) }
             drainQueuedSlashMessageIfIdle()
             return
         }
         if (item.attachments.isNotEmpty()) {
-            _state.update { it.copy(error = com.uzairansar.hermex.agent.tr("Steer передаёт только текст. Вложения останутся в очереди.", "Steer sends text only. Attachments stay queued.")) }
+            _state.update { it.copy(error = application.localizedString("Steer sends text only. Attachments stay queued.")) }
             return
         }
         steer(item.text, consumeDraft = false) { setQueue(MurfQueueOps.remove(queuedSlashMessages.toList(), id)) }
@@ -2792,7 +2812,8 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.createSession(state.selectedWorkspacePath, state.selectedModel, state.selectedProfile) }
                 .onSuccess { session ->
                     val newSessionId = session?.sessionId
@@ -2818,7 +2839,8 @@ class ChatViewModel internal constructor(
         val title = args.trim()
         if (title.isBlank()) {
             appendLocalAssistant("Current title: **${_state.value.sessionTitle ?: "Untitled Session"}**\n\nUse `/title <text>` to rename this session.")
-            _state.update { it.copy(draft = "", error = null) }
+            _draft.value = ""
+            _state.update { it.copy(error = null) }
             return
         }
         if (_state.value.isStreaming) {
@@ -2826,7 +2848,8 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.renameSession(sessionId, title) }
                 .onSuccess { response ->
                     if (!response.isConfirmedMutation()) {
@@ -2865,7 +2888,8 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.branchSession(sessionId, args.trim().takeIf { it.isNotBlank() }) }
                 .onSuccess { result ->
                     val branchId = result.session?.sessionId
@@ -2903,7 +2927,8 @@ class ChatViewModel internal constructor(
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             currentBtwTask?.let { previous ->
                 val cancelResponse = try {
                     repository.cancel(previous.streamId)
@@ -3037,17 +3062,18 @@ class ChatViewModel internal constructor(
             _state.update { it.copy(error = "Reconnect to the server to start a background task.") }
             return
         }
-        val consumedDraft = _state.value.draft
+        val consumedDraft = _draft.value
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.startBackground(sessionId, prompt) }
                 .onSuccess { response ->
                     val taskId = response.taskId
                     if (!response.error.isNullOrBlank() || taskId.isNullOrBlank()) {
+                        restoreDraft(consumedDraft)
                         _state.update {
                             it.copy(
                                 isRunningSessionAction = false,
-                                draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                                 error = response.error ?: "The server did not return a background task.",
                             )
                         }
@@ -3064,10 +3090,10 @@ class ChatViewModel internal constructor(
                     startBackgroundPollingIfNeeded()
                 }
                 .onFailure { error ->
+                    restoreDraft(consumedDraft)
                     _state.update {
                         it.copy(
                             isRunningSessionAction = false,
-                            draft = draftAfterFailedConsumption(it.draft, consumedDraft),
                             error = error.message ?: "Could not start a background task.",
                         )
                     }
@@ -3125,7 +3151,7 @@ class ChatViewModel internal constructor(
     private fun persistPendingState(durable: Boolean = false) {
         pendingStateStore?.save(
             PersistedChatPendingState(
-                draft = ChatDraftPersistencePolicy.persistedDraft(_state.value.draft),
+                draft = ChatDraftPersistencePolicy.persistedDraft(_draft.value),
                 pendingAttachments = _state.value.pendingAttachments,
                 pendingLocalUploads = pendingLocalUploads.values.toList(),
                 queuedDrafts = queuedSlashMessages.toList(),
@@ -3162,7 +3188,8 @@ class ChatViewModel internal constructor(
     private fun searchSkillsFromSlashCommand(args: String) {
         val query = args.trim()
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.skills() }
                 .onSuccess { skills ->
                     _state.update { it.copy(isRunningSessionAction = false) }
@@ -3216,7 +3243,8 @@ class ChatViewModel internal constructor(
         val normalized = requestedPersonality.lowercase()
         val name = if (PERSONALITY_CLEAR_ARGS.contains(normalized)) "" else requestedPersonality
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.setPersonality(sessionId, name) }
                 .onSuccess { response ->
                     if (!response.isConfirmedPersonalityMutation(name)) {
@@ -3244,7 +3272,8 @@ class ChatViewModel internal constructor(
 
     private fun listPersonalitiesFromSlashCommand() {
         viewModelScope.launch {
-            _state.update { it.copy(isRunningSessionAction = true, draft = "", error = null, notice = null) }
+            _draft.value = ""
+            _state.update { it.copy(isRunningSessionAction = true, error = null, notice = null) }
             runSuspendCatching { repository.personalities() }
                 .onSuccess { personalities ->
                     _state.update { it.copy(isRunningSessionAction = false) }
@@ -4031,16 +4060,16 @@ class ChatViewModel internal constructor(
         hadPersistedConversation: Boolean,
         message: String,
     ) {
+        val currentDraft = _draft.value
+        _draft.value = when {
+            currentDraft.isBlank() -> text
+            currentDraft == text -> currentDraft
+            else -> "$text\n\n$currentDraft"
+        }
         _state.update { current ->
-            val restoredDraft = when {
-                current.draft.isBlank() -> text
-                current.draft == text -> current.draft
-                else -> "$text\n\n${current.draft}"
-            }
             current.copy(
                 messages = optimisticMessageId?.let { id -> current.messages.filterNot { it.id == id } } ?: current.messages,
                 hasPersistedConversation = hadPersistedConversation,
-                draft = restoredDraft,
                 pendingAttachments = (attachments + current.pendingAttachments).distinctBy { it.path ?: it.filename },
                 isStreaming = false,
                 activeStreamId = null,

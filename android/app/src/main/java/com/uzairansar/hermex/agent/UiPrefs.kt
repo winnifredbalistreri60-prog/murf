@@ -60,7 +60,7 @@ const val APP_DISPLAY_NAME = "MURF"
 object UiPrefs {
     const val MIN_SCALE = 0.85f
     const val MAX_SCALE = 1.5f
-    val presets get() = listOf(tr("Мелкий", "Small") to 0.9f, tr("Обычный", "Normal") to 1.0f, tr("Крупный", "Large") to 1.2f, tr("Очень крупный", "Extra large") to 1.4f)
+    val presets get() = listOf(localizedString("Small") to 0.9f, localizedString("Normal") to 1.0f, localizedString("Large") to 1.2f, localizedString("Extra large") to 1.4f)
 
     private var sp: SharedPreferences? = null
     private val _fontScale = MutableStateFlow(1f)
@@ -249,7 +249,7 @@ fun FontSizeControls(modifier: Modifier = Modifier) {
     var live by remember(saved) { mutableFloatStateOf(saved) }
     Column(modifier.fillMaxWidth().testTag("font_size_controls"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Размер шрифта", "Font size"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(localizedString("Font size"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text("${(live * 100).roundToInt()}%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         }
         Slider(
@@ -282,9 +282,9 @@ fun FontSizeControls(modifier: Modifier = Modifier) {
                     .testTag("font_size_preview"),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(tr("Пример сообщения", "Sample message"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(localizedString("Sample message"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(tr("Так будет выглядеть текст в чате, меню и настройках $APP_DISPLAY_NAME.", "This is how text will look in chat, menus and settings of $APP_DISPLAY_NAME."), style = MaterialTheme.typography.bodyMedium)
-                Text(tr("print(\"привет\")  # код", "print(\"hello\")  # code"), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(localizedString("print(\"hello\")  # code"), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -294,10 +294,10 @@ fun FontSizeControls(modifier: Modifier = Modifier) {
 fun FontSizeDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Размер шрифта", "Font size")) },
+        title = { Text(localizedString("Font size")) },
         text = { FontSizeControls() },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Готово", "Done")) } },
-        dismissButton = { TextButton(onClick = { UiPrefs.setFontScale(1f) }) { Text(tr("Сбросить", "Reset")) } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(localizedString("Done")) } },
+        dismissButton = { TextButton(onClick = { UiPrefs.setFontScale(1f) }) { Text(localizedString("Reset")) } },
     )
 }
 
@@ -315,7 +315,7 @@ fun ScreenModeToggle(control: Boolean, onChange: (Boolean) -> Unit, modifier: Mo
             .testTag("screen_mode_toggle"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        listOf(false to tr("👁 Смотреть", "👁 View"), true to (if (control) tr("✋ Экран у вас", "✋ You have control") else tr("✋ Взять экран", "✋ Take over"))).forEach { (value, label) ->
+        listOf(false to localizedString("👁 View"), true to (if (control) localizedString("✋ You have control") else localizedString("✋ Take over"))).forEach { (value, label) ->
             val selected = control == value
             Text(
                 label,
@@ -338,9 +338,9 @@ fun ScreenModeToggle(control: Boolean, onChange: (Boolean) -> Unit, modifier: Mo
 fun ScreenControlConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Взять экран?", "Take over the screen?")) },
-        text = { Text(tr("Агент сейчас работает. Пока экран у вас, агент не будет кликать и делать снимки экрана (он подождёт). Когда закончите, нажмите «Я закончила» — управление вернётся агенту.", "The agent is working. While you have the screen, it won't click or take screenshots (it waits). When done, tap “I'm done” to hand control back.")) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(tr("Взять экран", "Take over")) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
+        title = { Text(localizedString("Take over the screen?")) },
+        text = { Text(localizedString("The agent is working. While you have the screen, it won't click or take screenshots (it waits). When done, tap “I'm done” to hand control back.")) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(localizedString("Take over")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(localizedString("Cancel")) } },
     )
 }

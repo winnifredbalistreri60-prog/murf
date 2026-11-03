@@ -24,7 +24,7 @@ fun rememberMurfQrScanner(onResult: (String) -> Unit): () -> Unit {
         launcher.launch(
             ScanOptions()
                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                .setPrompt(tr("Наведите камеру на QR из «murf pair» или из MURF на другом устройстве", "Point the camera at the QR from `murf pair` or from MURF on another device"))
+                .setPrompt(localizedString("Point the camera at the QR from `murf pair` or from MURF on another device"))
                 .setBeepEnabled(false)
                 .setOrientationLocked(false),
         )

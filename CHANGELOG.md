@@ -7,6 +7,26 @@ Security sections per release.
 
 ## [Unreleased]
 
+### Security
+- **VDS deploy (критично):** SSH-пароль/ключ больше не отправляются до верификации ключа хоста. `probe()` теперь двухфазный: анонимное соединение (без креденшелов) фиксирует ключ хоста, и только затем передаёт секреты по соединению, пинненному к этому ключу. Ранее `StrictHostKeyChecking=no` + sudo-проверка паролем в probe означали, что MITM мог получить root-пароль до показа отпечатка пользователю.
+- **Phone relay:** `POST /phone/api/drive-token` (перезапись rclone-конфига) теперь требует анти-CSRF заголовок `X-Agent-App`, как остальные POST-эндпоинты.
+- **nginx (пример):** `location /phone/` перезаписывают `X-Real-IP`/`X-Forwarded-For` — раньше клиентский заголовок проходил и rate-limit пейринга обходился спуфингом IP.
+- **systemd:** юнит `murf-relay` получил `UMask=0077` (как `murf-bots`); `FILES_DIR` создаётся с правами 0700 — выгрузки с телефона больше не читаемы другими пользователями VDS.
+
+### Fixed
+- **Phone relay:** гонки на `up_tokens`/`dl_tokens` — все обращения под общим `lock`; нечисловые `wait`/`timeout` больше не обрывают соединение (возврат 400-совместимого дефолта); `agent-update` явно проверяет наличие скрипта вместо молчаливого провала.
+- **Установщик:** в tar-пейлоад и ветку `MURF_RELAY_SRC` добавлены `agent_update.py` и `agent_tools_mcp.py` — раньше agent-update и MCP-инструменты были сломаны на VDS без диагностики.
+- **Установщик:** повторный запуск больше не рестартует `murf-relay`/`murf-bots`, если их файлы не изменились (рестарт обрывал long-poll телефона и ответы ботов).
+- **Отчёты:** лимит 10/час стал per-IP — один клиент больше не исчерпывает квоту всех устройств.
+
+### Changed
+- **Android (навигация):** `sessionId` кодируется через `Uri.encode` во всех переходах к чату — id со слэшем больше не крашит NavController.
+- **Android (доступность):** `InlineNotice` и статус-пилюля стрима получили `liveRegion` — TalkBack озвучивает ошибки и смену статуса.
+- **Android (touch targets):** минимальная зона нажатия иконочных кнопок 44→48dp (Material-минимум); кнопка сохранения медиа в транскрипте больше не сжимается до 38dp.
+- **Android (сеть):** идемпотентные GET в `HermesApiClient` повторяются до 3 раз с backoff при сетевых ошибках и 5xx; клиенты с нестандартным таймаутом кэшируются вместо создания нового `OkHttpClient` на запрос.
+- **Android (обновления):** автопроверка манифеста обновлений использует экспоненциальный backoff (60 с → 30 мин, максимум 5 попыток) вместо одной повторной проверки через 60 с.
+- **Android (SSH):** exec-канал закрывается по таймауту 60 с после EOF — зависший канал больше не блокирует IO-поток навсегда.
+
 ### Server / murf-install (Agent Screen)
 - Public VDS install: `murf_screen_desktop.py`, `POST/GET /phone/api/screen/start|status` (authz: nginx session + `X-Agent-App`), idempotent `murf-bot-desktop` unit **only** on proven x86_64+TigerVNC+Xfce stack; clear 501/503 otherwise. Matrix: `server/docs/AGENT-SCREEN-SUPPORT.md`.
 - Публичный murf-install: автозапуск Bot Desktop только на проверенном стеке; иначе явная ошибка, не тихий 404.

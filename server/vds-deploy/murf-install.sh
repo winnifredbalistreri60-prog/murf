@@ -175,17 +175,21 @@ grep -q '^HERMES_WEBUI_DEFAULT_WORKSPACE=' "$WEBUI_ENV" || echo "HERMES_WEBUI_DE
 
 # ---------------------------------------------------------------- 7. relay MURF
 step "Relay MURF (привязка по QR)"
+# Хэш до/после: не рестартовать службы, если файлы relay не изменились
+# (рестарт обрывает long-poll телефона и ответы ботов).
+RELAY_SUM_BEFORE=$(sh -c 'cat "$1"/agent-phone/*.py 2>/dev/null' _ "$HOME_DIR" | sha256sum | cut -d' ' -f1)
 PAYLOAD_LINE=$(awk '/^__MURF_PAYLOAD_BELOW__$/ {print NR + 1; exit 0}' "$0" || true)
 if [ -n "$PAYLOAD_LINE" ]; then
   tail -n +"$PAYLOAD_LINE" "$0" | base64 -d | tar -xz -C "$HOME_DIR/agent-phone" --no-same-owner
 elif [ -n "${MURF_RELAY_SRC:-}" ] && [ -d "$MURF_RELAY_SRC" ]; then
-  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf_screen_lease.py "$MURF_RELAY_SRC"/murf_screen_desktop.py "$MURF_RELAY_SRC"/murf_reports.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
+  cp "$MURF_RELAY_SRC"/phone_relay.py "$MURF_RELAY_SRC"/murf_pairing.py "$MURF_RELAY_SRC"/murf_bots.py "$MURF_RELAY_SRC"/murf_screen_lease.py "$MURF_RELAY_SRC"/murf_screen_desktop.py "$MURF_RELAY_SRC"/murf_reports.py "$MURF_RELAY_SRC"/agent_update.py "$MURF_RELAY_SRC"/agent_tools_mcp.py "$MURF_RELAY_SRC"/murf "$HOME_DIR/agent-phone/"
 else
   die "в установщике нет файлов relay (соберите его через build-installer.sh)"
 fi
 chown -R "$SVC_USER:$SVC_USER" "$HOME_DIR/agent-phone"
 chmod 755 "$HOME_DIR/agent-phone/murf"
 [ -f "$HOME_DIR/agent-phone/murf_screen_desktop.py" ] && chmod 755 "$HOME_DIR/agent-phone/murf_screen_desktop.py"
+RELAY_SUM_AFTER=$(sh -c 'cat "$1"/agent-phone/*.py 2>/dev/null' _ "$HOME_DIR" | sha256sum | cut -d' ' -f1)
 cat > /usr/local/bin/murf <<EOF
 #!/bin/sh
 # обёртка: команды murf выполняются от пользователя $SVC_USER
@@ -233,7 +237,8 @@ RELAY_ENV_LINES=""
 for kv in $RELAY_ENV; do RELAY_ENV_LINES="${RELAY_ENV_LINES}Environment=$kv
 "; done
 write_unit murf-relay "MURF: relay (QR-привязка, 127.0.0.1:$PHONE_PORT/$AGENT_PORT)" "$HOME_DIR/agent-phone" \
-  "/usr/bin/python3 $HOME_DIR/agent-phone/phone_relay.py" "$RELAY_ENV_LINES"
+  "/usr/bin/python3 $HOME_DIR/agent-phone/phone_relay.py" "${RELAY_ENV_LINES}UMask=0077
+"
 # боты MURF: отдельная служба, доступна только через relay (127.0.0.1:8792)
 write_unit murf-bots "MURF: боты (Hermes ACP и установленные CLI, 127.0.0.1:8792)" "$HOME_DIR" \
   "/usr/bin/python3 -u $HOME_DIR/agent-phone/murf_bots.py" "Environment=MURF_BOTS_PORT=8792
@@ -336,7 +341,14 @@ EOF
 if has_systemd; then
   systemctl daemon-reload
   systemctl enable murf-webui murf-relay murf-bots >/dev/null 2>&1
-  systemctl restart murf-relay murf-bots
+  if [ "${RELAY_SUM_AFTER:-}" != "${RELAY_SUM_BEFORE:-}" ]; then
+    systemctl restart murf-relay murf-bots
+  else
+    # Файлы не изменились: не обрываем long-poll телефона и ответы ботов;
+    # поднимаем службу, только если она не активна.
+    systemctl is-active --quiet murf-relay || systemctl restart murf-relay
+    systemctl is-active --quiet murf-bots || systemctl restart murf-bots
+  fi
   if [ "$UPDATE" -eq 1 ] || ! systemctl is-active --quiet murf-webui; then systemctl restart murf-webui; fi
   echo "murf-webui: $(systemctl is-active murf-webui || true), murf-relay: $(systemctl is-active murf-relay || true), murf-bots: $(systemctl is-active murf-bots || true)"
   enable_bot_desktop_unit

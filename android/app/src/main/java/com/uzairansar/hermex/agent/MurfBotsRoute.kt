@@ -82,7 +82,7 @@ private fun BotsTopBar(title: String, onBack: () -> Unit, leading: (@Composable 
                 Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
+        navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
         actions = { actions() },
     )
 }
@@ -114,14 +114,14 @@ fun MurfBotsRoute(
     }
     Scaffold(
         topBar = {
-            BotsTopBar(tr("Боты", "Bots"), onBack) {
-                IconButton(onClick = onOpenTasks) { Icon(painterResource(R.drawable.ic_hermex_lightning_bolt), tr("Задачи", "Tasks")) }
+            BotsTopBar(localizedString("Bots"), onBack) {
+                IconButton(onClick = onOpenTasks) { Icon(painterResource(R.drawable.ic_hermex_lightning_bolt), localizedString("Tasks")) }
                 IconButton(onClick = onOpenClis) { Icon(painterResource(R.drawable.ic_hermex_tools_wrench), "CLI") }
-                IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Refresh")) }
+                IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), localizedString("Refresh")) }
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { creating = true }) { Icon(painterResource(R.drawable.ic_hermex_plus), tr("Новый бот", "New bot")) }
+            FloatingActionButton(onClick = { creating = true }) { Icon(painterResource(R.drawable.ic_hermex_plus), localizedString("New bot")) }
         },
     ) { pad ->
         LazyColumn(
@@ -143,7 +143,7 @@ fun MurfBotsRoute(
             val list = bots
             if (list == null && error == null) item { CircularProgressIndicator() }
             if (list != null && list.isEmpty()) {
-                item { Text(tr("Ботов пока нет. Нажмите «+», чтобы создать первого.", "No bots yet. Tap “+” to create one."), style = MaterialTheme.typography.bodyMedium) }
+                item { Text(localizedString("No bots yet. Tap “+” to create one."), style = MaterialTheme.typography.bodyMedium) }
             }
             items(list.orEmpty(), key = { it.id }) { bot ->
                 Card(Modifier.fillMaxWidth().clickable { onOpenBot(bot.id) }) {
@@ -163,7 +163,7 @@ fun MurfBotsRoute(
                             }
                         }
                         if (bot.running > 0) TaskStatusPill(TaskStatus.Running)
-                        TextButton(onClick = { editing = bot }) { Text(tr("Изм.", "Edit")) }
+                        TextButton(onClick = { editing = bot }) { Text(localizedString("Edit")) }
                     }
                 }
             }
@@ -214,11 +214,11 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text(if (bot == null) tr("Новый бот", "New bot") else tr("Бот «${bot.name}»", "Bot “${bot.name}”")) },
+        title = { Text(if (bot == null) localizedString("New bot") else tr("Бот «${bot.name}»", "Bot “${bot.name}”")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(draft.name, { draft = draft.copy(name = it.take(60)) }, label = { Text(tr("Имя", "Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text(tr("Персонаж", "Character"), style = MaterialTheme.typography.labelLarge)
+                OutlinedTextField(draft.name, { draft = draft.copy(name = it.take(60)) }, label = { Text(localizedString("Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Text(localizedString("Character"), style = MaterialTheme.typography.labelLarge)
                 MurfAvatarPicker(
                     current = MurfAvatarSpec.resolve(draft.emoji, draft.backend, draft.name),
                     isDefault = MurfAvatarSpec.decode(draft.emoji) == null,
@@ -227,14 +227,14 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
                 )
                 OutlinedTextField(
                     draft.instructions, { draft = draft.copy(instructions = it.take(8000)) },
-                    label = { Text(tr("Инструкции / характер", "Instructions / persona")) },
+                    label = { Text(localizedString("Instructions / persona")) },
                     minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth(),
                 )
                 // бэкенд
                 val installed = clis?.clis.orEmpty().filter { it.backend }
                 Box {
                     OutlinedButton(onClick = { backendMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Бэкенд: ", "Backend: ") + (MurfBotsApi.backendNames[draft.backend] ?: draft.backend))
+                        Text(localizedString("Backend: ") + (MurfBotsApi.backendNames[draft.backend] ?: draft.backend))
                     }
                     DropdownMenu(expanded = backendMenu, onDismissRequest = { backendMenu = false }) {
                         installed.forEach { c ->
@@ -244,7 +244,7 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
                                     Column {
                                         Text(c.name)
                                         Text(
-                                            if (!c.installed) tr("не установлен", "not installed")
+                                            if (!c.installed) localizedString("not installed")
                                             else listOf(c.version, loginLabel(c.loggedIn), c.mode).filter { it.isNotBlank() }.joinToString(" · "),
                                             style = MaterialTheme.typography.labelSmall,
                                         )
@@ -258,7 +258,7 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
                 if (draft.backend == "hermes") {
                     Box {
                         OutlinedButton(onClick = { profileMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(tr("Профиль Hermes: ", "Hermes profile: ") + draft.profile)
+                            Text(localizedString("Hermes profile: ") + draft.profile)
                         }
                         DropdownMenu(expanded = profileMenu, onDismissRequest = { profileMenu = false }) {
                             clis?.profiles.orEmpty().forEach { p ->
@@ -268,16 +268,16 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
                     }
                 }
                 OutlinedTextField(draft.model, { draft = draft.copy(model = it.take(120)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(tr("Модель (необязательно)", "Model (optional)")) },
-                    supportingText = { Text(tr("пусто — модель по умолчанию у бэкенда", "empty — backend default"), style = MaterialTheme.typography.labelSmall) })
+                    label = { Text(localizedString("Model (optional)")) },
+                    supportingText = { Text(localizedString("empty — backend default"), style = MaterialTheme.typography.labelSmall) })
                 OutlinedTextField(draft.workdir, { draft = draft.copy(workdir = it.take(400)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(tr("Рабочая папка на сервере", "Working folder on the server")) },
-                    supportingText = { Text(tr("пусто — ", "empty — ") + (clis?.workroot?.let { "$it/<имя>" } ?: "~/murf-bots/<name>"), style = MaterialTheme.typography.labelSmall) })
-                Text(tr("Доступ", "Access"), style = MaterialTheme.typography.labelLarge)
+                    label = { Text(localizedString("Working folder on the server")) },
+                    supportingText = { Text(localizedString("empty — ") + (clis?.workroot?.let { "$it/<имя>" } ?: "~/murf-bots/<name>"), style = MaterialTheme.typography.labelSmall) })
+                Text(localizedString("Access"), style = MaterialTheme.typography.labelLarge)
                 listOf(
-                    "safe" to tr("Безопасный (по умолчанию): песочница папки, запрос разрешений", "Safe (default): folder sandbox, approval prompts"),
-                    "readonly" to tr("Только чтение (план, без изменений)", "Read-only (plan, no changes)"),
-                    "cli" to tr("Как в конфиге CLI — может быть полный доступ", "As in CLI config — may be full access"),
+                    "safe" to localizedString("Safe (default): folder sandbox, approval prompts"),
+                    "readonly" to localizedString("Read-only (plan, no changes)"),
+                    "cli" to localizedString("As in CLI config — may be full access"),
                 ).forEach { (id, label) ->
                     Row(Modifier.fillMaxWidth().clickable { draft = draft.copy(access = id) }, verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = draft.access == id, onClick = { draft = draft.copy(access = id) })
@@ -288,42 +288,42 @@ fun BotEditorDialog(server: HttpUrl, api: MurfBotsApi, bot: BotDto?, onDismiss: 
                     Row(Modifier.fillMaxWidth().clickable { draft = draft.copy(allowSpawn = !draft.allowSpawn) }, verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.material3.Checkbox(checked = draft.allowSpawn, onCheckedChange = { draft = draft.copy(allowSpawn = it) })
                         Text(
-                            if (bot.depth >= 2) tr("Создан ботом второго уровня — создавать ботов не может", "Second-level bot — cannot create bots")
-                            else tr("Разрешить этому боту предлагать новых ботов", "Allow this bot to propose new bots"),
+                            if (bot.depth >= 2) localizedString("Second-level bot — cannot create bots")
+                            else localizedString("Allow this bot to propose new bots"),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
                 ErrorLine(error)
                 if (bot != null) {
-                    TextButton(onClick = { confirmDelete = true }) { Text(tr("Удалить бота", "Delete bot"), color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { confirmDelete = true }) { Text(localizedString("Delete bot"), color = MaterialTheme.colorScheme.error) }
                 }
             }
         },
-        confirmButton = { Button(enabled = !busy && draft.name.isNotBlank(), onClick = { save(false) }) { Text(tr("Сохранить", "Save")) } },
-        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
+        confirmButton = { Button(enabled = !busy && draft.name.isNotBlank(), onClick = { save(false) }) { Text(localizedString("Save")) } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text(localizedString("Cancel")) } },
     )
     confirmNotice?.let { notice ->
         AlertDialog(
             onDismissRequest = { confirmNotice = null },
-            title = { Text(tr("Подключить CLI к боту?", "Connect the CLI to this bot?")) },
+            title = { Text(localizedString("Connect the CLI to this bot?")) },
             text = { Text(notice) },
-            confirmButton = { Button(onClick = { confirmNotice = null; save(true) }) { Text(tr("Подключить", "Connect")) } },
-            dismissButton = { TextButton(onClick = { confirmNotice = null }) { Text(tr("Отмена", "Cancel")) } },
+            confirmButton = { Button(onClick = { confirmNotice = null; save(true) }) { Text(localizedString("Connect")) } },
+            dismissButton = { TextButton(onClick = { confirmNotice = null }) { Text(localizedString("Cancel")) } },
         )
     }
     if (confirmDelete && bot != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(tr("Удалить бота «${bot.name}»?", "Delete bot “${bot.name}”?")) },
-            text = { Text(tr("Удалятся бот и его чаты в MURF. Рабочая папка на сервере останется.", "The bot and its MURF chats will be removed. The working folder on the server stays.")) },
+            text = { Text(localizedString("The bot and its MURF chats will be removed. The working folder on the server stays.")) },
             confirmButton = {
                 Button(onClick = {
                     confirmDelete = false
                     scope.launch { runCatching { api.delete(server, bot.id) }.onSuccess { onSaved() }.onFailure { error = it.message } }
-                }) { Text(tr("Удалить", "Delete")) }
+                }) { Text(localizedString("Delete")) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Отмена", "Cancel")) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(localizedString("Cancel")) } },
         )
     }
 }
@@ -333,9 +333,9 @@ private fun Modifier.horizontalScrollState(): Modifier =
     this.then(Modifier.horizontalScroll(rememberScrollState()))
 
 private fun loginLabel(v: Boolean?): String = when (v) {
-    true -> tr("вход выполнен", "logged in")
-    false -> tr("нет входа", "not logged in")
-    null -> tr("вход неизвестен", "login unknown")
+    true -> localizedString("logged in")
+    false -> localizedString("not logged in")
+    null -> localizedString("login unknown")
 }
 
 // ───────────────────────────── чаты бота ─────────────────────────────
@@ -358,14 +358,14 @@ fun MurfBotChatsRoute(server: HttpUrl, api: MurfBotsApi, botId: String, onOpenCh
     LaunchedEffect(Unit) { while (true) { delay(5000); refresh++ } }
     Scaffold(
         topBar = {
-            BotsTopBar(bot?.name ?: tr("Бот", "Bot"), onBack, leading = bot?.let { b -> { MurfBotAvatar(b, size = 32.dp) } }) {
-                TextButton(onClick = { editing = true }, enabled = bot != null) { Text(tr("Настроить", "Settings")) }
+            BotsTopBar(bot?.name ?: localizedString("Bot"), onBack, leading = bot?.let { b -> { MurfBotAvatar(b, size = 32.dp) } }) {
+                TextButton(onClick = { editing = true }, enabled = bot != null) { Text(localizedString("Settings")) }
             }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 scope.launch { runCatching { api.newChat(server, botId) }.onSuccess { onOpenChat(it.id) }.onFailure { error = it.message } }
-            }) { Icon(painterResource(R.drawable.ic_hermex_square_and_pencil), tr("Новый чат", "New chat")) }
+            }) { Icon(painterResource(R.drawable.ic_hermex_square_and_pencil), localizedString("New chat")) }
         },
     ) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -376,12 +376,12 @@ fun MurfBotChatsRoute(server: HttpUrl, api: MurfBotsApi, botId: String, onOpenCh
                 }
                 ErrorLine(error)
             }
-            if (chats?.isEmpty() == true) item { Text(tr("Чатов пока нет — начните новый.", "No chats yet — start a new one.")) }
+            if (chats?.isEmpty() == true) item { Text(localizedString("No chats yet — start a new one.")) }
             items(chats.orEmpty(), key = { it.id }) { c ->
                 Card(Modifier.fillMaxWidth().clickable { onOpenChat(c.id) }) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column(Modifier.weight(1f)) {
-                            Text(c.title.ifBlank { tr("Новый чат", "New chat") }, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(c.title.ifBlank { localizedString("New chat") }, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             c.lastText?.takeIf { it.isNotBlank() }?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -457,7 +457,7 @@ fun MurfBotChatRoute(server: HttpUrl, api: MurfBotsApi, chatId: String, onOpenCh
                     })
                 }
             }) {
-                TextButton(onClick = { handoffOpen = true }, enabled = bot != null) { Text(tr("Передать", "Hand off")) }
+                TextButton(onClick = { handoffOpen = true }, enabled = bot != null) { Text(localizedString("Hand off")) }
             }
         },
         bottomBar = {
@@ -466,11 +466,11 @@ fun MurfBotChatRoute(server: HttpUrl, api: MurfBotsApi, chatId: String, onOpenCh
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(
                         input, { input = it }, modifier = Modifier.weight(1f), maxLines = 6,
-                        placeholder = { Text(tr("Сообщение боту", "Message the bot")) },
+                        placeholder = { Text(localizedString("Message the bot")) },
                     )
                     if (transcript.running) {
                         IconButton(onClick = { scope.launch { runCatching { api.stop(server, chatId) }.onFailure { error = it.message } } }) {
-                            Icon(painterResource(R.drawable.ic_hermex_stop_fill), tr("Остановить", "Stop"))
+                            Icon(painterResource(R.drawable.ic_hermex_stop_fill), localizedString("Stop"))
                         }
                     } else {
                         IconButton(enabled = input.isNotBlank() && !sending, onClick = {
@@ -482,7 +482,7 @@ fun MurfBotChatRoute(server: HttpUrl, api: MurfBotsApi, chatId: String, onOpenCh
                                     .onFailure { error = it.message }
                                 sending = false
                             }
-                        }) { Icon(painterResource(R.drawable.ic_hermex_arrow_up), tr("Отправить", "Send")) }
+                        }) { Icon(painterResource(R.drawable.ic_hermex_arrow_up), localizedString("Send")) }
                     }
                 }
             }
@@ -501,7 +501,7 @@ fun MurfBotChatRoute(server: HttpUrl, api: MurfBotsApi, chatId: String, onOpenCh
             if (transcript.running) item("running") {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Text(if (transcript.pendingApprovals > 0) tr("ждёт вашего ответа", "waiting for your answer") else tr("бот работает…", "bot is working…"),
+                    Text(if (transcript.pendingApprovals > 0) localizedString("waiting for your answer") else localizedString("bot is working…"),
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -525,7 +525,7 @@ private fun BotItemView(item: BotItem, onApprove: (String, String?) -> Unit, onO
         }
         is BotItem.Assistant -> MarkdownText(item.text, modifier = Modifier.fillMaxWidth())
         is BotItem.Thinking -> SubtaskCard(
-            title = tr("Рассуждения", "Thinking"), status = TaskStatus.Done, stateKey = item.key,
+            title = localizedString("Thinking"), status = TaskStatus.Done, stateKey = item.key,
             body = { SubtaskDetailText(item.text) },
         )
         is BotItem.Step -> {
@@ -562,7 +562,7 @@ private fun BotItemView(item: BotItem, onApprove: (String, String?) -> Unit, onO
         )
         is BotItem.Approval -> Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(tr("Агент просит разрешение", "The agent asks for permission"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                Text(localizedString("The agent asks for permission"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 Text(item.title, style = MaterialTheme.typography.bodyMedium)
                 item.detail?.let { SubtaskDetailText(it) }
                 if (item.pending) {
@@ -572,11 +572,11 @@ private fun BotItemView(item: BotItem, onApprove: (String, String?) -> Unit, onO
                             if (allow) Button(onClick = { onApprove(item.id, o.id) }) { Text(o.name) }
                             else OutlinedButton(onClick = { onApprove(item.id, o.id) }) { Text(o.name) }
                         }
-                        if (item.options.isEmpty()) OutlinedButton(onClick = { onApprove(item.id, null) }) { Text(tr("Отклонить", "Deny")) }
+                        if (item.options.isEmpty()) OutlinedButton(onClick = { onApprove(item.id, null) }) { Text(localizedString("Deny")) }
                     }
                 } else {
                     val chosen = item.options.firstOrNull { it.id == item.chosen }?.name
-                    Text(chosen?.let { tr("Ответ: $it", "Answer: $it") } ?: tr("Отклонено / истекло", "Denied / expired"),
+                    Text(chosen?.let { tr("Ответ: $it", "Answer: $it") } ?: localizedString("Denied / expired"),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -611,10 +611,10 @@ private fun HandoffDialog(server: HttpUrl, api: MurfBotsApi, chatId: String, bot
     LaunchedEffect(Unit) { bots = runCatching { api.bots(server) }.getOrDefault(emptyList()).filter { it.id != bot.id } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Передать задачу другому боту", "Hand the task to another bot")) },
+        title = { Text(localizedString("Hand the task to another bot")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (bots.isEmpty()) Text(tr("Других ботов нет.", "No other bots."))
+                if (bots.isEmpty()) Text(localizedString("No other bots."))
                 bots.forEach { b ->
                     Row(Modifier.fillMaxWidth().clickable { target = b }, verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = target?.id == b.id, onClick = { target = b })
@@ -623,7 +623,7 @@ private fun HandoffDialog(server: HttpUrl, api: MurfBotsApi, chatId: String, bot
                         Text(b.name)
                     }
                 }
-                OutlinedTextField(task, { task = it }, label = { Text(tr("Задача", "Task")) }, minLines = 3, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(task, { task = it }, label = { Text(localizedString("Task")) }, minLines = 3, modifier = Modifier.fillMaxWidth())
                 ErrorLine(error)
             }
         },
@@ -631,9 +631,9 @@ private fun HandoffDialog(server: HttpUrl, api: MurfBotsApi, chatId: String, bot
             Button(enabled = target != null && task.isNotBlank(), onClick = {
                 val t = target ?: return@Button
                 scope.launch { runCatching { api.handoff(server, chatId, t.id, task) }.onSuccess { onDone(it.id) }.onFailure { error = it.message } }
-            }) { Text(tr("Передать", "Hand off")) }
+            }) { Text(localizedString("Hand off")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(localizedString("Cancel")) } },
     )
 }
 
@@ -651,8 +651,8 @@ fun MurfClisRoute(server: HttpUrl, api: MurfBotsApi, onBack: () -> Unit) {
         loading = false
     }
     Scaffold(topBar = {
-        BotsTopBar(tr("CLI на сервере", "CLIs on the server"), onBack) {
-            IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Refresh")) }
+        BotsTopBar(localizedString("CLIs on the server"), onBack) {
+            IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), localizedString("Refresh")) }
         }
     }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -671,10 +671,10 @@ fun MurfClisRoute(server: HttpUrl, api: MurfBotsApi, onBack: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(c.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             val (label, ok) = when {
-                                !c.installed -> tr("не установлен", "not installed") to null
-                                c.loggedIn == true -> tr("вход выполнен", "logged in") to true
-                                c.loggedIn == false -> tr("нет входа", "not logged in") to false
-                                else -> tr("вход неизвестен", "unknown") to null
+                                !c.installed -> localizedString("not installed") to null
+                                c.loggedIn == true -> localizedString("logged in") to true
+                                c.loggedIn == false -> localizedString("not logged in") to false
+                                else -> localizedString("unknown") to null
                             }
                             Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
                                 color = when (ok) { true -> MaterialTheme.colorScheme.primary; false -> MaterialTheme.colorScheme.error; null -> MaterialTheme.colorScheme.outline })
@@ -684,17 +684,17 @@ fun MurfClisRoute(server: HttpUrl, api: MurfBotsApi, onBack: () -> Unit) {
                             Text(c.path, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 tr("Режим: ${c.mode}", "Mode: ${c.mode}") + " · " +
-                                    if (c.approvals) tr("разрешения спрашиваются в MURF", "approvals shown in MURF")
-                                    else tr("без вопросов (песочница CLI)", "no prompts (CLI sandbox)"),
+                                    if (c.approvals) localizedString("approvals shown in MURF")
+                                    else localizedString("no prompts (CLI sandbox)"),
                                 style = MaterialTheme.typography.labelSmall,
                             )
-                            if (c.loginMethod.isNotBlank()) Text(tr("Способ: ", "Method: ") + c.loginMethod, style = MaterialTheme.typography.labelSmall)
+                            if (c.loginMethod.isNotBlank()) Text(localizedString("Method: ") + c.loginMethod, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
             }
             data?.profiles?.takeIf { it.size > 1 }?.let { profiles ->
-                item { Text(tr("Профили Hermes: ", "Hermes profiles: ") + profiles.joinToString(", "), style = MaterialTheme.typography.bodySmall) }
+                item { Text(localizedString("Hermes profiles: ") + profiles.joinToString(", "), style = MaterialTheme.typography.bodySmall) }
             }
         }
     }
@@ -712,17 +712,17 @@ fun MurfAgentTasksRoute(server: HttpUrl, api: MurfBotsApi, onOpenChat: (String) 
             delay(if (runs.orEmpty().any { TaskStatus.from(it.status).isActive }) 2000 else 6000)
         }
     }
-    Scaffold(topBar = { BotsTopBar(tr("Запуски ботов", "Bot runs"), onBack) }) { pad ->
+    Scaffold(topBar = { BotsTopBar(localizedString("Bot runs"), onBack) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { ErrorLine(error) }
             item { BotProposalsSection(server, api, refreshKey = (runs?.size ?: 0)) }
             val list = runs
             if (list == null && error == null) item { CircularProgressIndicator() }
-            if (list?.isEmpty() == true) item { Text(tr("Запусков пока не было.", "No runs yet.")) }
+            if (list?.isEmpty() == true) item { Text(localizedString("No runs yet.")) }
             val (active, done) = list.orEmpty().partition { TaskStatus.from(it.status).isActive }
-            if (active.isNotEmpty()) item { Text(tr("Идут сейчас", "Running now"), style = MaterialTheme.typography.titleSmall) }
+            if (active.isNotEmpty()) item { Text(localizedString("Running now"), style = MaterialTheme.typography.titleSmall) }
             items(active, key = { "a-" + it.run }) { RunCard(it, onOpenChat) }
-            if (done.isNotEmpty()) item { Text(tr("Завершённые", "Finished"), style = MaterialTheme.typography.titleSmall) }
+            if (done.isNotEmpty()) item { Text(localizedString("Finished"), style = MaterialTheme.typography.titleSmall) }
             items(done, key = { "d-" + it.run }) { RunCard(it, onOpenChat) }
         }
     }
@@ -757,7 +757,7 @@ private fun RunCard(r: BotRunDto, onOpenChat: (String) -> Unit) {
             {
                 r.subtasks.forEach { s ->
                     SubtaskCard(
-                        title = s.title ?: tr("подзадача", "subtask"), status = TaskStatus.from(s.status),
+                        title = s.title ?: localizedString("subtask"), status = TaskStatus.from(s.status),
                         startedAtMs = s.started?.let { (it * 1000).toLong() }, endedAtMs = s.ended?.let { (it * 1000).toLong() },
                         stateKey = "rs-" + s.id,
                     )
@@ -783,7 +783,7 @@ fun BotProposalsSection(server: HttpUrl, api: MurfBotsApi, refreshKey: Int = 0, 
     LaunchedEffect(Unit) { while (true) { delay(8000); tick++ } }
     if (items.isEmpty() && error == null) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(tr("Предложения новых ботов", "Proposed bots"), style = MaterialTheme.typography.titleSmall)
+        Text(localizedString("Proposed bots"), style = MaterialTheme.typography.titleSmall)
         ErrorLine(error)
         items.forEach { p ->
             Card(Modifier.fillMaxWidth()) {
@@ -798,7 +798,7 @@ fun BotProposalsSection(server: HttpUrl, api: MurfBotsApi, refreshKey: Int = 0, 
                     }
                     Text(listOf(MurfBotsApi.backendNames[p.backend] ?: p.backend, MurfBotsApi.accessLabel(p.access), p.workdir).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (p.reason.isNotBlank()) Text(tr("Зачем: ", "Why: ") + p.reason, style = MaterialTheme.typography.bodySmall)
+                    if (p.reason.isNotBlank()) Text(localizedString("Why: ") + p.reason, style = MaterialTheme.typography.bodySmall)
                     if (p.instructions.isNotBlank()) Text(p.instructions, style = MaterialTheme.typography.bodySmall, maxLines = 6, overflow = TextOverflow.Ellipsis)
                     p.notice?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -813,8 +813,8 @@ fun BotProposalsSection(server: HttpUrl, api: MurfBotsApi, refreshKey: Int = 0, 
                                 }
                                 Unit
                             }
-                            if (approve) Button(enabled = busy == null, onClick = onClick) { Text(tr("Создать", "Create")) }
-                            else OutlinedButton(enabled = busy == null, onClick = onClick) { Text(tr("Отклонить", "Reject")) }
+                            if (approve) Button(enabled = busy == null, onClick = onClick) { Text(localizedString("Create")) }
+                            else OutlinedButton(enabled = busy == null, onClick = onClick) { Text(localizedString("Reject")) }
                         }
                     }
                 }

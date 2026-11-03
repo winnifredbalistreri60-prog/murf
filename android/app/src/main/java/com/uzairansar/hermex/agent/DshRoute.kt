@@ -117,7 +117,7 @@ class DshTranscript {
             }
             "status" -> if (e.optString("phase") == "turn_end") usage.turns.lastOrNull()?.let { items += DshItem.Usage(it) }
             "error" -> items += DshItem.Error(e.optString("error"))
-            "murf_exit" -> if (e.optInt("code") != 0) items += DshItem.Error(tr("dsh завершился с кодом ", "dsh exited with code ") + e.optInt("code") +
+            "murf_exit" -> if (e.optInt("code") != 0) items += DshItem.Error(localizedString("dsh exited with code ") + e.optInt("code") +
                 e.optString("stderr").takeIf { it.isNotBlank() }?.let { "\n" + it.takeLast(800) }.orEmpty())
         }
     }
@@ -155,7 +155,7 @@ object DshLocal {
             }
             val sel = MurfProviders.selected(context)
             if (sel == null) {
-                withContext(Dispatchers.Main) { onEvent(JSONObject().put("type", "error").put("error", tr("Выберите провайдера и модель", "Choose a provider and model"))) }
+                withContext(Dispatchers.Main) { onEvent(JSONObject().put("type", "error").put("error", localizedString("Choose a provider and model"))) }
                 return@withContext
             }
             val (prov, model) = sel
@@ -167,7 +167,7 @@ object DshLocal {
                     if (!r.isSuccessful) {
                         val code = r.code
                         withContext(Dispatchers.Main) { onEvent(JSONObject().put("type", "error").put("error", if (r.code == 401 || r.code == 403)
-                            tr("Нет входа в локальную среду (войдите в «Телефон (локально)» один раз)", "Not logged in to the local environment") else "HTTP $code")) }
+                            localizedString("Not logged in to the local environment") else "HTTP $code")) }
                         return@use
                     }
                     val src = r.body!!.source()
@@ -243,17 +243,17 @@ fun DshRoute(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Агент Harness", "Harness agent")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
+            title = { Text(localizedString("Harness agent")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
             actions = {
-                if (tab == 0) IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) }
+                if (tab == 0) IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), localizedString("Update")) }
             },
         )
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(tr("На телефоне", "On phone")) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("На сервере", "On server")) })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(localizedString("On phone")) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(localizedString("On server")) })
             }
             when (tab) {
                 1 -> DshRemotePanel(cookieJar = cookieJar, auth = auth, onDevices = onDevices, onLocal = onLocal, onPhone = onPhone, onProviders = onProviders)
@@ -298,7 +298,7 @@ private fun DshPhonePanel(
                     localBusy = null
                     localError = null
                     onRefresh()
-                    AgentShare.toast(context, tr("Телефон подключён", "Phone connected"))
+                    AgentShare.toast(context, localizedString("Phone connected"))
                 }
                 .onFailure { e ->
                     val msg = LocalEnv.localConnectUserMessage(e) ?: (e.message ?: e.toString())
@@ -330,8 +330,7 @@ private fun DshPhonePanel(
                         val st = status
                         when {
                             health == null -> {
-                                Text(tr("Локальная среда не запущена. Нажмите ниже — MURF запустит службы в фоне (без окна Termux) и войдёт.",
-                                    "Local environment is not running. Tap below — MURF starts services in the background (no Termux window) and signs in."))
+                                Text(localizedString("Local environment is not running. Tap below — MURF starts services in the background (no Termux window) and signs in."))
                                 localBusy?.let { Text("⏳ $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
                                 localError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                                 if (localLog.isNotBlank()) {
@@ -349,18 +348,17 @@ private fun DshPhonePanel(
                                 }
                                 Button(
                                     enabled = localBusy == null,
-                                    onClick = { runSwitchToLocal(tr("Запуск…", "Starting…")) },
+                                    onClick = { runSwitchToLocal(localizedString("Starting…")) },
                                 ) {
                                     Text(
-                                        if (localError != null) tr("Повторить запуск и вход", "Retry start and sign-in")
-                                        else tr("Запустить и войти на телефон", "Start and sign in on phone"),
+                                        if (localError != null) localizedString("Retry start and sign-in")
+                                        else localizedString("Start and sign in on phone"),
                                     )
                                 }
-                                TextButton(onClick = onLocal) { Text(tr("Открыть «Локальная среда»", "Open “Local environment”")) }
+                                TextButton(onClick = onLocal) { Text(localizedString("Open “Local environment”")) }
                             }
                             st == null -> {
-                                Text(tr("Нет входа в локальную среду — войдите один раз (профиль «Телефон»).",
-                                    "Not logged in to the local environment — sign in once (Phone profile)."))
+                                Text(localizedString("Not logged in to the local environment — sign in once (Phone profile)."))
                                 localBusy?.let { Text("⏳ $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
                                 localError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                                 if (localLog.isNotBlank()) {
@@ -378,31 +376,29 @@ private fun DshPhonePanel(
                                 }
                                 Button(
                                     enabled = localBusy == null,
-                                    onClick = { runSwitchToLocal(tr("Вход…", "Signing in…")) },
+                                    onClick = { runSwitchToLocal(localizedString("Signing in…")) },
                                 ) {
                                     Text(
-                                        if (localError != null) tr("Повторить вход", "Retry sign-in")
-                                        else tr("Войти на телефон", "Sign in on phone"),
+                                        if (localError != null) localizedString("Retry sign-in")
+                                        else localizedString("Sign in on phone"),
                                     )
                                 }
                             }
-                            st.optBoolean("installed") -> Text(tr("Установлен dsh ", "Installed dsh ") + st.optString("version") +
-                                tr(" · мост телефона: ", " · phone bridge: ") + (if (st.optBoolean("phone_bridge")) tr("подключён", "connected") else tr("не подключён", "not connected")))
+                            st.optBoolean("installed") -> Text(localizedString("Installed dsh ") + st.optString("version") +
+                                localizedString(" · phone bridge: ") + (if (st.optBoolean("phone_bridge")) localizedString("connected") else localizedString("not connected")))
                             else -> {
                                 val pr = st.optJSONObject("progress")
-                                Text(tr("DeepSeek Harness ещё не установлен в Ubuntu на телефоне (~350 МБ: Node.js 22 + dsh 0.2.1-rc.2).",
-                                    "DeepSeek Harness is not installed yet (~350 MB: Node.js 22 + dsh 0.2.1-rc.2)."))
+                                Text(localizedString("DeepSeek Harness is not installed yet (~350 MB: Node.js 22 + dsh 0.2.1-rc.2)."))
                                 if (pr != null) {
                                     Text(pr.optString("msg"), style = MaterialTheme.typography.bodySmall)
                                     if (pr.optString("state") == "running") {
                                         LinearProgressIndicator(progress = { pr.optInt("pct") / 100f }, Modifier.fillMaxWidth())
-                                        Text(tr("npm может идти 5–20 мин. Не отключайте Wi‑Fi; прогресс здесь в MURF — полоска двигается раз в ~20 с.",
-                                            "npm can take 5–20 min. Keep Wi‑Fi on; progress stays in MURF — the bar moves about every 20s."),
+                                        Text(localizedString("npm can take 5–20 min. Keep Wi‑Fi on; progress stays in MURF — the bar moves about every 20s."),
                                             style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                                 if (pr?.optString("state") != "running") Button(onClick = { scope.launch { DshLocal.post(cookieJar, "install", JSONObject()); onRefresh() } }) {
-                                    Text(if (pr?.optString("state") == "error") tr("Повторить установку", "Retry install") else tr("Установить", "Install"))
+                                    Text(if (pr?.optString("state") == "error") localizedString("Retry install") else localizedString("Install"))
                                 }
                             }
                         }
@@ -411,12 +407,12 @@ private fun DshPhonePanel(
                         // Всегда показываем блок авторизации (api-key method как в оригинальном DSH)
                         ProviderQuickSetup(Modifier.fillMaxWidth())
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = onProviders) { Text(tr("Все провайдеры", "All providers")) }
+                            OutlinedButton(onClick = onProviders) { Text(localizedString("All providers")) }
                             Button(
                                 onClick = { onOpenChat("") },
                                 enabled = st?.optBoolean("installed") == true && authorized,
                             ) {
-                                Text(tr("Новый чат", "New chat"))
+                                Text(localizedString("New chat"))
                             }
                         }
                         if (!authorized) {
@@ -426,20 +422,19 @@ private fun DshPhonePanel(
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
-                        Text(tr("DeepSeek Harness — открытый агент DeepSeek (MIT). На телефоне: авторизация API-токеном (как «Paste a key» в оригинале); токен шифруется в MURF. OAuth/device-code провайдеров DSH — позже. Телеметрия dsh отключена.",
-                            "DeepSeek Harness is DeepSeek's open agent (MIT). On phone: authorize with an API token (like “Paste a key” upstream); token is encrypted in MURF. DSH OAuth/device-code flows — later. dsh telemetry is off."),
+                        Text(localizedString("DeepSeek Harness is DeepSeek's open agent (MIT). On phone: authorize with an API token (like “Paste a key” upstream); token is encrypted in MURF. DSH OAuth/device-code flows — later. dsh telemetry is off."),
                             style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
-            if (sessions.isNotEmpty()) item { Text(tr("Сессии", "Sessions"), style = MaterialTheme.typography.titleMedium) }
+            if (sessions.isNotEmpty()) item { Text(localizedString("Sessions"), style = MaterialTheme.typography.titleMedium) }
             items(sessions, key = { it.optString("id") }) { s ->
                 val u = s.optJSONObject("usage")
                 Card(Modifier.fillMaxWidth().clickable { onOpenChat(s.optString("id")) }) {
                     Column(Modifier.padding(12.dp)) {
                         Text(s.optString("title").ifBlank { s.optString("id") }, fontWeight = FontWeight.Medium, maxLines = 2)
                         Text(SimpleDateFormat("dd.MM HH:mm", Locale.ROOT).format(Date(s.optLong("updated") * 1000)) + " · " +
-                            s.optString("route") + " · " + tr("ходов ", "turns ") + s.optInt("turns") +
+                            s.optString("route") + " · " + localizedString("turns ") + s.optInt("turns") +
                             (u?.let { " · " + fmtTokens(it.optLong("input") + it.optLong("cacheRead") + it.optLong("cacheWrite") + it.optLong("output")) + " tok" } ?: ""),
                             style = MaterialTheme.typography.bodySmall)
                     }
@@ -501,7 +496,7 @@ private fun DshRemotePanel(
         val raw = if (server.contains("auth=", ignoreCase = true)) server.trim() else "${server.trim()} ${code.trim()}"
         val payload = PairPayloadParser.parse(raw)
         if (payload == null || payload.protocol != PairProtocol.DshRemote) {
-            error = tr("Нужна ссылка Harness с ?auth= или адрес + 8‑символьный код", "Need a Harness ?auth= link or address + 8-character code")
+            error = localizedString("Need a Harness ?auth= link or address + 8-character code")
             return
         }
         busy = true
@@ -544,7 +539,7 @@ private fun DshRemotePanel(
         item {
             Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(tr("Harness на сервере", "Harness on server"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(localizedString("Harness on server"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         tr(
                             "Удалённый клиент DeepSeek Harness (remote UI) внутри MURF: сопряжение по ссылке/?auth= или адресу + коду, затем чат и агент в приложении. Экран агента / VNC не нужен.",
@@ -553,22 +548,22 @@ private fun DshRemotePanel(
                         style = MaterialTheme.typography.bodySmall,
                     )
                     if (paired != null) {
-                        Text(tr("Сессия клиента: ", "Client session: ") + paired, style = MaterialTheme.typography.bodySmall)
+                        Text(localizedString("Client session: ") + paired, style = MaterialTheme.typography.bodySmall)
                         Button(
                             onClick = { clientBase = paired.trimEnd('/') + "/" },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(tr("Открыть клиент Harness", "Open Harness client"))
+                            Text(localizedString("Open Harness client"))
                         }
                     } else if (remembered != null) {
-                        Text(tr("Запомнен адрес: ", "Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
+                        Text(localizedString("Remembered address: ") + remembered, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            tr("Сессии ещё нет — введите код ещё раз (лучше постоянный).", "No session yet — enter the code again (prefer the permanent one)."),
+                            localizedString("No session yet — enter the code again (prefer the permanent one)."),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     OutlinedButton(onClick = { openTopUp() }, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Пополнить DeepSeek", "Top up DeepSeek"))
+                        Text(localizedString("Top up DeepSeek"))
                     }
                     Text(
                         tr(
@@ -583,7 +578,7 @@ private fun DshRemotePanel(
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(tr("Сопряжение", "Pairing"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(localizedString("Pairing"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text(
                         tr(
                             "В Desktop Harness: Удалённый доступ → код / QR. Вставьте сюда ссылку ?auth= или адрес + 8 символов. Один раз сохраните постоянный код.",
@@ -594,7 +589,7 @@ private fun DshRemotePanel(
                     OutlinedTextField(
                         value = server,
                         onValueChange = { server = it },
-                        label = { Text(tr("Адрес или ссылка ?auth=", "Address or ?auth= link")) },
+                        label = { Text(localizedString("Address or ?auth= link")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy,
@@ -602,7 +597,7 @@ private fun DshRemotePanel(
                     OutlinedTextField(
                         value = code,
                         onValueChange = { code = it.trim().uppercase() },
-                        label = { Text(tr("Код (8 символов, если не в ссылке)", "Code (8 chars if not in the link)")) },
+                        label = { Text(localizedString("Code (8 chars if not in the link)")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy,
@@ -612,27 +607,27 @@ private fun DshRemotePanel(
                         enabled = canSubmit && !busy,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(if (busy) tr("Подключение…", "Connecting…") else tr("Привязать и открыть клиент", "Pair and open client"))
+                        Text(if (busy) localizedString("Connecting…") else localizedString("Pair and open client"))
                     }
                     if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     if (info != null) Text(info!!, style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = onDevices, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Устройства (Hermes QR)", "Devices (Hermes QR)"))
+                        Text(localizedString("Devices (Hermes QR)"))
                     }
                 }
             }
         }
         item {
-            Text(tr("Связанные экраны", "Related screens"), style = MaterialTheme.typography.titleSmall)
+            Text(localizedString("Related screens"), style = MaterialTheme.typography.titleSmall)
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onLocal, modifier = Modifier.weight(1f)) { Text(tr("Локальная среда", "Local environment")) }
-                OutlinedButton(onClick = onPhone, modifier = Modifier.weight(1f)) { Text(tr("Телефон и Termux", "Phone & Termux")) }
+                OutlinedButton(onClick = onLocal, modifier = Modifier.weight(1f)) { Text(localizedString("Local environment")) }
+                OutlinedButton(onClick = onPhone, modifier = Modifier.weight(1f)) { Text(localizedString("Phone & Termux")) }
             }
         }
         item {
-            OutlinedButton(onClick = onProviders, modifier = Modifier.fillMaxWidth()) { Text(tr("Провайдеры моделей", "Model providers")) }
+            OutlinedButton(onClick = onProviders, modifier = Modifier.fillMaxWidth()) { Text(localizedString("Model providers")) }
         }
         item { Spacer(Modifier.padding(8.dp)) }
     }
@@ -673,28 +668,28 @@ private fun DshRemoteClient(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Клиент Harness", "Harness client"), maxLines = 1) },
+            title = { Text(localizedString("Harness client"), maxLines = 1) },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back"))
+                    Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back"))
                 }
             },
             actions = {
-                TextButton(onClick = onTopUp) { Text(tr("Пополнить", "Top up")) }
+                TextButton(onClick = onTopUp) { Text(localizedString("Top up")) }
                 TextButton(onClick = {
                     runCatching {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, Uri.parse(baseUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
-                }) { Text(tr("Браузер", "Browser")) }
+                }) { Text(localizedString("Browser")) }
             },
         )
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (httpUrl == null) {
                 Text(
-                    tr("Некорректный адрес клиента", "Invalid client address"),
+                    localizedString("Invalid client address"),
                     Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -785,8 +780,8 @@ private fun DshChat(cookieJar: CookieJar, initialSession: String?, onBack: () ->
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(if (initialSession == null && tr0.sessionId == null) tr("Новый чат DSH", "New DSH chat") else tr("Чат DSH", "DSH chat"), maxLines = 1) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
+            title = { Text(if (initialSession == null && tr0.sessionId == null) localizedString("New DSH chat") else localizedString("DSH chat"), maxLines = 1) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
         )
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().imePadding()) {
@@ -798,12 +793,12 @@ private fun DshChat(cookieJar: CookieJar, initialSession: String?, onBack: () ->
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 val t = PhoneTool.of(req.tool)
-                                Text(tr("Агент просит: ", "Agent asks: ") + (t?.title ?: req.tool), fontWeight = FontWeight.SemiBold)
+                                Text(localizedString("Agent asks: ") + (t?.title ?: req.tool), fontWeight = FontWeight.SemiBold)
                                 if (req.summary.isNotBlank()) Text(req.summary, style = MaterialTheme.typography.bodySmall)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = { PhoneBridge.decide(context, req.id, "allow") }) { Text(tr("Разрешить", "Allow")) }
-                                    OutlinedButton(onClick = { PhoneBridge.decide(context, req.id, "deny") }) { Text(tr("Отклонить", "Deny")) }
-                                    if (t != null && !t.screenControl) TextButton(onClick = { PhoneBridge.decide(context, req.id, "always") }) { Text(tr("Всегда", "Always")) }
+                                    Button(onClick = { PhoneBridge.decide(context, req.id, "allow") }) { Text(localizedString("Allow")) }
+                                    OutlinedButton(onClick = { PhoneBridge.decide(context, req.id, "deny") }) { Text(localizedString("Deny")) }
+                                    if (t != null && !t.screenControl) TextButton(onClick = { PhoneBridge.decide(context, req.id, "always") }) { Text(localizedString("Always")) }
                                 }
                             }
                         }
@@ -811,23 +806,23 @@ private fun DshChat(cookieJar: CookieJar, initialSession: String?, onBack: () ->
                 }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(selected = phoneTools, onClick = { phoneTools = !phoneTools }, label = { Text(tr("Телефон", "Phone"), fontSize = 12.sp) })
+                FilterChip(selected = phoneTools, onClick = { phoneTools = !phoneTools }, label = { Text(localizedString("Phone"), fontSize = 12.sp) })
                 if (running) FilterChip(selected = userControl, onClick = {
                     userControl = !userControl; MurfAccessibilityService.userHasControl = userControl
-                }, label = { Text(if (userControl) tr("Экран у меня", "I have the screen") else tr("Взять экран", "Take screen"), fontSize = 12.sp) })
+                }, label = { Text(if (userControl) localizedString("I have the screen") else localizedString("Take screen"), fontSize = 12.sp) })
                 Spacer(Modifier.weight(1f))
                 val sel = MurfProviders.selected(context)
-                TextButton(onClick = onProviders) { Text(sel?.second ?: tr("модель?", "model?"), fontSize = 12.sp, maxLines = 1) }
+                TextButton(onClick = onProviders) { Text(sel?.second ?: localizedString("model?"), fontSize = 12.sp, maxLines = 1) }
             }
             Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f),
-                    placeholder = { Text(tr("Задача для агента…", "Task for the agent…")) }, maxLines = 6)
+                    placeholder = { Text(localizedString("Task for the agent…")) }, maxLines = 6)
                 Spacer(Modifier.width(8.dp))
                 if (running) Button(onClick = {
                     scope.launch { DshLocal.post(cookieJar, "stop", JSONObject()) }
                     MurfAccessibilityService.userHasControl = true; userControl = true
-                }) { Text(tr("Стоп", "Stop")) }
-                else Button(onClick = { val t = input; input = ""; send(t) }, enabled = input.isNotBlank()) { Text(tr("Отправить", "Send")) }
+                }) { Text(localizedString("Stop")) }
+                else Button(onClick = { val t = input; input = ""; send(t) }, enabled = input.isNotBlank()) { Text(localizedString("Send")) }
             }
         }
     }
@@ -843,7 +838,7 @@ private fun DshItemView(item: DshItem, onRetry: (String) -> Unit) {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.padding(10.dp)) {
                     SelectionContainer { Text(item.text) }
-                    Text(tr("Повторить", "Retry"), Modifier.clickable { onRetry(item.text) }.padding(top = 4.dp),
+                    Text(localizedString("Retry"), Modifier.clickable { onRetry(item.text) }.padding(top = 4.dp),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             }

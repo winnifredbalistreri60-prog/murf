@@ -254,7 +254,7 @@ fun SettingsRoute(
                     com.uzairansar.hermex.agent.LanguageSettingsRow()
                     SettingsDivider()
                     com.uzairansar.hermex.agent.FontSizeControls(Modifier.padding(vertical = 10.dp))
-                    SettingsFootnote(tr("Действует во всём приложении: чат, Markdown, блоки кода, шаги инструментов, меню. Быстро — из меню «…» в чате.", "Applies to the whole app: chat, Markdown, code blocks, tool steps, menus. Quick access — from the “…” menu in chat."))
+                    SettingsFootnote(localizedString("Applies to the whole app: chat, Markdown, code blocks, tool steps, menus. Quick access — from the “…” menu in chat."))
                     SettingsDivider()
                     HeaderLogoColorSettings(
                         selectedHex = state.headerLogoColorHex,
@@ -295,43 +295,43 @@ fun SettingsRoute(
                 SettingsSection(title = "Interaction", collapsible = true) {
                     val swipesOn by com.uzairansar.hermex.agent.UiPrefs.swipesEnabled.collectAsState()
                     SettingsToggleRow(
-                        label = tr("Свайпы", "Swipes"),
+                        label = localizedString("Swipes"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_move_horizontal,
                         value = swipesOn,
                         switchTestTag = "swipes_toggle",
                         onValueChange = com.uzairansar.hermex.agent.UiPrefs::setSwipesEnabled,
                     )
-                    SettingsFootnote(tr("Главное меню: влево/вправо — следующий/предыдущий раздел (Чаты → Экран → Телефон → Диск → панели). В чате: вправо от левой половины — к списку чатов, влево — экран агента; на экране агента вправо — закрыть.", "Main menu: swipe left/right — next/previous section (Chats → Screen → Phone → Drive → panels). In chat: swipe right from the left half — to the chat list, left — agent screen; on the agent screen swipe right — close."))
+                    SettingsFootnote(localizedString("Main menu: swipe left/right — next/previous section (Chats → Screen → Phone → Drive → panels). In chat: swipe right from the left half — to the chat list, left — agent screen; on the agent screen swipe right — close."))
                     SettingsDivider()
                     val miniOn by com.uzairansar.hermex.agent.UiPrefs.miniPreview.collectAsState()
                     SettingsToggleRow(
-                        label = tr("Мини-превью экрана в чате", "Mini screen preview in chat"),
+                        label = localizedString("Mini screen preview in chat"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_monitor,
                         value = miniOn,
                         switchTestTag = "mini_preview_toggle",
                         onValueChange = com.uzairansar.hermex.agent.UiPrefs::setMiniPreview,
                     )
-                    SettingsFootnote(tr("Выключено: экран агента открывается кнопкой с монитором в шапке чата (зелёная точка — агент работает). Включено: пока агент работает, в углу чата маленький экран — его можно перетащить или закрыть ×.", "Off: the agent screen opens with the monitor button in the chat header (green dot — the agent is working). On: while the agent works, a small screen sits in the chat corner — drag it or close it with ×."))
+                    SettingsFootnote(localizedString("Off: the agent screen opens with the monitor button in the chat header (green dot — the agent is working). On: while the agent works, a small screen sits in the chat corner — drag it or close it with ×."))
                     SettingsDivider()
                     val animOn by com.uzairansar.hermex.agent.UiPrefs.animations.collectAsState()
                     SettingsToggleRow(
-                        label = tr("Анимации", "Animations"),
+                        label = localizedString("Animations"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_move_horizontal,
                         value = animOn,
                         switchTestTag = "animations_toggle",
                         onValueChange = com.uzairansar.hermex.agent.UiPrefs::setAnimations,
                     )
-                    SettingsFootnote(tr("Плавное появление сообщений, индикатор работы агента и переходы между экранами. Если в Android включено «Удалить анимацию», анимаций не будет.", "Smooth message appearance, the agent working indicator and screen transitions. If Android “Remove animations” is on, animations stay off."))
+                    SettingsFootnote(localizedString("Smooth message appearance, the agent working indicator and screen transitions. If Android “Remove animations” is on, animations stay off."))
                     SettingsDivider()
                     val waterOn by com.uzairansar.hermex.agent.UiPrefs.waterMascots.collectAsState()
                     SettingsToggleRow(
-                        label = tr("Водяные коротышки у ботов", "Water mascots for bots"),
+                        label = localizedString("Water mascots for bots"),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_lucide_move_horizontal,
                         value = waterOn,
                         switchTestTag = "water_mascots_toggle",
                         onValueChange = com.uzairansar.hermex.agent.UiPrefs::setWaterMascots,
                     )
-                    SettingsFootnote(tr("Объёмные прозрачные человечки из воды. Двигаются, только пока бот работает или ждёт подтверждения, и только если анимации включены. Выключено: простые нарисованные значки.", "Glossy see-through water characters. They move only while a bot is working or waiting for approval, and only with animations on. Off: simple drawn icons."))
+                    SettingsFootnote(localizedString("Glossy see-through water characters. They move only while a bot is working or waiting for approval, and only with animations on. Off: simple drawn icons."))
                     SettingsDivider()
                     SettingsToggleRow(
                         label = localizedString("Haptic Feedback"),
@@ -695,8 +695,8 @@ fun SettingsRoute(
                     SettingsInfoRow(localizedString("Build"), appInfo.build)
                     var showsProblemReport by remember { mutableStateOf(false) }
                     SettingsActionRow(
-                        label = tr("Сообщить о проблеме", "Report a problem"),
-                        value = tr("журнал без секретов", "log without secrets"),
+                        label = localizedString("Report a problem"),
+                        value = localizedString("log without secrets"),
                         onClick = { showsProblemReport = true },
                     )
                     if (showsProblemReport) {
@@ -707,8 +707,8 @@ fun SettingsRoute(
                         )
                     }
                     SettingsActionRow(
-                        label = tr("Проверить обновления", "Check for updates"),
-                        value = tr("Релизы GitHub", "GitHub Releases"),
+                        label = localizedString("Check for updates"),
+                        value = localizedString("GitHub Releases"),
                         onClick = {
                             com.uzairansar.hermex.agent.AppUpdates.openDialog()
                             com.uzairansar.hermex.agent.AppUpdates.check(context, auto = false)
@@ -794,7 +794,7 @@ private fun SettingsSection(
         if (collapsible) {
             TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
                 Text(localizedString(title).uppercase(), modifier = Modifier.weight(1f))
-                Text(if (expanded) tr("Свернуть", "Collapse") else tr("Настроить", "Configure"))
+                Text(if (expanded) localizedString("Collapse") else localizedString("Configure"))
             }
         } else Text(
             text = localizedString(title).uppercase(),

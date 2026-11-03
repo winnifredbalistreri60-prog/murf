@@ -1,8 +1,10 @@
 package com.uzairansar.hermex.core.network
 
 import com.uzairansar.hermex.core.model.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -480,11 +482,35 @@ class HermesApiClient(
             .method(method, encodedBody)
             .header("Accept", "application/json")
         val request = builder.build()
-        val callClient = timeoutSeconds?.let {
-            client.newBuilder().callTimeout(it.seconds.inWholeMilliseconds, java.util.concurrent.TimeUnit.MILLISECONDS).build()
-        } ?: client
-        return executeAndDecode(callClient.newCall(request))
+        val callClient = if (timeoutSeconds != null) timeoutClient(timeoutSeconds) else client
+        if (method != "GET") return executeAndDecode(callClient.newCall(request))
+        // Идемпотентные GET: единичная сетевая заминка (роуминг, обрыв Wi-Fi) не должна
+        // сразу отдавать ошибку — до 3 попыток с нарастающей паузой. На HTTP 5xx не
+        // ретраим: сервер отвечает, повтор только умножал бы нагрузку на него.
+        var lastError: Throwable? = null
+        for (attempt in 1..IDEMPOTENT_GET_ATTEMPTS) {
+            try {
+                return executeAndDecode(callClient.newCall(request))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ApiError.Network) {
+                lastError = e
+            }
+            if (attempt < IDEMPOTENT_GET_ATTEMPTS) delay(IDEMPOTENT_RETRY_BASE_DELAY_MS * attempt)
+        }
+        throw lastError!!
     }
+
+    /**
+     * Клиенты с нестандартным callTimeout кэшируются: раньше каждый длинный запрос
+     * строил собственный OkHttpClient (свой пул соединений и потоков).
+     */
+    private val timeoutClients = java.util.concurrent.ConcurrentHashMap<Long, OkHttpClient>()
+
+    private fun timeoutClient(timeoutSeconds: Long): OkHttpClient =
+        timeoutClients.computeIfAbsent(timeoutSeconds) { secs ->
+            client.newBuilder().callTimeout(secs, java.util.concurrent.TimeUnit.SECONDS).build()
+        }
 
     private suspend fun data(
         endpoint: Endpoint,
@@ -616,6 +642,8 @@ class HermesApiClient(
     )
 
     companion object {
+        private const val IDEMPOTENT_GET_ATTEMPTS = 3
+        private const val IDEMPOTENT_RETRY_BASE_DELAY_MS = 500L
         private const val MAX_JSON_RESPONSE_BYTES = 16L * 1024L * 1024L
         private const val MAX_PREVIEW_RESPONSE_BYTES = 16L * 1024L * 1024L
         private const val MAX_MEDIA_RESPONSE_BYTES = 20L * 1024L * 1024L

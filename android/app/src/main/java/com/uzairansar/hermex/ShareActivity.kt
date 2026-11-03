@@ -40,7 +40,7 @@ class ShareActivity : ComponentActivity() {
                 if (result.rejectedAttachmentCount > 0) {
                     Toast.makeText(
                         this@ShareActivity,
-                        "${result.rejectedAttachmentCount} - ${localizedString("Could Not Load Attachment")}",
+                        "${result.rejectedAttachmentCount} - ${this@ShareActivity.localizedString("Could Not Load Attachment")}",
                         Toast.LENGTH_LONG,
                     ).show()
                 }
@@ -51,7 +51,7 @@ class ShareActivity : ComponentActivity() {
             } else {
                 Toast.makeText(
                     this@ShareActivity,
-                    localizedString("Could Not Load Attachment"),
+                    this@ShareActivity.localizedString("Could Not Load Attachment"),
                     Toast.LENGTH_LONG,
                 ).show()
             }

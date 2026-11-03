@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
         if (!StreamRecoveryService.resumePending(this)) {
             Toast.makeText(
                 this,
-                localizedString("Background stream recovery could not start."),
+                this.localizedString("Background stream recovery could not start."),
                 Toast.LENGTH_LONG,
             ).show()
         }

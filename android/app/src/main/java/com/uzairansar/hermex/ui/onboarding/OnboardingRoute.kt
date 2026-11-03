@@ -128,12 +128,12 @@ private fun OnboardingRouteContent(
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return OnboardingViewModel(authRepository) as T
+                return OnboardingViewModel(authRepository, application = context.applicationContext) as T
             }
 
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 @Suppress("UNCHECKED_CAST")
-                return OnboardingViewModel(authRepository, extras.createSavedStateHandle()) as T
+                return OnboardingViewModel(authRepository, extras.createSavedStateHandle(), application = context.applicationContext) as T
             }
         }
     }
@@ -1122,21 +1122,21 @@ private fun OnboardingBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OnboardingActionButton(
-                    label = com.uzairansar.hermex.agent.tr("QR-код", "Scan QR"),
+                    label = com.uzairansar.hermex.agent.localizedString("Scan QR"),
                     primary = false,
                     enabled = !isBusy,
                     modifier = Modifier.weight(1f),
                     onClick = onScanQr,
                 )
                 OnboardingActionButton(
-                    label = com.uzairansar.hermex.agent.tr("Код вручную", "Enter code"),
+                    label = com.uzairansar.hermex.agent.localizedString("Enter code"),
                     primary = false,
                     enabled = !isBusy,
                     modifier = Modifier.weight(1f),
                     onClick = onManualPair,
                 )
                 OnboardingActionButton(
-                    label = com.uzairansar.hermex.agent.tr("Свой VDS", "My VDS"),
+                    label = com.uzairansar.hermex.agent.localizedString("My VDS"),
                     primary = false,
                     enabled = !isBusy,
                     modifier = Modifier.weight(1f),
@@ -1162,7 +1162,7 @@ private fun OnboardingBottomBar(
                         .padding(horizontal = 8.dp, vertical = 12.dp),
                 )
                 Text(
-                    text = com.uzairansar.hermex.agent.tr("Агент на телефоне (DeepSeek Harness, без сервера)", "On-phone agent (DeepSeek Harness, no server)"),
+                    text = com.uzairansar.hermex.agent.localizedString("On-phone agent (DeepSeek Harness, no server)"),
                     color = Color.White.copy(alpha = 0.55f),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,

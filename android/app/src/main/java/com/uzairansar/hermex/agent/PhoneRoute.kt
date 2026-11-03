@@ -93,7 +93,7 @@ private fun CodeBox(code: String, onCopy: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp)) {
             SelectionContainer { Text(code, fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
-            TextButton(onClick = onCopy) { Text(tr("Копировать", "Copy")) }
+            TextButton(onClick = onCopy) { Text(localizedString("Copy")) }
         }
     }
 }
@@ -117,20 +117,20 @@ fun PhoneRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Телефон и Termux", "Phone & Termux")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
-            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) } },
+            title = { Text(localizedString("Phone & Termux")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
+            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), localizedString("Update")) } },
         )
     }) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Section(tr("Мост «Телефон»", "Phone bridge")) {
-                Text(tr("Когда мост включён, агент на сервере может попросить телефон выполнить действие: команду в Termux, фото, геопозицию, передачу файлов. Каждый запрос подтверждается здесь или в уведомлении, кроме разрешённых «всегда».", "When the bridge is on, the agent on the server can ask the phone to do something: a Termux command, a photo, location, file transfer. Each request is confirmed here or in a notification, except those allowed “always”."),
+            Section(localizedString("Phone bridge")) {
+                Text(localizedString("When the bridge is on, the agent on the server can ask the phone to do something: a Termux command, a photo, location, file transfer. Each request is confirmed here or in a notification, except those allowed “always”."),
                     style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (enabled) tr("Включён", "On") else tr("Выключен", "Off"), Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                    Text(if (enabled) localizedString("On") else localizedString("Off"), Modifier.weight(1f), fontWeight = FontWeight.Medium)
                     Switch(checked = enabled, onCheckedChange = { v ->
                         enabled = v
                         if (v) {
@@ -141,91 +141,90 @@ fun PhoneRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
                 }
                 Text(
                     when {
-                        !enabled -> tr("Агент не видит телефон.", "The agent can't see the phone.")
+                        !enabled -> localizedString("The agent can't see the phone.")
                         ui.connected -> tr("● Подключено к ${server.host} — агент видит телефон", "● Connected to ${server.host} — the agent sees the phone")
-                        else -> tr("○ Подключение… ", "○ Connecting… ") + (ui.lastError ?: "")
+                        else -> localizedString("○ Connecting… ") + (ui.lastError ?: "")
                     },
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
 
-            Section(tr("Агент на телефоне (DeepSeek Harness)", "On-phone agent (DeepSeek Harness)")) {
+            Section(localizedString("On-phone agent (DeepSeek Harness)")) {
                 val a11y = remember(refresh) { MurfAccessibilityService.enabled(context) }
                 val notif = remember(refresh) { MurfNotificationListener.enabled(context) }
-                Text(if (ui.localConnected) tr("● Мост подключён к локальной среде (127.0.0.1)", "● Bridge connected to the local environment")
-                    else tr("○ Локальная среда: мост не подключён (запустите среду и включите мост)", "○ Local environment: bridge not connected"),
+                Text(if (ui.localConnected) localizedString("● Bridge connected to the local environment")
+                    else localizedString("○ Local environment: bridge not connected"),
                     style = MaterialTheme.typography.bodySmall)
-                Text((if (a11y) "✓" else "✗") + tr(" Управление экраном (спец. возможности): снимок, что на экране, нажатия, свайпы, ввод", " Screen control (accessibility): screenshot, screen contents, taps, swipes, typing"))
-                Text((if (notif) "✓" else "✗") + tr(" Доступ к уведомлениям (чтение для агента)", " Notification access (read for the agent)"))
+                Text((if (a11y) "✓" else "✗") + localizedString(" Screen control (accessibility): screenshot, screen contents, taps, swipes, typing"))
+                Text((if (notif) "✓" else "✗") + localizedString(" Notification access (read for the agent)"))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { context.startActivity(MurfAccessibilityService.settingsIntent()) }) { Text(tr("Спец. возможности", "Accessibility")) }
-                    OutlinedButton(onClick = { context.startActivity(MurfNotificationListener.settingsIntent()) }) { Text(tr("Уведомления", "Notifications")) }
+                    OutlinedButton(onClick = { context.startActivity(MurfAccessibilityService.settingsIntent()) }) { Text(localizedString("Accessibility")) }
+                    OutlinedButton(onClick = { context.startActivity(MurfNotificationListener.settingsIntent()) }) { Text(localizedString("Notifications")) }
                 }
-                Text(tr("Нажатия, свайпы и ввод текста в других приложениях подтверждаются каждый раз (без «Всегда»). Чтение/запись файлов вне Download/MURF, ссылки, снимки экрана, буфер обмена, геопозиция и команды Termux — с подтверждением. SMS по умолчанию выключены. «Взять экран» или «Стоп» в чате сразу запрещают агенту действия на экране.",
-                    "Taps, swipes and typing in other apps are confirmed every time (no “Always”). Files outside Download/MURF, links, screenshots, clipboard, location and Termux commands need confirmation. SMS is off by default. “Take screen” or “Stop” in chat immediately blocks screen actions."),
+                Text(localizedString("Taps, swipes and typing in other apps are confirmed every time (no “Always”). Files outside Download/MURF, links, screenshots, clipboard, location and Termux commands need confirmation. SMS is off by default. “Take screen” or “Stop” in chat immediately blocks screen actions."),
                     style = MaterialTheme.typography.labelSmall)
                 if (MurfAccessibilityService.userHasControl) TextButton(onClick = { MurfAccessibilityService.userHasControl = false; refresh++ }) {
-                    Text(tr("Вернуть агенту доступ к экрану", "Give the screen back to the agent"))
+                    Text(localizedString("Give the screen back to the agent"))
                 }
             }
 
             if (ui.pending.isNotEmpty()) {
-                Section(tr("Ждут подтверждения", "Awaiting confirmation")) {
+                Section(localizedString("Awaiting confirmation")) {
                     ui.pending.forEach { req ->
                         val tool = PhoneTool.of(req.tool)
                         Text("${tool?.title ?: req.tool}", fontWeight = FontWeight.Medium)
                         if (req.summary.isNotBlank()) Text(req.summary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { PhoneBridge.decide(context, req.id, "allow") }) { Text(tr("Разрешить", "Allow")) }
-                            OutlinedButton(onClick = { PhoneBridge.decide(context, req.id, "deny") }) { Text(tr("Отклонить", "Deny")) }
-                            if (tool?.screenControl != true) TextButton(onClick = { PhoneBridge.decide(context, req.id, "always"); auto = PhoneBridgeSettings.autoAllowed(context) + req.tool }) { Text(tr("Всегда", "Always")) }
+                            Button(onClick = { PhoneBridge.decide(context, req.id, "allow") }) { Text(localizedString("Allow")) }
+                            OutlinedButton(onClick = { PhoneBridge.decide(context, req.id, "deny") }) { Text(localizedString("Deny")) }
+                            if (tool?.screenControl != true) TextButton(onClick = { PhoneBridge.decide(context, req.id, "always"); auto = PhoneBridgeSettings.autoAllowed(context) + req.tool }) { Text(localizedString("Always")) }
                         }
                     }
                 }
             }
 
-            Section(tr("Termux: состояние", "Termux: status")) {
-                Text((if (termuxInstalled) "✓" else "✗") + tr(" Termux установлен", " Termux installed"))
-                Text((if (termuxApi) "✓" else "✗") + tr(" Termux:API установлен (фото, геопозиция, буфер, SMS)", " Termux:API installed (photo, location, clipboard, SMS)"))
-                Text((if (termuxPerm) "✓" else "✗") + tr(" Разрешение «Запуск команд в Termux»", " “Run commands in Termux” permission"))
+            Section(localizedString("Termux: status")) {
+                Text((if (termuxInstalled) "✓" else "✗") + localizedString(" Termux installed"))
+                Text((if (termuxApi) "✓" else "✗") + localizedString(" Termux:API installed (photo, location, clipboard, SMS)"))
+                Text((if (termuxPerm) "✓" else "✗") + localizedString(" “Run commands in Termux” permission"))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (termuxInstalled && !termuxPerm) Button(onClick = { permLauncher.launch(Termux.PERMISSION) }) { Text(tr("Выдать разрешение", "Grant permission")) }
+                    if (termuxInstalled && !termuxPerm) Button(onClick = { permLauncher.launch(Termux.PERMISSION) }) { Text(localizedString("Grant permission")) }
                     if (termuxInstalled && termuxPerm) Button(onClick = {
-                        testOutput = tr("Проверяю…", "Checking…")
+                        testOutput = localizedString("Checking…")
                         scope.launch {
                             val r = Termux.run(context, "echo \"Termux OK: \$(uname -m), \$(date)\"; command -v termux-location >/dev/null && echo 'termux-api: есть' || echo 'termux-api: нет (pkg install termux-api)'; command -v curl >/dev/null && echo 'curl: есть' || echo 'curl: нет'", timeoutMs = 30_000)
                             testOutput = r.combined()
                         }
-                    }) { Text(tr("Проверить", "Check")) }
+                    }) { Text(localizedString("Check")) }
                 }
                 testOutput?.let { Text(it, fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
             }
 
-            Section(tr("Настройка Termux (один раз)", "Termux setup (once)")) {
-                Text(tr("1. Установите Termux и Termux:API из F-Droid (версия из Google Play устарела и не подходит).", "1. Install Termux and Termux:API from F-Droid (the Google Play version is outdated and won't work)."))
+            Section(localizedString("Termux setup (once)")) {
+                Text(localizedString("1. Install Termux and Termux:API from F-Droid (the Google Play version is outdated and won't work)."))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { open(context, "https://f-droid.org/packages/com.termux/") }) { Text("Termux") }
                     OutlinedButton(onClick = { open(context, "https://f-droid.org/packages/com.termux.api/") }) { Text("Termux:API") }
                     TextButton(onClick = { open(context, "https://github.com/termux/termux-app/releases") }) { Text("GitHub") }
                 }
-                Text(tr("2. Откройте Termux и выполните (поставит termux-api, curl, rclone, доступ к памяти и разрешит внешние команды):", "2. Open Termux and run (installs termux-api, curl, rclone, storage access and allows external commands):"))
-                CodeBox(Termux.SETUP_SCRIPT) { AgentShare.copy(context, Termux.SETUP_SCRIPT); AgentShare.toast(context, tr("Скопировано", "Copied")) }
+                Text(localizedString("2. Open Termux and run (installs termux-api, curl, rclone, storage access and allows external commands):"))
+                CodeBox(Termux.SETUP_SCRIPT) { AgentShare.copy(context, Termux.SETUP_SCRIPT); AgentShare.toast(context, localizedString("Copied")) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = {
                         AgentShare.copy(context, Termux.SETUP_SCRIPT)
                         context.packageManager.getLaunchIntentForPackage(Termux.PACKAGE)?.let { context.startActivity(it) }
-                            ?: AgentShare.toast(context, tr("Termux не установлен", "Termux is not installed"))
-                    }) { Text(tr("Скопировать и открыть Termux", "Copy and open Termux")) }
+                            ?: AgentShare.toast(context, localizedString("Termux is not installed"))
+                    }) { Text(localizedString("Copy and open Termux")) }
                 }
-                Text(tr("3. Вернитесь сюда, нажмите «Выдать разрешение», затем «Проверить». 4. Включите мост выше.", "3. Come back here, tap “Grant permission”, then “Check”. 4. Turn on the bridge above."), style = MaterialTheme.typography.bodySmall)
+                Text(localizedString("3. Come back here, tap “Grant permission”, then “Check”. 4. Turn on the bridge above."), style = MaterialTheme.typography.bodySmall)
             }
 
-            Section(tr("Что разрешено без вопроса", "Allowed without asking")) {
+            Section(localizedString("Allowed without asking")) {
                 PhoneTool.entries.filterNot { it.screenControl }.forEach { t ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(t.title)
-                            if (t.risky) Text(tr("лучше подтверждать", "better to confirm"), style = MaterialTheme.typography.labelSmall)
+                            if (t.risky) Text(localizedString("better to confirm"), style = MaterialTheme.typography.labelSmall)
                         }
                         Switch(checked = t.wire in auto, onCheckedChange = { v ->
                             PhoneBridgeSettings.setAutoAllowed(context, t.wire, v); auto = PhoneBridgeSettings.autoAllowed(context)
@@ -233,13 +232,13 @@ fun PhoneRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(tr("Разрешить агенту запрашивать SMS", "Let the agent request SMS"), Modifier.weight(1f))
+                    Text(localizedString("Let the agent request SMS"), Modifier.weight(1f))
                     Switch(checked = sms, onCheckedChange = { sms = it; PhoneBridgeSettings.setSmsEnabled(context, it) })
                 }
             }
 
             if (ui.log.isNotEmpty()) {
-                Section(tr("Последние запросы", "Recent requests")) {
+                Section(localizedString("Recent requests")) {
                     val fmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
                     ui.log.take(15).forEach { e ->
                         Text("${fmt.format(Date(e.time))}  ${PhoneTool.of(e.tool)?.title ?: e.tool} — ${e.state}", fontSize = 12.sp)
@@ -260,7 +259,7 @@ private fun open(context: android.content.Context, url: String) =
 fun DriveRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf(tr("Проверяю…", "Checking…")) }
+    var status by remember { mutableStateOf(localizedString("Checking…")) }
     var configured by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
     var token by remember { mutableStateOf("") }
@@ -269,12 +268,12 @@ fun DriveRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
 
     suspend fun sendToken(text: String) {
         busy = true
-        status = tr("Отправляю токен на сервер…", "Sending token to server…")
+        status = localizedString("Sending token to server…")
         status = runCatching {
             val body = buildJsonObject { put("token", JsonPrimitive(text)) }.toString()
             val resp = withContext(Dispatchers.IO) { postJson(cookieJar, server.newBuilder().encodedPath("/phone/api/drive-token").build(), body) }
             val o = Json.parseToJsonElement(resp).jsonObject
-            if (o["ok"].toString() == "true") tr("✓ Google Диск подключён к агенту", "✓ Google Drive connected to the agent") else tr("✗ Ошибка: ", "✗ Error: ") + o["error"]
+            if (o["ok"].toString() == "true") localizedString("✓ Google Drive connected to the agent") else localizedString("✗ Error: ") + o["error"]
         }.getOrElse { "✗ ${it.message}" }
         busy = false
         refresh++
@@ -285,50 +284,50 @@ fun DriveRoute(server: HttpUrl, cookieJar: CookieJar, onBack: () -> Unit) {
             val s = withContext(Dispatchers.IO) { getJson(cookieJar, server.newBuilder().encodedPath("/phone/api/drive-status").build()) }
             val o = Json.parseToJsonElement(s).jsonObject
             configured = o["configured"].toString() == "true"
-            if (!busy) status = if (configured) tr("✓ Агент подключён к Google Диску (remote gdrive:)", "✓ Agent is connected to Google Drive (remote gdrive:)") else tr("Агент ещё не подключён к Google Диску", "The agent is not connected to Google Drive yet")
+            if (!busy) status = if (configured) localizedString("✓ Agent is connected to Google Drive (remote gdrive:)") else localizedString("The agent is not connected to Google Drive yet")
         }.onFailure { if (!busy) status = tr("Не удалось узнать статус: ${it.message}", "Could not get status: ${it.message}") }
     }
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Google Диск", "Google Drive")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
-            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Update")) } },
+            title = { Text(localizedString("Google Drive")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
+            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), localizedString("Update")) } },
         )
     }) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Section(tr("Статус", "Status")) { Text(status) }
-            Section(tr("Сохранение из приложения", "Saving from the app")) {
-                Text(tr("Любое сообщение, беседу (Markdown/PDF), файл из рабочей папки или снимок экрана агента можно отправить в Google Диск кнопкой «В Google Диск» — откроется окно приложения Диск, вход не нужен.", "Any message, conversation (Markdown/PDF), workspace file or agent screenshot can be sent to Google Drive with “To Google Drive” — the Drive app opens, no login needed."),
+            Section(localizedString("Status")) { Text(status) }
+            Section(localizedString("Saving from the app")) {
+                Text(localizedString("Any message, conversation (Markdown/PDF), workspace file or agent screenshot can be sent to Google Drive with “To Google Drive” — the Drive app opens, no login needed."),
                     style = MaterialTheme.typography.bodySmall)
             }
-            Section(tr("Доступ агента к Диску (rclone)", "Agent access to Drive (rclone)")) {
-                Text(tr("Агент на сервере работает с вашим Диском через rclone. Нужна одна авторизация Google — пароль никуда не передаётся, на сервер уходит только токен rclone.", "The agent on the server works with your Drive via rclone. One Google authorization is needed — your password is never sent, only the rclone token goes to the server."),
+            Section(localizedString("Agent access to Drive (rclone)")) {
+                Text(localizedString("The agent on the server works with your Drive via rclone. One Google authorization is needed — your password is never sent, only the rclone token goes to the server."),
                     style = MaterialTheme.typography.bodySmall)
-                Text(tr("Вариант А — на этом телефоне (нужен Termux с разрешением, см. «Телефон и Termux»):", "Option A — on this phone (needs Termux with permission, see “Phone & Termux”):"), fontWeight = FontWeight.Medium)
+                Text(localizedString("Option A — on this phone (needs Termux with permission, see “Phone & Termux”):"), fontWeight = FontWeight.Medium)
                 Button(enabled = !busy, onClick = {
                     if (!Termux.isInstalled(context) || !Termux.hasPermission(context)) {
-                        AgentShare.toast(context, tr("Сначала настройте Termux в разделе «Телефон»", "Set up Termux in “Phone” first"))
+                        AgentShare.toast(context, localizedString("Set up Termux in “Phone” first"))
                     } else {
                         Termux.runVisible(context, authCmd)
-                        status = tr("В Termux откроется ссылка Google. Войдите, разрешите доступ, затем вернитесь и нажмите «Отправить токен».", "Termux will open a Google link. Sign in, allow access, then come back and tap “Send token”.")
+                        status = localizedString("Termux will open a Google link. Sign in, allow access, then come back and tap “Send token”.")
                     }
-                }) { Text(tr("1. Войти в Google через Termux", "1. Sign in to Google via Termux")) }
+                }) { Text(localizedString("1. Sign in to Google via Termux")) }
                 Button(enabled = !busy, onClick = {
                     scope.launch {
                         val r = Termux.run(context, "cat \$HOME/.agent-drive-auth.txt", timeoutMs = 30_000)
-                        if (!r.stdout.contains("{")) status = tr("Токен не найден: завершите вход в Termux (шаг 1).", "Token not found: finish signing in in Termux (step 1).") else sendToken(r.stdout)
+                        if (!r.stdout.contains("{")) status = localizedString("Token not found: finish signing in in Termux (step 1).") else sendToken(r.stdout)
                     }
-                }) { Text(tr("2. Отправить токен агенту", "2. Send token to the agent")) }
-                Text(tr("Вариант Б — на компьютере: установите rclone и выполните", "Option B — on a computer: install rclone and run"), fontWeight = FontWeight.Medium)
-                CodeBox("rclone authorize \"drive\"") { AgentShare.copy(context, "rclone authorize \"drive\""); AgentShare.toast(context, tr("Скопировано", "Copied")) }
-                Text(tr("Скопируйте весь блок {…} между «Paste the following» и «End paste» и вставьте сюда:", "Copy the whole {…} block between “Paste the following” and “End paste” and paste it here:"), style = MaterialTheme.typography.bodySmall)
+                }) { Text(localizedString("2. Send token to the agent")) }
+                Text(localizedString("Option B — on a computer: install rclone and run"), fontWeight = FontWeight.Medium)
+                CodeBox("rclone authorize \"drive\"") { AgentShare.copy(context, "rclone authorize \"drive\""); AgentShare.toast(context, localizedString("Copied")) }
+                Text(localizedString("Copy the whole {…} block between “Paste the following” and “End paste” and paste it here:"), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = token, onValueChange = { token = it }, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(tr("Токен rclone {…}", "rclone token {…}")) }, minLines = 2, maxLines = 5)
-                Button(enabled = !busy && token.contains("{"), onClick = { scope.launch { sendToken(token); token = "" } }) { Text(tr("Отправить токен", "Send token")) }
+                    label = { Text(localizedString("rclone token {…}")) }, minLines = 2, maxLines = 5)
+                Button(enabled = !busy && token.contains("{"), onClick = { scope.launch { sendToken(token); token = "" } }) { Text(localizedString("Send token")) }
             }
             Spacer(Modifier.height(24.dp))
         }

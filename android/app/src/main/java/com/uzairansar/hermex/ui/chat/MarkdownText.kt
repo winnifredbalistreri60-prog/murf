@@ -624,7 +624,7 @@ private fun ChatCodeBlock(
                 ) {
                     Text(
                         if (expanded) {
-                            com.uzairansar.hermex.agent.tr("Свернуть", "Collapse")
+                            com.uzairansar.hermex.agent.localizedString("Collapse")
                         } else {
                             com.uzairansar.hermex.agent.tr("Показать всё ($totalLines строк)", "Show all ($totalLines lines)")
                         },

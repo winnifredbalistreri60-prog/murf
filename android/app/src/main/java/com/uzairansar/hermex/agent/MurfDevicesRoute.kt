@@ -99,19 +99,19 @@ fun MurfDevicesRoute(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Устройства", "Devices")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
-            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), tr("Обновить", "Refresh")) } },
+            title = { Text(localizedString("Devices")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
+            actions = { IconButton(onClick = { refresh++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), localizedString("Refresh")) } },
         )
     }) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            DevicesSection(tr("Это устройство", "This device")) {
+            DevicesSection(localizedString("This device")) {
                 Text(
-                    if (thisPaired) tr("✓ Привязано по QR: при истечении сессии MURF войдёт сам, пароль не хранится.", "✓ Paired by QR: when the session expires MURF signs in by itself; no password is stored.")
-                    else tr("Вход выполнен паролем. Привяжите устройство, чтобы не вводить пароль снова (сессия будет обновляться по токену устройства из Keystore).", "Signed in with a password. Pair this device so you never type it again (the session is renewed with a device token kept in Keystore)."),
+                    if (thisPaired) localizedString("✓ Paired by QR: when the session expires MURF signs in by itself; no password is stored.")
+                    else localizedString("Signed in with a password. Pair this device so you never type it again (the session is renewed with a device token kept in Keystore)."),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (!thisPaired) Button(enabled = !busy, onClick = {
@@ -120,17 +120,17 @@ fun MurfDevicesRoute(
                         runCatching {
                             val c = api.newCode(server, "self")
                             auth.pairWithCode(server.toString(), c.code)
-                        }.onSuccess { info = tr("Устройство привязано", "Device paired") }
+                        }.onSuccess { info = localizedString("Device paired") }
                             .onFailure { error = it.message ?: it.javaClass.simpleName }
                         busy = false
                         refresh++
                     }
-                }) { Text(tr("Привязать это устройство", "Pair this device")) }
+                }) { Text(localizedString("Pair this device")) }
                 Text("ID: $myId", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
             }
 
-            DevicesSection(tr("Подключить другое устройство", "Connect another device")) {
-                Text(tr("Покажите QR второму телефону или планшету: MURF → «QR-код» на экране входа. Код одноразовый и живёт 3 минуты. Можно и на сервере: «murf pair».", "Show this QR to another phone or tablet: MURF → “Scan QR” on the sign-in screen. The code is single-use and lives 3 minutes. On the server: `murf pair`."),
+            DevicesSection(localizedString("Connect another device")) {
+                Text(localizedString("Show this QR to another phone or tablet: MURF → “Scan QR” on the sign-in screen. The code is single-use and lives 3 minutes. On the server: `murf pair`."),
                     style = MaterialTheme.typography.bodySmall)
                 val c = code
                 if (c == null) {
@@ -140,43 +140,43 @@ fun MurfDevicesRoute(
                             runCatching { api.newCode(server, "app") }.onSuccess { code = it }.onFailure { error = it.message ?: it.javaClass.simpleName }
                             busy = false
                         }
-                    }) { Text(tr("Показать QR", "Show QR")) }
+                    }) { Text(localizedString("Show QR")) }
                 } else {
                     val image = remember(c.payload) { qrImageBitmap(c.payload) }
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Image(image, tr("QR привязки", "Pairing QR"), Modifier.size(260.dp).background(Color.White))
+                        Image(image, localizedString("Pairing QR"), Modifier.size(260.dp).background(Color.White))
                         SelectionContainer { Text(c.code, fontFamily = FontFamily.Monospace, fontSize = 15.sp) }
                         Text(tr("Осталось $secondsLeft с", "$secondsLeft s left"), style = MaterialTheme.typography.bodySmall)
-                        TextButton(onClick = { code = null }) { Text(tr("Скрыть", "Hide")) }
+                        TextButton(onClick = { code = null }) { Text(localizedString("Hide")) }
                     }
                 }
             }
 
-            DevicesSection(tr("Привязанные устройства", "Paired devices")) {
+            DevicesSection(localizedString("Paired devices")) {
                 when {
                     loading -> CircularProgressIndicator(strokeWidth = 2.dp)
-                    devices == null -> Text(tr("Список недоступен", "List unavailable"), style = MaterialTheme.typography.bodySmall)
-                    devices!!.devices.isEmpty() -> Text(tr("Пока нет устройств, привязанных по QR.", "No QR-paired devices yet."), style = MaterialTheme.typography.bodySmall)
+                    devices == null -> Text(localizedString("List unavailable"), style = MaterialTheme.typography.bodySmall)
+                    devices!!.devices.isEmpty() -> Text(localizedString("No QR-paired devices yet."), style = MaterialTheme.typography.bodySmall)
                     else -> devices!!.devices.forEach { d ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(d.name.ifBlank { d.id } + if (d.id == myId) tr(" (это устройство)", " (this device)") else "", fontWeight = FontWeight.Medium)
+                                Text(d.name.ifBlank { d.id } + if (d.id == myId) localizedString(" (this device)") else "", fontWeight = FontWeight.Medium)
                                 val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-                                Text(tr("последний вход ", "last used ") + fmt.format(Date(d.lastUsed * 1000)) + (if (d.lastIp.isNotBlank()) " · ${d.lastIp}" else ""),
+                                Text(localizedString("last used ") + fmt.format(Date(d.lastUsed * 1000)) + (if (d.lastIp.isNotBlank()) " · ${d.lastIp}" else ""),
                                     style = MaterialTheme.typography.bodySmall)
                             }
-                            OutlinedButton(enabled = !busy, onClick = { confirmRevoke = d }) { Text(tr("Отозвать", "Revoke")) }
+                            OutlinedButton(enabled = !busy, onClick = { confirmRevoke = d }) { Text(localizedString("Revoke")) }
                         }
                     }
                 }
                 if (devices?.webuiSecretConfigured == false) {
-                    Text(tr("⚠ На сервере не задан пароль WebUI для relay: выполните «murf set-webui-password», иначе привязанные устройства не смогут войти.", "⚠ The relay has no WebUI password: run `murf set-webui-password` on the server, otherwise paired devices can't sign in."),
+                    Text(localizedString("⚠ The relay has no WebUI password: run `murf set-webui-password` on the server, otherwise paired devices can't sign in."),
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
             info?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Text(tr("Вход по паролю остаётся запасным способом. Отзыв сразу закрывает сессии устройства.", "Password sign-in stays as a fallback. Revoking closes the device's sessions immediately."),
+            Text(localizedString("Password sign-in stays as a fallback. Revoking closes the device's sessions immediately."),
                 style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -185,10 +185,10 @@ fun MurfDevicesRoute(
         val self = d.id == myId
         AlertDialog(
             onDismissRequest = { confirmRevoke = null },
-            title = { Text(tr("Отозвать доступ?", "Revoke access?")) },
+            title = { Text(localizedString("Revoke access?")) },
             text = {
                 Text(
-                    if (self) tr("Это устройство потеряет вход по QR и будет разлогинено.", "This device will lose QR sign-in and will be signed out.")
+                    if (self) localizedString("This device will lose QR sign-in and will be signed out.")
                     else tr("«${d.name}» больше не сможет войти без нового QR.", "“${d.name}” won't be able to sign in without a new QR."),
                 )
             },
@@ -200,15 +200,15 @@ fun MurfDevicesRoute(
                         runCatching { api.revoke(server, d.id) }
                             .onSuccess {
                                 if (self) tokens.remove(server)
-                                info = tr("Доступ отозван", "Access revoked")
+                                info = localizedString("Access revoked")
                             }
                             .onFailure { error = it.message ?: it.javaClass.simpleName }
                         busy = false
                         refresh++
                     }
-                }) { Text(tr("Отозвать", "Revoke")) }
+                }) { Text(localizedString("Revoke")) }
             },
-            dismissButton = { TextButton(onClick = { confirmRevoke = null }) { Text(tr("Отмена", "Cancel")) } },
+            dismissButton = { TextButton(onClick = { confirmRevoke = null }) { Text(localizedString("Cancel")) } },
         )
     }
 }
@@ -223,7 +223,7 @@ fun ManualPairDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
         PairPayloadParser.parse(server) != null
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Код привязки", "Pairing code")) },
+        title = { Text(localizedString("Pairing code")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -233,8 +233,8 @@ fun ManualPairDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
                     ),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                OutlinedTextField(server, { server = it.trim() }, label = { Text(tr("Адрес сервера", "Server address")) }, singleLine = true)
-                OutlinedTextField(code, { code = it.trim().uppercase() }, label = { Text(tr("Код", "Code")) }, singleLine = true)
+                OutlinedTextField(server, { server = it.trim() }, label = { Text(localizedString("Server address")) }, singleLine = true)
+                OutlinedTextField(code, { code = it.trim().uppercase() }, label = { Text(localizedString("Code")) }, singleLine = true)
             }
         },
         confirmButton = {
@@ -244,8 +244,8 @@ fun ManualPairDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
                     val raw = if (server.contains("auth=", ignoreCase = true)) server else "$server $code"
                     onSubmit(raw)
                 },
-            ) { Text(tr("Подключить", "Connect")) }
+            ) { Text(localizedString("Connect")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(localizedString("Cancel")) } },
     )
 }

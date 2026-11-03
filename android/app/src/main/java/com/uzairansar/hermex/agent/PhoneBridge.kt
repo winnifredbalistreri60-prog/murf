@@ -55,32 +55,32 @@ import java.util.concurrent.TimeUnit
 
 /** Инструменты, которые агент может вызвать на телефоне. */
 enum class PhoneTool(val wire: String, private val titleRes: () -> String, val risky: Boolean) {
-    RunShell("run_shell", { tr("Команды в Termux", "Termux commands") }, true),
-    Location("get_location", { tr("Геопозиция", "Location") }, true),
-    Photo("take_photo", { tr("Фото камерой", "Camera photo") }, true),
-    ListFiles("list_files", { tr("Список файлов", "File list") }, false),
-    PullFile("pull_file", { tr("Отдать файл с телефона", "Send file from phone") }, true),
-    PushFile("push_file", { tr("Принять файл в Загрузки", "Receive file to Downloads") }, false),
-    ClipGet("clipboard_get", { tr("Чтение буфера обмена", "Read clipboard") }, true),
-    ClipSet("clipboard_set", { tr("Запись в буфер обмена", "Write clipboard") }, false),
-    Notify("notify", { tr("Уведомления", "Notifications") }, false),
-    Battery("battery", { tr("Заряд батареи", "Battery level") }, false),
-    Sms("sms_list", { tr("Чтение SMS", "Read SMS") }, true),
+    RunShell("run_shell", { context.localizedString("Termux commands") }, true),
+    Location("get_location", { context.localizedString("Location") }, true),
+    Photo("take_photo", { context.localizedString("Camera photo") }, true),
+    ListFiles("list_files", { context.localizedString("File list") }, false),
+    PullFile("pull_file", { context.localizedString("Send file from phone") }, true),
+    PushFile("push_file", { context.localizedString("Receive file to Downloads") }, false),
+    ClipGet("clipboard_get", { context.localizedString("Read clipboard") }, true),
+    ClipSet("clipboard_set", { context.localizedString("Write clipboard") }, false),
+    Notify("notify", { context.localizedString("Notifications") }, false),
+    Battery("battery", { context.localizedString("Battery level") }, false),
+    Sms("sms_list", { context.localizedString("Read SMS") }, true),
     // 1.10.0: инструменты для локального агента (DeepSeek Harness на телефоне), см. MurfPhoneControl.kt
-    Network("network_info", { tr("Сеть", "Network") }, false),
-    ListApps("list_apps", { tr("Список приложений", "App list") }, false),
-    OpenApp("open_app", { tr("Открыть приложение", "Open app") }, false),
-    OpenUrl("open_url", { tr("Открыть ссылку", "Open link") }, true),
-    Share("share_text", { tr("Поделиться текстом", "Share text") }, false),
-    FileRead("file_read", { tr("Чтение файла", "Read file") }, false),
-    FileWrite("file_write", { tr("Запись файла", "Write file") }, false),
-    Notifications("notifications_list", { tr("Чтение уведомлений", "Read notifications") }, true),
-    Screenshot("screenshot", { tr("Снимок экрана", "Screenshot") }, true),
-    ScreenView("screen_view", { tr("Что на экране", "What is on screen") }, true),
-    Tap("tap", { tr("Нажатие на экране", "Tap on screen") }, true),
-    Swipe("swipe", { tr("Свайп", "Swipe") }, true),
-    TypeText("type_text", { tr("Ввод текста", "Type text") }, true),
-    PressKey("press_key", { tr("Системная кнопка", "System key") }, true);
+    Network("network_info", { context.localizedString("Network") }, false),
+    ListApps("list_apps", { context.localizedString("App list") }, false),
+    OpenApp("open_app", { context.localizedString("Open app") }, false),
+    OpenUrl("open_url", { context.localizedString("Open link") }, true),
+    Share("share_text", { context.localizedString("Share text") }, false),
+    FileRead("file_read", { context.localizedString("Read file") }, false),
+    FileWrite("file_write", { context.localizedString("Write file") }, false),
+    Notifications("notifications_list", { context.localizedString("Read notifications") }, true),
+    Screenshot("screenshot", { context.localizedString("Screenshot") }, true),
+    ScreenView("screen_view", { context.localizedString("What is on screen") }, true),
+    Tap("tap", { context.localizedString("Tap on screen") }, true),
+    Swipe("swipe", { context.localizedString("Swipe") }, true),
+    TypeText("type_text", { context.localizedString("Type text") }, true),
+    PressKey("press_key", { context.localizedString("System key") }, true);
 
     /** Действие на экране/в другом приложении: «Всегда» не предлагается, подтверждение каждый раз. */
     val screenControl: Boolean get() = this in setOf(Tap, Swipe, TypeText)
@@ -103,8 +103,8 @@ data class PhoneRequest(val id: String, val tool: String, val args: JsonObject, 
             "push_file" -> arg("name").orEmpty()
             "clipboard_set" -> arg("text").orEmpty().take(80)
             "notify" -> listOfNotNull(arg("title"), arg("text")).joinToString(": ")
-            "take_photo" -> tr("камера: ", "camera: ") + (arg("camera") ?: "back")
-            "file_read", "file_write" -> arg("path").orEmpty() + (if (tool == "file_write") " (" + (arg("text")?.length ?: 0) + tr(" симв.)", " chars)") else "")
+            "take_photo" -> context.localizedString("camera: ") + (arg("camera") ?: "back")
+            "file_read", "file_write" -> arg("path").orEmpty() + (if (tool == "file_write") " (" + (arg("text")?.length ?: 0) + context.localizedString(" chars)") else "")
             "open_app" -> arg("package").orEmpty()
             "open_url" -> arg("url").orEmpty()
             "share_text", "type_text" -> "«" + arg("text").orEmpty().take(120) + "»"
@@ -194,8 +194,8 @@ class PhoneBridgeService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val n = NotificationCompat.Builder(this, CH_BRIDGE)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle(tr("MURF: мост «Телефон» включён", "MURF: phone bridge is on"))
-            .setContentText(tr("Агент может запрашивать действия на телефоне (с подтверждением)", "The agent can request actions on the phone (with confirmation)"))
+            .setContentTitle(context.localizedString("MURF: phone bridge is on"))
+            .setContentText(context.localizedString("The agent can request actions on the phone (with confirmation)"))
             .setOngoing(true)
             .setContentIntent(openAppIntent(this))
             .build()
@@ -239,7 +239,7 @@ class PhoneBridgeService : Service() {
         while (scope.isActive) {
             val base = target()
             if (base == null) {
-                if (!local) PhoneBridge.state.update { st(it, local, false, tr("Не выполнен вход в приложение", "Not logged in to the app")) }
+                if (!local) PhoneBridge.state.update { st(it, local, false, context.localizedString("Not logged in to the app")) }
                 delay(if (local) 30_000 else 10_000); continue
             }
             if (local && LocalEnv.health() == null) { delay(20_000); continue }
@@ -261,7 +261,7 @@ class PhoneBridgeService : Service() {
                 http.newCall(Request.Builder().url(url).get().build()).execute().use { resp ->
                     when {
                         resp.code == 401 || resp.code == 403 -> {
-                            PhoneBridge.state.update { st(it, local, false, tr("Сессия истекла — войдите в приложение заново", "Session expired — log in again")) }
+                            PhoneBridge.state.update { st(it, local, false, context.localizedString("Session expired — log in again")) }
                             delay(15_000)
                         }
                         resp.code == 204 -> PhoneBridge.state.update { st(it, local, true, null) }
@@ -308,7 +308,7 @@ class PhoneBridgeService : Service() {
         val result: JsonObject = if (tool == null) {
             fail(tr("Неизвестный инструмент ${req.tool}", "Unknown tool ${req.tool}"))
         } else if (tool == PhoneTool.Sms && !PhoneBridgeSettings.smsEnabled(this)) {
-            fail(tr("Чтение SMS выключено в приложении MURF (Телефон → SMS)", "SMS reading is disabled in MURF (Phone → SMS)"))
+            fail(context.localizedString("SMS reading is disabled in MURF (Phone → SMS)"))
         } else {
             val outside = (tool == PhoneTool.FileRead || tool == PhoneTool.FileWrite) && !PhoneControl.resolve(req.arg("path").orEmpty()).second
             val needAsk = tool.screenControl || outside || (tool.risky && req.tool !in PhoneBridgeSettings.autoAllowed(this)) ||
@@ -321,11 +321,11 @@ class PhoneBridgeService : Service() {
             when (allowed) {
                 "always" -> { PhoneBridgeSettings.setAutoAllowed(this, req.tool, true); execute(http, req, tool) }
                 "allow" -> execute(http, req, tool)
-                "timeout" -> fail(tr("Пользователь не подтвердил запрос вовремя", "The user did not confirm the request in time"))
-                else -> fail(tr("Пользователь отклонил запрос", "The user declined the request"))
+                "timeout" -> fail(context.localizedString("The user did not confirm the request in time"))
+                else -> fail(context.localizedString("The user declined the request"))
             }
         }
-        PhoneBridge.log(req.tool, req.summary, if (result["ok"]?.jsonPrimitive?.content == "true") tr("выполнено", "done") else tr("ошибка/отказ", "error/declined"))
+        PhoneBridge.log(req.tool, req.summary, if (result["ok"]?.jsonPrimitive?.content == "true") context.localizedString("done") else context.localizedString("error/declined"))
         runCatching {
             val body = buildJsonObject { put("id", req.id); result.forEach { (k, v) -> put(k, v) } }
             post(http, base, "phone/api/result", body.toString())
@@ -349,9 +349,9 @@ class PhoneBridgeService : Service() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setContentIntent(openAppIntent(this, "phone"))
-            .addAction(0, tr("Разрешить", "Allow"), action("allow", 1))
-            .addAction(0, tr("Отклонить", "Deny"), action("deny", 2))
-            .addAction(0, tr("Всегда", "Always"), action("always", 3))
+            .addAction(0, context.localizedString("Allow"), action("allow", 1))
+            .addAction(0, context.localizedString("Deny"), action("deny", 2))
+            .addAction(0, context.localizedString("Always"), action("always", 3))
             .setAutoCancel(true)
             .build()
         runCatching { NotificationManagerCompat.from(this).notify(req.id.hashCode(), n) }
@@ -401,12 +401,12 @@ class PhoneBridgeService : Service() {
                 fromTermux(Termux.run(this, "curl -sS --fail --data-binary @${q(path)} ${q("$upload?name=" + java.net.URLEncoder.encode(name, "UTF-8"))}", timeoutMs = 280_000))
             }
             PhoneTool.PushFile -> {
-                val url = req.raw["download_url"]?.jsonPrimitive?.contentOrNull ?: return fail(tr("нет download_url", "no download_url"))
+                val url = req.raw["download_url"]?.jsonPrimitive?.contentOrNull ?: return fail(context.localizedString("no download_url"))
                 val bytes = http.newCall(Request.Builder().url(url).get().build()).execute().use { r ->
                     if (!r.isSuccessful) return fail(tr("скачивание: HTTP ${r.code}", "download: HTTP ${r.code}")); r.body!!.bytes()
                 }
                 val name = req.arg("name") ?: "file"
-                ok(tr("Сохранено: ", "Saved: ") + AgentShare.saveToDownloads(this, name, "application/octet-stream", bytes))
+                ok(context.localizedString("Saved: ") + AgentShare.saveToDownloads(this, name, "application/octet-stream", bytes))
             }
             PhoneTool.ClipGet -> fromTermux(Termux.run(this, "termux-clipboard-get", timeoutMs = 30_000))
             PhoneTool.ClipSet -> {
@@ -424,11 +424,11 @@ class PhoneBridgeService : Service() {
                     .setStyle(NotificationCompat.BigTextStyle().bigText(req.arg("text").orEmpty()))
                     .setContentIntent(openAppIntent(this)).setAutoCancel(true).build()
                 runCatching { NotificationManagerCompat.from(this).notify((System.currentTimeMillis() % 100000).toInt() + 5000, n) }
-                    .fold({ ok(tr("Уведомление показано", "Notification shown")) }, { fail(tr("Нет разрешения на уведомления", "No notification permission")) })
+                    .fold({ ok(context.localizedString("Notification shown")) }, { fail(context.localizedString("No notification permission")) })
             }
             PhoneTool.Battery -> {
                 val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
-                ok(tr("Заряд: ", "Battery: ") + "${bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)}%, " + tr("заряжается: ", "charging: ") + (if (bm.isCharging) tr("да", "yes") else tr("нет", "no")))
+                ok(context.localizedString("Battery: ") + "${bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)}%, " + context.localizedString("charging: ") + (if (bm.isCharging) context.localizedString("yes") else context.localizedString("no")))
             }
             PhoneTool.Network -> ok(PhoneControl.network(this))
             PhoneTool.ListApps -> ok(PhoneControl.listApps(this, req.arg("query")))
@@ -468,9 +468,9 @@ class PhoneBridgeService : Service() {
         fun ensureChannels(c: Context) {
             if (Build.VERSION.SDK_INT < 26) return
             val nm = c.getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(NotificationChannel(CH_BRIDGE, tr("Мост «Телефон»", "Phone bridge"), NotificationManager.IMPORTANCE_LOW))
-            nm.createNotificationChannel(NotificationChannel(CH_CONFIRM, tr("Запросы MURF к телефону", "MURF requests to the phone"), NotificationManager.IMPORTANCE_HIGH))
-            nm.createNotificationChannel(NotificationChannel(CH_AGENT, tr("Сообщения MURF", "MURF messages"), NotificationManager.IMPORTANCE_DEFAULT))
+            nm.createNotificationChannel(NotificationChannel(CH_BRIDGE, context.localizedString("Phone bridge"), NotificationManager.IMPORTANCE_LOW))
+            nm.createNotificationChannel(NotificationChannel(CH_CONFIRM, context.localizedString("MURF requests to the phone"), NotificationManager.IMPORTANCE_HIGH))
+            nm.createNotificationChannel(NotificationChannel(CH_AGENT, context.localizedString("MURF messages"), NotificationManager.IMPORTANCE_DEFAULT))
         }
 
         fun openAppIntent(c: Context, route: String? = null): PendingIntent {

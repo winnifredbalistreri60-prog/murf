@@ -87,12 +87,12 @@ fun ProviderQuickSetup(
             else providerId ?: existing?.id ?: MurfProviders.newId(context, kind)
         val apiKey = key.trim().ifBlank { MurfProviders.key(context, id).orEmpty() }
         if (apiKey.isBlank() && kind != ProviderKind.Custom) {
-            msg = tr("Вставьте ключ API провайдера", "Paste the provider API key")
+            msg = localizedString("Paste the provider API key")
             msgError = true
             return
         }
         if (!base.trim().startsWith("http")) {
-            msg = tr("Неверный адрес API", "Invalid API URL")
+            msg = localizedString("Invalid API URL")
             msgError = true
             return
         }
@@ -137,7 +137,7 @@ fun ProviderQuickSetup(
                 MurfProviders.fetchModels(cfg.kind, cfg.baseUrl, useKey).fold(
                     onSuccess = { list ->
                         if (list.isEmpty()) {
-                            msg = tr("Провайдер не вернул моделей", "Provider returned no models")
+                            msg = localizedString("Provider returned no models")
                             msgError = true
                             return@fold
                         }
@@ -153,7 +153,7 @@ fun ProviderQuickSetup(
                         models = list
                         MurfProviders.select(context, useId, choose)
                         picked = choose
-                        msg = tr("Моделей с API: ", "Models from API: ") + list.size
+                        msg = localizedString("Models from API: ") + list.size
                         msgError = false
                         key = ""
                         ver++
@@ -177,7 +177,7 @@ fun ProviderQuickSetup(
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            tr("Авторизация (API-токен)", "Authorization (API token)"),
+            localizedString("Authorization (API token)"),
             color = titleColor,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
@@ -195,16 +195,16 @@ fun ProviderQuickSetup(
             val authed = MurfProviders.isAuthorized(context)
             Text(
                 (if (authed) "✓ " else "⚠ ") +
-                    tr("Выбрано: ", "Selected: ") + "${selected.first} / ${selected.second}" +
-                    (fetchedAtLabel?.let { tr(" · обновлено ", " · fetched ") + it } ?: "") +
-                    if (authed) tr(" · авторизован", " · authorized") else tr(" · нет токена", " · no token"),
+                    localizedString("Selected: ") + "${selected.first} / ${selected.second}" +
+                    (fetchedAtLabel?.let { localizedString(" · fetched ") + it } ?: "") +
+                    if (authed) localizedString(" · authorized") else localizedString(" · no token"),
                 color = if (authed) titleColor else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
             )
             TextButton(onClick = { expanded = true }) {
                 Text(
-                    if (authed) tr("Сменить токен / модели", "Change token / models")
-                    else tr("Вставить токен и загрузить модели", "Paste token & load models"),
+                    if (authed) localizedString("Change token / models")
+                    else localizedString("Paste token & load models"),
                 )
             }
             return@Column
@@ -239,7 +239,7 @@ fun ProviderQuickSetup(
             value = base,
             onValueChange = { base = it.trim() },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(tr("Адрес API", "API URL")) },
+            label = { Text(localizedString("API URL")) },
             singleLine = true,
             enabled = !busy,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -253,9 +253,9 @@ fun ProviderQuickSetup(
                     existing?.let { MurfProviders.hasKey(context, it.id) } == true
                 Text(
                     if (hasSaved) {
-                        tr("Новый токен (пусто — оставить сохранённый)", "New token (empty — keep saved)")
+                        localizedString("New token (empty — keep saved)")
                     } else {
-                        tr("API-токен / ключ ", "API token / key ") + kind.keyHint
+                        localizedString("API token / key ") + kind.keyHint
                     },
                 )
             },
@@ -270,8 +270,8 @@ fun ProviderQuickSetup(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                if (busy) tr("Проверка токена…", "Verifying token…")
-                else tr("Авторизовать и загрузить модели", "Authorize & load models"),
+                if (busy) localizedString("Verifying token…")
+                else localizedString("Authorize & load models"),
             )
         }
         msg?.let {
@@ -283,7 +283,7 @@ fun ProviderQuickSetup(
         }
         if (models.isNotEmpty()) {
             Text(
-                tr("Выберите модель", "Pick a model"),
+                localizedString("Pick a model"),
                 color = titleColor,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
@@ -345,8 +345,8 @@ object ProviderApiErrors {
                 )
             raw.contains("Неверный адрес", ignoreCase = true) ||
                 raw.contains("Invalid API", ignoreCase = true) ->
-                tr("Неверный адрес API", "Invalid API URL")
-            else -> tr("Не удалось получить модели. Проверьте настройки и повторите попытку.", "Could not fetch models. Check the settings and try again.")
+                localizedString("Invalid API URL")
+            else -> localizedString("Could not fetch models. Check the settings and try again.")
         }
     }
 }

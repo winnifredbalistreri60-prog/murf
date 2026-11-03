@@ -56,6 +56,12 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
+        <!-- WorkManager setForeground: на targetSdk 34+ foreground-сервис должен иметь тип
+             (используем dataSync — как у остальных сервисов приложения). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
         <receiver
             android:name=".agent.TermuxResultReceiver"
             android:exported="false" />

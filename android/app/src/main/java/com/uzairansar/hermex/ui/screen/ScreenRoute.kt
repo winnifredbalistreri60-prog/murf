@@ -181,7 +181,7 @@ fun ScreenRoute(
             val data = raw?.trim('"').orEmpty()
             val b64 = data.substringAfter("base64,", "")
             if (b64.isBlank()) {
-                com.uzairansar.hermex.agent.AgentShare.toast(context, tr("Экран ещё не показан — нечего сохранять", "The screen is not shown yet — nothing to save"))
+                com.uzairansar.hermex.agent.AgentShare.toast(context, localizedString("The screen is not shown yet — nothing to save"))
                 return@evaluateJavascript
             }
             val share = com.uzairansar.hermex.agent.AgentShare
@@ -189,9 +189,9 @@ fun ScreenRoute(
                 val bytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT)
                 val name = "agent-screen-${share.stamp()}.png"
                 when (kind) {
-                    "share" -> share.shareFile(context, share.writeExport(context, name, bytes), "image/png", tr("Снимок экрана агента", "Agent screenshot"))
+                    "share" -> share.shareFile(context, share.writeExport(context, name, bytes), "image/png", localizedString("Agent screenshot"))
                     "drive" -> share.saveFileToDrive(context, share.writeExport(context, name, bytes), "image/png")
-                    else -> share.toast(context, tr("Сохранено: ", "Saved: ") + share.saveToDownloads(context, name, "image/png", bytes))
+                    else -> share.toast(context, localizedString("Saved: ") + share.saveToDownloads(context, name, "image/png", bytes))
                 }
             }.onFailure { share.toast(context, tr("Ошибка: ${it.message}", "Error: ${it.message}")) }
         }
@@ -199,20 +199,20 @@ fun ScreenRoute(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tr("Экран агента", "Agent screen")) },
+                title = { Text(localizedString("Agent screen")) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), contentDescription = tr("Назад", "Back")) }
+                    IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), contentDescription = localizedString("Back")) }
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = { snapMenu = true }) { Icon(painterResource(R.drawable.ic_hermex_external_link), contentDescription = tr("Снимок экрана", "Screenshot")) }
+                        IconButton(onClick = { snapMenu = true }) { Icon(painterResource(R.drawable.ic_hermex_external_link), contentDescription = localizedString("Screenshot")) }
                         androidx.compose.material3.DropdownMenu(expanded = snapMenu, onDismissRequest = { snapMenu = false }) {
-                            listOf("share" to tr("Поделиться снимком", "Share screenshot"), "downloads" to tr("Снимок в Загрузки", "Screenshot to Downloads"), "drive" to tr("Снимок в Google Диск", "Screenshot to Google Drive")).forEach { (k, label) ->
+                            listOf("share" to localizedString("Share screenshot"), "downloads" to localizedString("Screenshot to Downloads"), "drive" to localizedString("Screenshot to Google Drive")).forEach { (k, label) ->
                                 androidx.compose.material3.DropdownMenuItem(text = { Text(label) }, onClick = { snapMenu = false; snapshot(k) })
                             }
                         }
                     }
-                    IconButton(onClick = { reloadKey++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), contentDescription = tr("Обновить", "Update")) }
+                    IconButton(onClick = { reloadKey++ }) { Icon(painterResource(R.drawable.ic_hermex_refresh), contentDescription = localizedString("Update")) }
                 },
             )
         },
@@ -226,7 +226,7 @@ fun ScreenRoute(
                 com.uzairansar.hermex.agent.ScreenModeToggle(control, com.uzairansar.hermex.agent.UiPrefs::setScreenControl)
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    if (control) tr("Тап — клик, удержание — правый клик, 2 пальца — прокрутка", "Tap — click, hold — right click, 2 fingers — scroll") else tr("Только просмотр", "View only"),
+                    if (control) localizedString("Tap — click, hold — right click, 2 fingers — scroll") else localizedString("View only"),
                     color = Color(0xFFB4B4BA),
                     fontSize = 11.sp,
                     lineHeight = 13.sp,
@@ -278,7 +278,7 @@ fun MiniScreenPreview(
         // Transparent layer: WebView must not eat the tap.
         Box(Modifier.fillMaxSize().clickable(onClick = onOpen))
         Text(
-            tr("Экран", "Screen"),
+            localizedString("Screen"),
             color = Color.White,
             fontSize = 10.sp,
             modifier = Modifier.align(Alignment.BottomStart).background(Color(0x99000000)).padding(horizontal = 6.dp, vertical = 2.dp),
@@ -286,7 +286,7 @@ fun MiniScreenPreview(
         if (onDismiss != null) {
             Box(
                 Modifier.align(Alignment.TopEnd).padding(3.dp).size(26.dp).clip(CircleShape).background(Color(0xB3000000))
-                    .clickable(onClick = onDismiss).semantics { contentDescription = tr("Скрыть превью", "Hide preview") }
+                    .clickable(onClick = onDismiss).semantics { contentDescription = localizedString("Hide preview") }
                     .testTag("chat_mini_preview_close"),
                 contentAlignment = Alignment.Center,
             ) { Text("×", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
@@ -463,25 +463,25 @@ fun AgentScreenOverlay(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OverlayRoundButton(R.drawable.ic_hermex_xmark, tr("Закрыть экран", "Close screen"), onClose, Modifier.testTag("chat_screen_close"))
+            OverlayRoundButton(R.drawable.ic_hermex_xmark, localizedString("Close screen"), onClose, Modifier.testTag("chat_screen_close"))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(tr("Экран агента", "Agent screen"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(localizedString("Agent screen"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LiveDot(isLive, size = 8.dp)
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        if (isLive) tr("Агент работает — в эфире", "Agent is working — live") else tr("Ожидание задачи", "Waiting for a task"),
+                        if (isLive) localizedString("Agent is working — live") else localizedString("Waiting for a task"),
                         color = Color(0xFFB4B4BA),
                         fontSize = 12.sp,
                     )
                 }
             }
-            OverlayRoundButton(R.drawable.ic_hermex_refresh, tr("Переподключить", "Reconnect"), { holder.reload() })
+            OverlayRoundButton(R.drawable.ic_hermex_refresh, localizedString("Reconnect"), { holder.reload() })
             Spacer(Modifier.width(8.dp))
             OverlayRoundButton(
                 if (expanded) R.drawable.ic_lucide_minimize_2 else R.drawable.ic_lucide_maximize_2,
-                if (expanded) tr("Свернуть", "Minimize") else tr("На весь экран", "Full screen"),
+                if (expanded) localizedString("Minimize") else localizedString("Full screen"),
                 { expanded = !expanded },
                 Modifier.testTag("chat_screen_expand"),
             )
@@ -497,7 +497,7 @@ fun AgentScreenOverlay(
             })
             if (control && isLive) {
                 Spacer(Modifier.width(8.dp))
-                Text(tr("⚠ агент работает", "⚠ agent is working"), color = Color(0xFFFFD36B), fontSize = 11.sp)
+                Text(localizedString("⚠ agent is working"), color = Color(0xFFFFD36B), fontSize = 11.sp)
             }
         }
         if (askControl) {
@@ -567,17 +567,17 @@ private fun ScreenPaneHeader(holder: ScreenWebViewHolder, isLive: Boolean, onClo
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OverlayRoundButton(R.drawable.ic_hermex_xmark, tr("Закрыть экран", "Close screen"), onClose, Modifier.testTag("screen_pane_close"))
+        OverlayRoundButton(R.drawable.ic_hermex_xmark, localizedString("Close screen"), onClose, Modifier.testTag("screen_pane_close"))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(tr("Экран агента", "Agent screen"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(localizedString("Agent screen"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LiveDot(isLive, size = 8.dp)
                 Spacer(Modifier.width(6.dp))
-                Text(if (isLive) tr("Агент работает — в эфире", "Agent is working — live") else tr("Ожидание задачи", "Waiting for a task"), color = Color(0xFFB4B4BA), fontSize = 12.sp)
+                Text(if (isLive) localizedString("Agent is working — live") else localizedString("Waiting for a task"), color = Color(0xFFB4B4BA), fontSize = 12.sp)
             }
         }
-        OverlayRoundButton(R.drawable.ic_hermex_refresh, tr("Переподключить", "Reconnect"), { holder.reload() })
+        OverlayRoundButton(R.drawable.ic_hermex_refresh, localizedString("Reconnect"), { holder.reload() })
     }
     val control by com.uzairansar.hermex.agent.UiPrefs.screenControl.collectAsState()
     var askControl by remember { mutableStateOf(false) }
@@ -637,7 +637,7 @@ fun SplitPaneDivider(onDrag: (Float) -> Unit, modifier: Modifier = Modifier) {
             .fillMaxHeight()
             .background(Color(0xFF161619))
             .draggable(state, Orientation.Horizontal)
-            .semantics { contentDescription = tr("Перетащите, чтобы изменить ширину", "Drag to resize") }
+            .semantics { contentDescription = localizedString("Drag to resize") }
             .testTag("screen_split_divider"),
         contentAlignment = Alignment.Center,
     ) {
