@@ -485,7 +485,8 @@ class HermesApiClient(
         val callClient = if (timeoutSeconds != null) timeoutClient(timeoutSeconds) else client
         if (method != "GET") return executeAndDecode(callClient.newCall(request))
         // Идемпотентные GET: единичная сетевая заминка (роуминг, обрыв Wi-Fi) не должна
-        // сразу отдавать ошибку — до 3 попыток с нарастающей паузой.
+        // сразу отдавать ошибку — до 3 попыток с нарастающей паузой. На HTTP 5xx не
+        // ретраим: сервер отвечает, повтор только умножал бы нагрузку на него.
         var lastError: Throwable? = null
         for (attempt in 1..IDEMPOTENT_GET_ATTEMPTS) {
             try {
@@ -494,8 +495,6 @@ class HermesApiClient(
                 throw e
             } catch (e: ApiError.Network) {
                 lastError = e
-            } catch (e: ApiError.Http) {
-                if (e.statusCode in 500..599) lastError = e else throw e
             }
             if (attempt < IDEMPOTENT_GET_ATTEMPTS) delay(IDEMPOTENT_RETRY_BASE_DELAY_MS * attempt)
         }
