@@ -1429,4 +1429,15 @@
     <string name="l10n_3be58851adb2abe1">Лыжник — шапка с помпоном</string>
     <string name="l10n_7ebc48c084068120">Поварёнок — колпак повара</string>
     <string name="l10n_f8d5aaf471f2061e">Рыбак — соломенная шляпа</string>
+    <string name="l10n_2bfc3471571e5c00">Подтверждения</string>
+    <string name="l10n_23ab7e337a2d93a1">Агент ждёт разрешения на опасное действие</string>
+    <string name="l10n_67a19e6eca930448">Откройте чат, чтобы разрешить или запретить.</string>
+    <string name="l10n_9b3014f668690d05">Агенту нужно подтверждение</string>
+    <string name="l10n_9f994d9823828778">В Загрузки</string>
+    <string name="l10n_406dc8d6b82c0c2e">В Google Диск</string>
+    <string name="l10n_b9d03423960aa1c5">Сохранено: %1$s</string>
+    <string name="l10n_81a2d6c71464c8a5">Ошибка: %1$s</string>
+    <string name="l10n_b9200e62549787c9">"сервер: HTTP "</string>
+    <string name="l10n_1a1a632240719299">"Перенесено: "</string>
+    <string name="l10n_5602379699b7c63d">Локальный WebUI не принял пароль (%1$s)</string>
 </resources>

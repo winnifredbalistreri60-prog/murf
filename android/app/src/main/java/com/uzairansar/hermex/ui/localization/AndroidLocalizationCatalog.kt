@@ -7,6 +7,17 @@ import com.uzairansar.hermex.R
 
 internal object AndroidLocalizationCatalog {
     private val resourcesByEnglishText: Map<String, Int> = mapOf(
+        "Approvals" to R.string.l10n_2bfc3471571e5c00,
+        "The agent is waiting for approval of a risky action" to R.string.l10n_23ab7e337a2d93a1,
+        "Open the chat to allow or deny." to R.string.l10n_67a19e6eca930448,
+        "The agent needs approval" to R.string.l10n_9b3014f668690d05,
+        "To Downloads" to R.string.l10n_9f994d9823828778,
+        "To Google Drive" to R.string.l10n_406dc8d6b82c0c2e,
+        "Saved: %1\$s" to R.string.l10n_b9d03423960aa1c5,
+        "Error: %1\$s" to R.string.l10n_81a2d6c71464c8a5,
+        "server: HTTP " to R.string.l10n_b9200e62549787c9,
+        "Transferred: " to R.string.l10n_1a1a632240719299,
+        "Local WebUI rejected the password (%1\$s)" to R.string.l10n_5602379699b7c63d,
         "%1\$d lines" to R.string.l10n_3f6322ad49062d3d,
         "Collapse" to R.string.l10n_be6eb1fc3b05bf9d,
         "Show all (%1\$d lines)" to R.string.l10n_8a1428c9884d223b,
@@ -1356,7 +1367,7 @@ internal object AndroidLocalizationCatalog {
         "Regenerating this response will discard %lld later messages." to R.plurals.l10n_e57e8f39b6e8ce1b,
     )
 
-    const val sourceEntryCount: Int = 1179
+    const val sourceEntryCount: Int = 1190
     val entryCount: Int = resourcesByEnglishText.size
 
     @StringRes

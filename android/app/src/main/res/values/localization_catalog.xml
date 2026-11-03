@@ -1429,4 +1429,15 @@
     <string name="l10n_3be58851adb2abe1">Skier — bobble hat</string>
     <string name="l10n_7ebc48c084068120">Little chef — chef hat</string>
     <string name="l10n_f8d5aaf471f2061e">Fisher — straw boater</string>
+    <string name="l10n_2bfc3471571e5c00">Approvals</string>
+    <string name="l10n_23ab7e337a2d93a1">The agent is waiting for approval of a risky action</string>
+    <string name="l10n_67a19e6eca930448">Open the chat to allow or deny.</string>
+    <string name="l10n_9b3014f668690d05">The agent needs approval</string>
+    <string name="l10n_9f994d9823828778">To Downloads</string>
+    <string name="l10n_406dc8d6b82c0c2e">To Google Drive</string>
+    <string name="l10n_b9d03423960aa1c5">Saved: %1$s</string>
+    <string name="l10n_81a2d6c71464c8a5">Error: %1$s</string>
+    <string name="l10n_b9200e62549787c9">"server: HTTP "</string>
+    <string name="l10n_1a1a632240719299">"Transferred: "</string>
+    <string name="l10n_5602379699b7c63d">Local WebUI rejected the password (%1$s)</string>
 </resources>

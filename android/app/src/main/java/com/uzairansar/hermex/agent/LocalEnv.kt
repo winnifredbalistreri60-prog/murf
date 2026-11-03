@@ -326,7 +326,7 @@ object LocalEnv {
         try {
             when (val res = auth.addServer(URL, pw, displayName = DISPLAY_NAME, initials = "ТЛ", headerLogoColorHex = "#4CAF50")) {
                 is AddServerResult.Added -> Unit
-                else -> error(tr("Локальный WebUI не принял пароль ($res)", "Local WebUI rejected the password ($res)"))
+                else -> error(context.localizedStringFormat("Local WebUI rejected the password (%1\$s)", res))
             }
         } catch (t: Throwable) {
             rethrowLocalConnect(t)
@@ -346,13 +346,13 @@ object LocalEnv {
                 .newCall(Request.Builder().url(server.newBuilder().encodedPath("/phone/api/local/export").build())
                     .header("X-Agent-App", "1")
                     .post(body.toRequestBody("application/json".toMediaType())).build())
-                .execute().use { r -> if (!r.isSuccessful) error(tr("сервер: HTTP ", "server: HTTP ") + r.code); JSONObject(r.body!!.string()) }
+                .execute().use { r -> if (!r.isSuccessful) error(context.localizedString("server: HTTP ") + r.code); JSONObject(r.body!!.string()) }
         }
         if (!resp.optBoolean("ok")) error(resp.optString("error", context.localizedString("export failed")))
         val url = resp.getString("url")
         val r = Termux.run(context, "murf-local import " + Termux.shellQuote(url) + if (withSecrets) " --with-secrets" else "", timeoutMs = 300_000)
         if (r.error != null) error(r.error)
-        return tr("Перенесено: ", "Transferred: ") + resp.optJSONArray("included")?.let { a -> (0 until a.length()).joinToString { a.getString(it) } } +
+        return context.localizedString("Transferred: ") + resp.optJSONArray("included")?.let { a -> (0 until a.length()).joinToString { a.getString(it) } } +
             " (${resp.optLong("size") / 1024} " + context.localizedString("KB") + ")\n" + r.stdout.trim().takeLast(600)
     }
 
@@ -393,3 +393,6 @@ object LocalEnv {
 
     fun serverUrlOf(account: ServerAccount?): HttpUrl? = account?.urlString?.let { runCatching { it.toHttpUrl() }.getOrNull() }
 }
+
+private fun android.content.Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)

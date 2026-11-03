@@ -561,21 +561,21 @@ private fun FilePreview(
                     enabled = !isLoading && (content != null || binaryPreview?.bytes != null),
                 )
                 HermexPillButton(
-                    tr("В Загрузки", "To Downloads"),
+                    localizedString("To Downloads"),
                     onClick = {
                         val bytes = content?.toByteArray() ?: binaryPreview?.bytes
                         if (bytes != null) {
                             val name = WorkspaceFilePreviewPolicy.displayName(displayPath).ifBlank { "agent-file" }
                             val mime = binaryPreview?.mimeType ?: WorkspaceFilePreviewPolicy.mimeType(displayPath, isText = true)
                             runCatching { com.uzairansar.hermex.agent.AgentShare.saveToDownloads(context, name, mime, bytes) }
-                                .onSuccess { Toast.makeText(context, tr("Сохранено: $it", "Saved: $it"), Toast.LENGTH_LONG).show() }
-                                .onFailure { Toast.makeText(context, tr("Ошибка: ${it.message}", "Error: ${it.message}"), Toast.LENGTH_LONG).show() }
+                                .onSuccess { Toast.makeText(context, context.localizedStringFormat("Saved: %1\$s", it), Toast.LENGTH_LONG).show() }
+                                .onFailure { Toast.makeText(context, context.localizedStringFormat("Error: %1\$s", it.message), Toast.LENGTH_LONG).show() }
                         }
                     },
                     enabled = !isLoading && (content != null || binaryPreview?.bytes != null),
                 )
                 HermexPillButton(
-                    tr("В Google Диск", "To Google Drive"),
+                    localizedString("To Google Drive"),
                     onClick = {
                         val bytes = content?.toByteArray() ?: binaryPreview?.bytes
                         if (bytes != null) {
@@ -584,7 +584,7 @@ private fun FilePreview(
                             runCatching {
                                 val f = com.uzairansar.hermex.agent.AgentShare.writeExport(context, name, bytes)
                                 com.uzairansar.hermex.agent.AgentShare.saveFileToDrive(context, f, mime)
-                            }.onFailure { Toast.makeText(context, tr("Ошибка: ${it.message}", "Error: ${it.message}"), Toast.LENGTH_LONG).show() }
+                            }.onFailure { Toast.makeText(context, context.localizedStringFormat("Error: %1\$s", it.message), Toast.LENGTH_LONG).show() }
                         }
                     },
                     enabled = !isLoading && (content != null || binaryPreview?.bytes != null),
@@ -858,3 +858,6 @@ private suspend fun shareWorkspacePreview(
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     context.startActivity(Intent.createChooser(intent, "Share File"))
 }
+
+private fun android.content.Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)

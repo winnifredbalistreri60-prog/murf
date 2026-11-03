@@ -216,17 +216,17 @@ class StreamStatusNotifier(private val context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(APPROVAL_CHANNEL_ID) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(APPROVAL_CHANNEL_ID, tr("Подтверждения", "Approvals"), NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = tr("Агент ждёт разрешения на опасное действие", "The agent is waiting for approval of a risky action")
+                NotificationChannel(APPROVAL_CHANNEL_ID, context.localizedString("Approvals"), NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = context.localizedString("The agent is waiting for approval of a risky action")
                     setShowBadge(true)
                 },
             )
         }
         if (!canPostNotifications(APPROVAL_CHANNEL_ID)) return
-        val text = detail?.takeIf { it.isNotBlank() }?.take(300) ?: tr("Откройте чат, чтобы разрешить или запретить.", "Open the chat to allow or deny.")
+        val text = detail?.takeIf { it.isNotBlank() }?.take(300) ?: context.localizedString("Open the chat to allow or deny.")
         val notification = NotificationCompat.Builder(context, APPROVAL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hermex_launcher_monochrome)
-            .setContentTitle(tr("Агенту нужно подтверждение", "The agent needs approval"))
+            .setContentTitle(context.localizedString("The agent needs approval"))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
