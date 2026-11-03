@@ -561,7 +561,7 @@ private fun FilePreview(
                     enabled = !isLoading && (content != null || binaryPreview?.bytes != null),
                 )
                 HermexPillButton(
-                    tr("В Загрузки", "To Downloads"),
+                    localizedString("To Downloads"),
                     onClick = {
                         val bytes = content?.toByteArray() ?: binaryPreview?.bytes
                         if (bytes != null) {
@@ -575,7 +575,7 @@ private fun FilePreview(
                     enabled = !isLoading && (content != null || binaryPreview?.bytes != null),
                 )
                 HermexPillButton(
-                    tr("В Google Диск", "To Google Drive"),
+                    localizedString("To Google Drive"),
                     onClick = {
                         val bytes = content?.toByteArray() ?: binaryPreview?.bytes
                         if (bytes != null) {

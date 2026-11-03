@@ -107,7 +107,7 @@ object SubtaskPolicy {
             g.size > 1 -> tr("${g.size} подзадачи: ", "${g.size} subtasks: ") + g.first()
             g.size == 1 -> g.first()
             !preview.isNullOrBlank() -> preview.lineSequence().first { it.isNotBlank() }.trim()
-            else -> name?.takeIf { it.isNotBlank() } ?: tr("Подзадача", "Subtask")
+            else -> name?.takeIf { it.isNotBlank() } ?: localizedString("Subtask")
         }.let { if (it.length > 140) it.take(139) + "…" else it }
     }
 
@@ -137,11 +137,11 @@ object SubtaskPolicy {
 
 @Composable
 fun taskStatusLabel(status: TaskStatus): String = when (status) {
-    TaskStatus.Running -> tr("идёт", "running")
-    TaskStatus.Waiting -> tr("ждёт ответа", "waiting")
-    TaskStatus.Done -> tr("готово", "done")
-    TaskStatus.Failed -> tr("ошибка", "failed")
-    TaskStatus.Stopped -> tr("остановлено", "stopped")
+    TaskStatus.Running -> localizedString("running")
+    TaskStatus.Waiting -> localizedString("waiting")
+    TaskStatus.Done -> localizedString("done")
+    TaskStatus.Failed -> localizedString("failed")
+    TaskStatus.Stopped -> localizedString("stopped")
 }
 
 @Composable
@@ -284,13 +284,13 @@ fun ChatTasksSheet(tasks: List<ChatSubtask>, onDismiss: () -> Unit) {
         ) {
             val ordered = SubtaskPolicy.ordered(tasks)
             val running = ordered.count { it.status.isActive }
-            Text(tr("Задачи чата", "Chat tasks"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(localizedString("Chat tasks"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
                 tr("Идёт: $running · завершено: ${ordered.size - running}", "Running: $running · finished: ${ordered.size - running}"),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (ordered.isEmpty()) {
-                Text(tr("Подзадач в этом чате пока нет.", "No subtasks in this chat yet."), style = MaterialTheme.typography.bodyMedium)
+                Text(localizedString("No subtasks in this chat yet."), style = MaterialTheme.typography.bodyMedium)
             }
             ordered.forEach { t ->
                 SubtaskCard(

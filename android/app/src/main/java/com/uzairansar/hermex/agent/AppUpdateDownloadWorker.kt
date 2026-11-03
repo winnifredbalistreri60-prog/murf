@@ -39,7 +39,7 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val info = readInfo() ?: run {
             AppUpdates.setFailed(
-                tr("Обновление не установлено: повреждены данные задачи", "Update not installed: work input is invalid"),
+                applicationContext.localizedString("Update not installed: work input is invalid"),
                 null,
             )
             return Result.failure()
@@ -143,8 +143,8 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, tr("Скачивание обновления", "Update download"), NotificationManager.IMPORTANCE_LOW).apply {
-                description = tr("Прогресс скачивания обновления MURF", "MURF update download progress")
+            NotificationChannel(CHANNEL_ID, applicationContext.localizedString("Update download"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = applicationContext.localizedString("MURF update download progress")
                 setShowBadge(false)
             },
         )

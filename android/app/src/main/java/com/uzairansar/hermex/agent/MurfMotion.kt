@@ -154,7 +154,7 @@ fun AgentWorkingStrip(startedAtMs: Long?, activity: String?, queued: Int, modifi
     }
     val accent = MaterialTheme.colorScheme.primary
     val label = buildString {
-        append(tr("Агент работает", "Agent is working"))
+        append(localizedString("Agent is working"))
         if (startedAtMs != null) append(" · ").append(formatElapsed(now - startedAtMs))
         activity?.trim()?.takeIf { it.isNotEmpty() }?.let { append(" · ").append(it.lineSequence().first().take(60)) }
         if (queued > 0) append(" · ").append(tr("в очереди: $queued", "queued: $queued"))

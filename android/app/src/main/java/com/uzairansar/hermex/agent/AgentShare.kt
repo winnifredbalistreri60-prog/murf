@@ -51,10 +51,10 @@ object AgentShare {
     fun shareText(context: Context, text: String, subject: String? = null) {
         val intent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
         if (subject != null) intent.putExtra(Intent.EXTRA_SUBJECT, subject)
-        context.startActivity(Intent.createChooser(intent, tr("Поделиться", "Share")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent.createChooser(intent, context.localizedString("Share")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    fun shareFile(context: Context, file: File, mime: String, title: String = tr("Поделиться файлом", "Share file")) {
+    fun shareFile(context: Context, file: File, mime: String, title: String = context.localizedString("Share file")) {
         val intent = Intent(Intent.ACTION_SEND).setType(mime)
             .putExtra(Intent.EXTRA_STREAM, uriFor(context, file))
             .putExtra(Intent.EXTRA_TITLE, file.name)
@@ -80,8 +80,8 @@ object AgentShare {
             } catch (_: ActivityNotFoundException) {
             }
         }
-        toast(context, tr("Приложение Google Диск не найдено — выберите, куда сохранить", "Google Drive app not found — choose where to save"))
-        context.startActivity(Intent.createChooser(intent, tr("Сохранить", "Save")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        toast(context, context.localizedString("Google Drive app not found — choose where to save"))
+        context.startActivity(Intent.createChooser(intent, context.localizedString("Save")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     fun saveTextToDrive(context: Context, text: String, baseName: String) {
@@ -101,7 +101,7 @@ object AgentShare {
             }
             val resolver = context.contentResolver
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                ?: error(tr("Не удалось создать файл в Загрузках", "Could not create file in Downloads"))
+                ?: error(context.localizedString("Could not create file in Downloads"))
             resolver.openOutputStream(uri)!!.use { it.write(bytes) }
             values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0)
             resolver.update(uri, values, null, null)
@@ -170,17 +170,17 @@ fun confirmRunInTermux(context: android.content.Context, code: String) {
     val permitted = Termux.hasPermission(context)
     if (activity == null) { AgentShare.copy(context, code); return }
     val b = android.app.AlertDialog.Builder(activity)
-        .setTitle(tr("Выполнить в Termux?", "Run in Termux?"))
+        .setTitle(context.localizedString("Run in Termux?"))
         .setMessage(code.take(1500) + if (code.length > 1500) "\n…" else "")
-        .setNegativeButton(tr("Отмена", "Cancel"), null)
-        .setNeutralButton(tr("Копировать", "Copy")) { _, _ -> AgentShare.copy(context, code); AgentShare.toast(context, tr("Скопировано", "Copied")) }
+        .setNegativeButton(context.localizedString("Cancel"), null)
+        .setNeutralButton(context.localizedString("Copy")) { _, _ -> AgentShare.copy(context, code); AgentShare.toast(context, context.localizedString("Copied")) }
     if (installed && permitted) {
-        b.setPositiveButton(tr("Выполнить", "Run")) { _, _ -> Termux.runVisible(context, code + "\necho; read -p 'Готово. Enter — закрыть' _") }
+        b.setPositiveButton(context.localizedString("Run")) { _, _ -> Termux.runVisible(context, code + "\necho; read -p 'Готово. Enter — закрыть' _") }
     } else {
-        b.setPositiveButton(if (installed) tr("Скопировать и открыть Termux", "Copy and open Termux") else tr("Нужен Termux", "Termux required")) { _, _ ->
+        b.setPositiveButton(if (installed) context.localizedString("Copy and open Termux") else context.localizedString("Termux required")) { _, _ ->
             AgentShare.copy(context, code)
             context.packageManager.getLaunchIntentForPackage(Termux.PACKAGE)?.let { context.startActivity(it) }
-                ?: AgentShare.toast(context, tr("Установите Termux: раздел «Телефон и Termux»", "Install Termux: see “Phone & Termux”"))
+                ?: AgentShare.toast(context, context.localizedString("Install Termux: see “Phone & Termux”"))
         }
     }
     b.show()

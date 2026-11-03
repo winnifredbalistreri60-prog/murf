@@ -300,11 +300,11 @@ fun MurfAvatarPicker(current: MurfAvatarSpec, isDefault: Boolean, backend: Strin
             Column(Modifier.weight(1f)) {
                 Text(tr(current.hat.ru, current.hat.en), style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    if (isDefault) tr("по умолчанию", "default") else tr("выбрано", "custom"),
+                    if (isDefault) localizedString("default") else localizedString("custom"),
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (!isDefault) Text(tr("Сбросить", "Reset"), color = MaterialTheme.colorScheme.primary,
+            if (!isDefault) Text(localizedString("Reset"), color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelLarge, modifier = Modifier.clickable { onPick(null) }.padding(6.dp))
         }
         MurfHat.entries.chunked(5).forEach { row ->

@@ -1579,8 +1579,8 @@ private fun StatusStack(state: SessionListUiState, onReconnect: () -> Unit = {})
                 )
                 TextButton(onClick = onReconnect, enabled = !state.isLoading) {
                     Text(
-                        if (state.isLoading) com.uzairansar.hermex.agent.tr("…", "…")
-                        else com.uzairansar.hermex.agent.tr("Переподключить", "Reconnect"),
+                        if (state.isLoading) com.uzairansar.hermex.agent.localizedString("…")
+                        else com.uzairansar.hermex.agent.localizedString("Reconnect"),
                     )
                 }
             }
@@ -1595,7 +1595,7 @@ private fun StatusStack(state: SessionListUiState, onReconnect: () -> Unit = {})
             ) {
                 StatusLine(err, MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 TextButton(onClick = onReconnect, enabled = !state.isLoading) {
-                    Text(com.uzairansar.hermex.agent.tr("Переподключить", "Reconnect"))
+                    Text(com.uzairansar.hermex.agent.localizedString("Reconnect"))
                 }
             }
         }
@@ -1622,18 +1622,18 @@ private fun EmptySessionsRow(
         scheduled = scheduled,
     )
     val (title, message) = when (emptyState) {
-        SessionEmptyState.Unavailable -> com.uzairansar.hermex.agent.tr("Чаты недоступны в этом списке", "Chats unavailable in this view") to
-            com.uzairansar.hermex.agent.tr("Проверьте подключение и потяните список вниз, чтобы обновить.", "Check the connection and pull down to refresh.")
-        SessionEmptyState.Searching -> com.uzairansar.hermex.agent.tr("Ищем чаты…", "Searching chats…") to
-            com.uzairansar.hermex.agent.tr("Идёт поиск на сервере.", "Searching on the server.")
-        SessionEmptyState.Filtered -> com.uzairansar.hermex.agent.tr("Чаты не найдены", "No matching chats") to
-            com.uzairansar.hermex.agent.tr("Измените запрос, выберите все проекты или проверьте фильтры в настройках.", "Change the query, select all projects or check filters in settings.")
-        SessionEmptyState.Archived -> com.uzairansar.hermex.agent.tr("Архив пуст", "Archive is empty") to
-            com.uzairansar.hermex.agent.tr("Здесь появятся чаты, которые вы отправите в архив.", "Chats you archive will appear here.")
-        SessionEmptyState.Scheduled -> com.uzairansar.hermex.agent.tr("Запусков по расписанию пока нет", "No scheduled runs yet") to
-            com.uzairansar.hermex.agent.tr("Создайте задачу в разделе «Расписание» и дождитесь её запуска.", "Create a scheduled task and wait for it to run.")
-        SessionEmptyState.New -> com.uzairansar.hermex.agent.tr("Чатов пока нет", "No chats yet") to
-            com.uzairansar.hermex.agent.tr("Нажмите кнопку чата внизу и напишите, чем вам помочь.", "Tap the chat button below and describe what you need help with.")
+        SessionEmptyState.Unavailable -> com.uzairansar.hermex.agent.localizedString("Chats unavailable in this view") to
+            com.uzairansar.hermex.agent.localizedString("Check the connection and pull down to refresh.")
+        SessionEmptyState.Searching -> com.uzairansar.hermex.agent.localizedString("Searching chats…") to
+            com.uzairansar.hermex.agent.localizedString("Searching on the server.")
+        SessionEmptyState.Filtered -> com.uzairansar.hermex.agent.localizedString("No matching chats") to
+            com.uzairansar.hermex.agent.localizedString("Change the query, select all projects or check filters in settings.")
+        SessionEmptyState.Archived -> com.uzairansar.hermex.agent.localizedString("Archive is empty") to
+            com.uzairansar.hermex.agent.localizedString("Chats you archive will appear here.")
+        SessionEmptyState.Scheduled -> com.uzairansar.hermex.agent.localizedString("No scheduled runs yet") to
+            com.uzairansar.hermex.agent.localizedString("Create a scheduled task and wait for it to run.")
+        SessionEmptyState.New -> com.uzairansar.hermex.agent.localizedString("No chats yet") to
+            com.uzairansar.hermex.agent.localizedString("Tap the chat button below and describe what you need help with.")
     }
     Column(
         modifier = Modifier

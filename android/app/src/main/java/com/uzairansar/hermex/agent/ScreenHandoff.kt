@@ -110,9 +110,9 @@ object ScreenHandoff {
         if (s == null || c == null) { _state.value = _state.value.copy(busy = false); return }
         scope.launch {
             runCatching {
-                ServerUpdatesApi.post(s, c, "/phone/api/screen/handoff", JSONObject().put("action", "take").put("viewer", viewer).put("reason", tr("MURF: управление с телефона", "MURF: phone has control")))
+                ServerUpdatesApi.post(s, c, "/phone/api/screen/handoff", JSONObject().put("action", "take").put("viewer", viewer).put("reason", context.localizedString("MURF: phone has control")))
             }.onSuccess { _state.value = parse(it, _state.value).copy(holding = true) }
-                .onFailure { _state.value = _state.value.copy(busy = false, error = tr("Не удалось сообщить серверу: агент может продолжать работать на экране.", "Could not notify the server: the agent may keep acting on the screen.")) }
+                .onFailure { _state.value = _state.value.copy(busy = false, error = context.localizedString("Could not notify the server: the agent may keep acting on the screen.")) }
         }
     }
 
@@ -132,7 +132,7 @@ object ScreenHandoff {
             runCatching {
                 ServerUpdatesApi.post(s, c, "/phone/api/screen/handoff", JSONObject().put("action", "release").put("viewer", viewer).put("force", force))
             }.onSuccess { _state.value = parse(it, _state.value).copy(holding = false) }
-                .onFailure { _state.value = _state.value.copy(busy = false, error = tr("Сервер не ответил. Экран может остаться за вами — нажмите «Я закончила» ещё раз.", "The server did not respond. Tap “I'm done” again.")) }
+                .onFailure { _state.value = _state.value.copy(busy = false, error = context.localizedString("The server did not respond. Tap “I'm done” again.")) }
         }
     }
 
@@ -169,14 +169,14 @@ fun ScreenHandoffBanner(modifier: androidx.compose.ui.Modifier = androidx.compos
         ) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.weight(1f)) {
                 androidx.compose.material3.Text(
-                    if (st.holding) tr("✋ Экран у вас", "✋ You have the screen") else tr("Экран", "Screen"),
+                    if (st.holding) context.localizedString("✋ You have the screen") else context.localizedString("Screen"),
                     color = androidx.compose.ui.graphics.Color(0xFFFFD36B), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                 )
                 val sub = st.error ?: when {
-                    st.busy -> tr("Связь с сервером…", "Contacting the server…")
-                    st.supported == false -> tr("Сервер не умеет ставить агента на паузу — договоритесь с ним в чате.", "The server can't pause the agent — tell it in chat.")
-                    st.agentPaused -> tr("Агент ждёт и не трогает экран", "The agent waits and won't touch the screen")
-                    else -> tr("Управление включено", "Control is on")
+                    st.busy -> context.localizedString("Contacting the server…")
+                    st.supported == false -> context.localizedString("The server can't pause the agent — tell it in chat.")
+                    st.agentPaused -> context.localizedString("The agent waits and won't touch the screen")
+                    else -> context.localizedString("Control is on")
                 }
                 androidx.compose.material3.Text(sub, color = androidx.compose.ui.graphics.Color(0xFFE8DCC4), fontSize = 11.sp, maxLines = 2)
             }
@@ -186,7 +186,7 @@ fun ScreenHandoffBanner(modifier: androidx.compose.ui.Modifier = androidx.compos
                     modifier = androidx.compose.ui.Modifier.testTag("screen_handoff_done"),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFF5C400), contentColor = androidx.compose.ui.graphics.Color(0xFF111111)),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                ) { androidx.compose.material3.Text(tr("Я закончила", "I'm done"), fontSize = 13.sp) }
+                ) { androidx.compose.material3.Text(context.localizedString("I'm done"), fontSize = 13.sp) }
             } else {
                 androidx.compose.material3.TextButton(onClick = { ScreenHandoff.clearError() }) { androidx.compose.material3.Text("OK") }
             }

@@ -167,7 +167,7 @@ object MurfProviders {
         runCatching {
             val base = baseUrl.trimEnd('/')
             val url = base.toHttpUrlOrNull()
-            require(url != null && url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { tr("Неверный адрес API", "Invalid API URL") }
+            require(url != null && url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { localizedString("Invalid API URL") }
             val rb = Request.Builder().url("$base/" + if (kind == ProviderKind.Anthropic) "v1/models?limit=1000" else "models")
             when (kind) {
                 ProviderKind.Anthropic -> rb.header("x-api-key", key).header("anthropic-version", "2023-06-01")

@@ -60,17 +60,15 @@ private suspend fun pageState(wv: WebView?): JSONObject? {
 internal fun diagnoseLocalScreen(page: JSONObject?, health: JSONObject?): String {
     val scr = health?.optJSONObject("screen")
     return when {
-        health == null -> tr("Локальная среда не отвечает (nginx 127.0.0.1:18080). Запустите её в «Локальная среда».",
-            "The local environment does not respond (nginx 127.0.0.1:18080). Start it in “Local environment”.")
-        page == null -> tr("Страница экрана не открылась.", "The screen page did not open.")
+        health == null -> localizedString("The local environment does not respond (nginx 127.0.0.1:18080). Start it in “Local environment”.")
+        page == null -> localizedString("The screen page did not open.")
         !page.optBoolean("js") || scr?.optBoolean("novnc", true) == false ->
-            tr("Не загрузились файлы экрана (noVNC). Обновите локальную среду: «Локальная среда» → «Обновить».",
-                "Screen files (noVNC) did not load. Update the local environment: “Local environment” → “Update”.")
-        scr != null && !scr.optBoolean("xvnc") -> tr("Рабочий стол агента (Xvnc) не запущен.", "The agent desktop (Xvnc) is not running.")
-        !health.optBoolean("screen_view") -> tr("Не запущен websockify экрана (порт 18081).", "Screen websockify (port 18081) is not running.")
-        scr != null && !scr.optBoolean("rfb_sock") -> tr("VNC рабочего стола не отвечает.", "The desktop VNC does not respond.")
-        scr != null && !scr.optBoolean("view_sock") -> tr("Прокси просмотра (view.sock) не отвечает.", "The view proxy (view.sock) does not respond.")
-        else -> tr("WebSocket экрана не подключается", "The screen WebSocket does not connect") +
+            localizedString("Screen files (noVNC) did not load. Update the local environment: “Local environment” → “Update”.")
+        scr != null && !scr.optBoolean("xvnc") -> localizedString("The agent desktop (Xvnc) is not running.")
+        !health.optBoolean("screen_view") -> localizedString("Screen websockify (port 18081) is not running.")
+        scr != null && !scr.optBoolean("rfb_sock") -> localizedString("The desktop VNC does not respond.")
+        scr != null && !scr.optBoolean("view_sock") -> localizedString("The view proxy (view.sock) does not respond.")
+        else -> localizedString("The screen WebSocket does not connect") +
             (page.optString("lastError").takeIf { it.isNotBlank() }?.let { ": $it" } ?: ".")
     }
 }
@@ -111,37 +109,37 @@ fun LocalScreenGuard(server: HttpUrl, webView: () -> WebView?, onReload: () -> U
                 Modifier.fillMaxWidth().background(Color(0xF01C1C22), RoundedCornerShape(14.dp)).padding(12.dp).testTag("local_screen_problem"),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(tr("Экран не подключился", "The screen did not connect"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(localizedString("The screen did not connect"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 Text(p, color = Color(0xFFE0E0E6), fontSize = 13.sp, lineHeight = 17.sp)
                 busy?.let { Text("⏳ $it…", color = Color(0xFF8AB4FF), fontSize = 12.sp) }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = busy == null, onClick = {
-                        if (!Termux.hasPermission(context)) { AgentShare.toast(context, tr("Нет разрешения на команды Termux — «Телефон и Termux»", "No Termux command permission — see “Phone & Termux”")); return@Button }
-                        busy = tr("Перезапуск экрана (до 1,5 мин)", "Restarting the screen (up to 1.5 min)")
+                        if (!Termux.hasPermission(context)) { AgentShare.toast(context, localizedString("No Termux command permission — see “Phone & Termux”")); return@Button }
+                        busy = localizedString("Restarting the screen (up to 1.5 min)")
                         scope.launch {
                             val r = LocalEnv.restartScreen(context)
                             busy = null
                             AgentShare.toast(context, r.stdout.lines().lastOrNull { it.isNotBlank() } ?: r.combined().take(200))
                             onReload(); round++
                         }
-                    }) { Text(tr("Перезапустить экран", "Restart screen")) }
+                    }) { Text(localizedString("Restart screen")) }
                     OutlinedButton(enabled = busy == null, onClick = {
-                        busy = tr("Журнал", "Log")
+                        busy = localizedString("Log")
                         scope.launch { log = LocalEnv.screenLogs(context); busy = null }
-                    }) { Text(tr("Показать журнал", "Show log")) }
-                    TextButton(onClick = { dismissed = true }) { Text(tr("Скрыть", "Hide")) }
+                    }) { Text(localizedString("Show log")) }
+                    TextButton(onClick = { dismissed = true }) { Text(localizedString("Hide")) }
                 }
-                Text(tr("Полная проверка: «Локальная среда» → «Диагностика».", "Full check: “Local environment” → “Diagnostics”."), color = Color(0xFF9A9AA2), fontSize = 11.sp)
+                Text(localizedString("Full check: “Local environment” → “Diagnostics”."), color = Color(0xFF9A9AA2), fontSize = 11.sp)
             }
         }
     }
     log?.let { t ->
         AlertDialog(
             onDismissRequest = { log = null },
-            title = { Text(tr("Журнал экрана", "Screen log")) },
+            title = { Text(localizedString("Screen log")) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { SelectionContainer { Text(t, fontFamily = FontFamily.Monospace, fontSize = 10.sp) } } },
-            confirmButton = { TextButton(onClick = { log = null }) { Text(tr("Закрыть", "Close")) } },
-            dismissButton = { TextButton(onClick = { AgentShare.copy(context, t); AgentShare.toast(context, tr("Скопировано", "Copied")) }) { Text(tr("Копировать", "Copy")) } },
+            confirmButton = { TextButton(onClick = { log = null }) { Text(localizedString("Close")) } },
+            dismissButton = { TextButton(onClick = { AgentShare.copy(context, t); AgentShare.toast(context, localizedString("Copied")) }) { Text(localizedString("Copy")) } },
         )
     }
 }

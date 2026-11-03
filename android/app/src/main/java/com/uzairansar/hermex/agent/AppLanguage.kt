@@ -70,7 +70,7 @@ object AppLanguage {
 
     /** Название языка на нём самом («Русский», «English», «Deutsch»…). */
     fun nativeName(tag: String): String {
-        if (tag.isEmpty()) return tr("Как в системе", "System default")
+        if (tag.isEmpty()) return localizedString("System default")
         val loc = Locale.forLanguageTag(tag)
         val name = loc.getDisplayName(loc).ifBlank { tag }
         return name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(loc) else it.toString() }
@@ -126,13 +126,13 @@ fun LanguageSettingsRow(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(com.uzairansar.hermex.R.drawable.ic_lucide_languages), contentDescription = null)
-        Text(tr("Язык / Language", "Language / Язык"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Text(localizedString("Language / Язык"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Text(AppLanguage.nativeName(current), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyMedium)
     }
     if (open) {
         AlertDialog(
             onDismissRequest = { open = false },
-            title = { Text(tr("Язык приложения", "App language")) },
+            title = { Text(localizedString("App language")) },
             text = {
                 LazyColumn(Modifier.heightIn(max = 460.dp)) {
                     items(AppLanguage.TAGS) { tag ->
@@ -155,7 +155,7 @@ fun LanguageSettingsRow(modifier: Modifier = Modifier) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { open = false }) { Text(tr("Закрыть", "Close")) } },
+            confirmButton = { TextButton(onClick = { open = false }) { Text(localizedString("Close")) } },
         )
     }
 }

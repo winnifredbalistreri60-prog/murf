@@ -67,7 +67,7 @@ fun ProvidersRoute(onBack: () -> Unit) {
                 MurfProviders.upsert(context, p.copy(models = models, modelsFetchedAt = System.currentTimeMillis(),
                     defaultModel = p.defaultModel?.takeIf { it in models } ?: models.firstOrNull()), null)
                 if (MurfProviders.selected(context) == null) models.firstOrNull()?.let { MurfProviders.select(context, p.id, it) }
-                msg = "${p.name}: " + tr("моделей ", "models ") + models.size
+                msg = "${p.name}: " + localizedString("models ") + models.size
             }, { msg = "${p.name}: " + (it.message ?: "error") })
             busy = null; ver++
         }
@@ -75,32 +75,29 @@ fun ProvidersRoute(onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(tr("Модели на телефоне", "On-phone models")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), tr("Назад", "Back")) } },
+            title = { Text(localizedString("On-phone models")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_hermex_chevron_left), localizedString("Back")) } },
         )
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(tr("Ключи хранятся на телефоне в зашифрованном виде (Android Keystore) и передаются только провайдеру и агенту в локальной среде. Список моделей берётся с API провайдера.",
-                "Keys are stored encrypted on the phone (Android Keystore) and sent only to the provider and the local agent. Model lists come live from the provider API."),
+            Text(localizedString("Keys are stored encrypted on the phone (Android Keystore) and sent only to the provider and the local agent. Model lists come live from the provider API."),
                 style = MaterialTheme.typography.bodySmall)
             msg?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             if (providers.isEmpty()) {
-                Text(tr("Модели ещё не настроены", "No models configured yet"), style = MaterialTheme.typography.titleMedium)
-                Text(tr("Нажмите «Добавить провайдера», сохраните ключ API и выберите модель. Эти настройки используются агентом на телефоне.",
-                    "Tap “Add provider”, save an API key and choose a model. These settings are used by the on-phone agent."),
+                Text(localizedString("No models configured yet"), style = MaterialTheme.typography.titleMedium)
+                Text(localizedString("Tap “Add provider”, save an API key and choose a model. These settings are used by the on-phone agent."),
                     style = MaterialTheme.typography.bodySmall)
             }
             providers.forEach { p ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${p.name} · ${p.kind.title}", fontWeight = FontWeight.SemiBold)
-                        Text((if (MurfProviders.hasKey(context, p.id)) tr("ключ сохранён", "key saved") else tr("без ключа", "no key")) +
-                            " · " + p.baseUrl + " · " + tr("моделей: ", "models: ") + p.models.size +
+                        Text((if (MurfProviders.hasKey(context, p.id)) localizedString("key saved") else localizedString("no key")) +
+                            " · " + p.baseUrl + " · " + localizedString("models: ") + p.models.size +
                             (if (p.modelsFetchedAt > 0) " (" + SimpleDateFormat("dd.MM HH:mm", Locale.ROOT).format(Date(p.modelsFetchedAt)) + ")" else ""),
                             style = MaterialTheme.typography.bodySmall)
                         if (p.models.isEmpty()) {
-                            Text(tr("Список моделей пуст. Нажмите «Обновить модели»; если запрос не удастся, проверьте ключ через «Изменить».",
-                                "The model list is empty. Tap “Refresh models”; if the request fails, check the key under “Edit”."),
+                            Text(localizedString("The model list is empty. Tap “Refresh models”; if the request fails, check the key under “Edit”."),
                                 style = MaterialTheme.typography.bodySmall)
                         }
                         androidx.compose.foundation.layout.FlowRow(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()),
@@ -110,15 +107,15 @@ fun ProvidersRoute(onBack: () -> Unit) {
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { refresh(p) }, enabled = busy == null) { Text(if (busy == p.id) "…" else tr("Обновить модели", "Refresh models")) }
-                            TextButton(onClick = { edit = p }) { Text(tr("Изменить", "Edit")) }
-                            TextButton(onClick = { MurfProviders.remove(context, p.id); ver++ }) { Text(tr("Удалить", "Delete")) }
+                            OutlinedButton(onClick = { refresh(p) }, enabled = busy == null) { Text(if (busy == p.id) "…" else localizedString("Refresh models")) }
+                            TextButton(onClick = { edit = p }) { Text(localizedString("Edit")) }
+                            TextButton(onClick = { MurfProviders.remove(context, p.id); ver++ }) { Text(localizedString("Delete")) }
                         }
                     }
                 }
             }
-            Button(onClick = { adding = true }) { Text(tr("Добавить провайдера", "Add provider")) }
-            Text(tr("Цены для оценки стоимости — ориентировочная таблица MURF, не счёт провайдера.", "Cost estimates use MURF's approximate price table, not the provider's bill."),
+            Button(onClick = { adding = true }) { Text(localizedString("Add provider")) }
+            Text(localizedString("Cost estimates use MURF's approximate price table, not the provider's bill."),
                 style = MaterialTheme.typography.labelSmall)
         }
     }
@@ -138,7 +135,7 @@ private fun ProviderDialog(existing: ProviderConfig?, onDismiss: () -> Unit, onS
     var base by remember { mutableStateOf(existing?.baseUrl ?: kind.baseUrl) }
     var key by remember { mutableStateOf("") }
     AlertDialog(onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) tr("Новый провайдер", "New provider") else existing.name) },
+        title = { Text(if (existing == null) localizedString("New provider") else existing.name) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (existing == null) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -146,10 +143,10 @@ private fun ProviderDialog(existing: ProviderConfig?, onDismiss: () -> Unit, onS
                         FilterChip(selected = kind == k, onClick = { kind = k; name = k.title; base = k.baseUrl }, label = { Text(k.title) })
                     }
                 }
-                OutlinedTextField(name, { name = it }, label = { Text(tr("Название", "Name")) }, singleLine = true)
-                OutlinedTextField(base, { base = it.trim() }, label = { Text(tr("Адрес API", "API URL")) }, singleLine = true,
+                OutlinedTextField(name, { name = it }, label = { Text(localizedString("Name")) }, singleLine = true)
+                OutlinedTextField(base, { base = it.trim() }, label = { Text(localizedString("API URL")) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-                OutlinedTextField(key, { key = it.trim() }, label = { Text(if (existing != null) tr("Новый ключ (пусто — оставить)", "New key (empty — keep)") else tr("Ключ API ", "API key ") + kind.keyHint) },
+                OutlinedTextField(key, { key = it.trim() }, label = { Text(if (existing != null) localizedString("New key (empty — keep)") else localizedString("API key ") + kind.keyHint) },
                     singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
             }
@@ -158,7 +155,7 @@ private fun ProviderDialog(existing: ProviderConfig?, onDismiss: () -> Unit, onS
             TextButton(enabled = base.startsWith("http") && (key.isNotBlank() || existing != null || kind == ProviderKind.Custom), onClick = {
                 val cfg = (existing ?: ProviderConfig(MurfProviders.newId(context, kind), kind, name, base)).copy(name = name.ifBlank { kind.title }, baseUrl = base)
                 onSave(cfg, key.ifBlank { null })
-            }) { Text(tr("Сохранить и загрузить модели", "Save & load models")) }
+            }) { Text(localizedString("Save & load models")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Отмена", "Cancel")) } })
+        dismissButton = { TextButton(onClick = onDismiss) { Text(localizedString("Cancel")) } })
 }

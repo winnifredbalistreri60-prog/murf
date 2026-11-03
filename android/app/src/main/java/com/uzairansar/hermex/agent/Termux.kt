@@ -17,7 +17,7 @@ data class TermuxResult(val stdout: String, val stderr: String, val exitCode: In
     fun combined(): String = buildString {
         append(stdout)
         if (stderr.isNotBlank()) { if (isNotEmpty()) append("\n"); append("[stderr]\n").append(stderr) }
-        if (error != null) { if (isNotEmpty()) append("\n"); append(tr("[ошибка] ", "[error] ")).append(error) }
+        if (error != null) { if (isNotEmpty()) append("\n"); append(context.localizedString("[error] ")).append(error) }
     }
 }
 
@@ -99,8 +99,8 @@ object Termux {
 
     /** Фоновый запуск с ожиданием результата. Никогда не открывает Activity Termux (SESSION_ACTION 2). */
     suspend fun run(context: Context, command: String, workdir: String? = null, timeoutMs: Long = 120_000): TermuxResult {
-        if (!isInstalled(context)) return TermuxResult("", "", null, tr("Termux не установлен", "Termux is not installed"))
-        if (!hasPermission(context)) return TermuxResult("", "", null, tr("Нет разрешения «Запуск команд в Termux» для приложения MURF", "MURF lacks the “Run commands in Termux” permission"))
+        if (!isInstalled(context)) return TermuxResult("", "", null, context.localizedString("Termux is not installed"))
+        if (!hasPermission(context)) return TermuxResult("", "", null, context.localizedString("MURF lacks the “Run commands in Termux” permission"))
         val id = ids.incrementAndGet()
         val deferred = CompletableDeferred<TermuxResult>()
         waiting[id] = deferred
@@ -132,7 +132,7 @@ class TermuxResultReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra(Termux.EXTRA_ID, -1)
         val bundle = intent.getBundleExtra("result")
         val res = if (bundle == null) {
-            TermuxResult("", "", null, tr("Пустой ответ Termux", "Empty response from Termux"))
+            TermuxResult("", "", null, context.localizedString("Empty response from Termux"))
         } else {
             val err = bundle.getInt("err", -1)
             val errmsg = bundle.getString("errmsg")

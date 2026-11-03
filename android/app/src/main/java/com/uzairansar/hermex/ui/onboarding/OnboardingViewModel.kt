@@ -28,6 +28,7 @@ data class OnboardingUiState(
 class OnboardingViewModel(
     private val authRepository: AuthRepository,
     private val savedStateHandle: SavedStateHandle? = null,
+    private val application: android.app.Application,
 ) : ViewModel() {
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<OnboardingUiState> = _state
@@ -124,7 +125,7 @@ class OnboardingViewModel(
         if (payload == null) {
             _state.update {
                 it.copy(
-                    message = com.uzairansar.hermex.agent.tr(
+                    message = application.localizedString(
                         "Это не QR привязки (нужен murf://pair или ссылка Harness с ?auth=).",
                         "This is not a pairing QR (need murf://pair or a Harness ?auth= link).",
                     ),
@@ -148,7 +149,7 @@ class OnboardingViewModel(
             result
                 .onSuccess {
                     val note = if (payload.protocol == com.uzairansar.hermex.agent.PairProtocol.DshRemote) {
-                        com.uzairansar.hermex.agent.tr(
+                        application.localizedString(
                             "Harness привязан (cookie). Чат Hermex к Harness не подключается — откройте веб-UI сервера.",
                             "Harness paired (cookie). Hermex chat APIs are Hermes-only — open the server web UI.",
                         )
@@ -159,7 +160,7 @@ class OnboardingViewModel(
                     _state.update {
                         it.copy(
                             isBusy = false,
-                            message = com.uzairansar.hermex.agent.tr("Привязка не удалась: ", "Pairing failed: ") +
+                            message = application.localizedString("Pairing failed: ") +
                                 friendlyAuthError(error),
                             messageIsError = true,
                         )
@@ -177,17 +178,17 @@ class OnboardingViewModel(
                 raw.contains("Unable to resolve host", ignoreCase = true) ||
                 raw.contains("failed to connect", ignoreCase = true) ||
                 raw.contains("timeout", ignoreCase = true) ->
-                com.uzairansar.hermex.agent.tr(
+                application.localizedString(
                     "Сервер недоступен. Проверьте сеть или адрес и попробуйте снова.",
                     "Server unreachable. Check the network or address and try again.",
                 )
             raw.contains("401") || raw.contains("Unauthorized", ignoreCase = true) ||
                 (raw.contains("password", ignoreCase = true) && raw.contains("invalid", ignoreCase = true)) ->
-                com.uzairansar.hermex.agent.tr(
+                application.localizedString(
                     "Неверный пароль или нет доступа (401).",
                     "Wrong password or no access (401).",
                 )
-            else -> com.uzairansar.hermex.agent.tr("Не удалось подключиться. Проверьте настройки и повторите попытку.", "Connection failed. Check the settings and try again.")
+            else -> application.localizedString("Connection failed. Check the settings and try again.")
         }
     }
 

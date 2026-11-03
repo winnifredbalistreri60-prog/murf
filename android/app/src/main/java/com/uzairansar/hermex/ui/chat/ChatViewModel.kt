@@ -378,6 +378,7 @@ class ChatViewModel internal constructor(
     private val repository: ChatRepository,
     private val pendingStateStore: ChatPendingStateStore? = null,
     private val outboxStore: OfflineOutboxStore? = null,
+    private val application: android.app.Application,
 ) : ViewModel() {
     private val registryKey = "${repository.serverUrl}\u0000$sessionId"
     private val _state = MutableStateFlow(ChatUiState())
@@ -2409,10 +2410,10 @@ class ChatViewModel internal constructor(
                     _state.update {
                         it.copy(
                             isRunningSessionAction = false,
-                            notice = if (accepted) com.uzairansar.hermex.agent.tr("Steer: агент учтёт сообщение на следующем шаге.", "Steer sent: the agent will see it at the next step.") else null,
+                            notice = if (accepted) application.localizedString("Steer sent: the agent will see it at the next step.") else null,
                             error = if (accepted) null else responseError ?: rejection?.let { reason ->
                                 com.uzairansar.hermex.agent.tr("Steer не принят: $reason. Сообщение можно оставить в очереди.", "Steering was not accepted: $reason.")
-                            } ?: com.uzairansar.hermex.agent.tr("Сервер не поддерживает Steer для этого ответа. Сообщение можно оставить в очереди.", "The active response could not be steered."),
+                            } ?: application.localizedString("The active response could not be steered."),
                         )
                     }
                 }
@@ -2766,7 +2767,7 @@ class ChatViewModel internal constructor(
             steer(text, consumeDraft = false, onRejected = {
                 queuedSlashMessages.addFirst(QueuedDraft(text, emptyList()))
                 persistQueuedDrafts()
-                _state.update { it.copy(error = null, notice = com.uzairansar.hermex.agent.tr("«Продолжай» поставлено в очередь.", "“Continue” was queued.")) }
+                _state.update { it.copy(error = null, notice = application.localizedString("“Continue” was queued.")) }
             })
             return
         }
@@ -2779,12 +2780,12 @@ class ChatViewModel internal constructor(
     fun steerQueued(id: String) {
         val item = queuedSlashMessages.firstOrNull { it.id == id } ?: return
         if (!_state.value.isStreaming) {
-            _state.update { it.copy(error = com.uzairansar.hermex.agent.tr("Агент сейчас не работает — сообщение уйдёт обычным порядком.", "The agent is idle; the message will be sent normally.")) }
+            _state.update { it.copy(error = application.localizedString("The agent is idle; the message will be sent normally.")) }
             drainQueuedSlashMessageIfIdle()
             return
         }
         if (item.attachments.isNotEmpty()) {
-            _state.update { it.copy(error = com.uzairansar.hermex.agent.tr("Steer передаёт только текст. Вложения останутся в очереди.", "Steer sends text only. Attachments stay queued.")) }
+            _state.update { it.copy(error = application.localizedString("Steer sends text only. Attachments stay queued.")) }
             return
         }
         steer(item.text, consumeDraft = false) { setQueue(MurfQueueOps.remove(queuedSlashMessages.toList(), id)) }

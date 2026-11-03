@@ -1036,14 +1036,14 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
             com.uzairansar.hermex.agent.LocalEnv.health() == null) return@LaunchedEffect
         checked = true
         if (!com.uzairansar.hermex.agent.LocalEnv.reachable(server)) {
-            offer = if (com.uzairansar.hermex.agent.LocalEnv.health() != null) tr("Локальная среда на телефоне запущена.", "The local environment on the phone is running.")
-            else tr("Локальная среда на телефоне сейчас не запущена — её можно запустить в разделе «Локальная среда».", "The local environment on the phone is not running — you can start it in “Local environment”.")
+            offer = if (com.uzairansar.hermex.agent.LocalEnv.health() != null) localizedString("The local environment on the phone is running.")
+            else localizedString("The local environment on the phone is not running — you can start it in “Local environment”.")
         }
     }
     offer?.let { text ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { offer = null },
-            title = { androidx.compose.material3.Text(tr("Сервер недоступен", "Server unreachable")) },
+            title = { androidx.compose.material3.Text(localizedString("Server unreachable")) },
             text = {
                 androidx.compose.material3.Text(
                     tr(
@@ -1060,7 +1060,7 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
                             offer = null
                             com.uzairansar.hermex.agent.AgentShare.toast(
                                 context,
-                                tr("Сервер снова отвечает", "Server is responding again"),
+                                localizedString("Server is responding again"),
                             )
                         } else {
                             com.uzairansar.hermex.agent.AgentShare.toast(
@@ -1072,7 +1072,7 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
                             )
                         }
                     }
-                }) { androidx.compose.material3.Text(tr("Переподключить", "Reconnect")) }
+                }) { androidx.compose.material3.Text(localizedString("Reconnect")) }
             },
             dismissButton = {
                 androidx.compose.foundation.layout.Row {
@@ -1083,13 +1083,13 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
                                 .onFailure {
                                     com.uzairansar.hermex.agent.AgentShare.toast(
                                         context,
-                                        tr("Не удалось: ", "Failed: ") + (it.message ?: ""),
+                                        localizedString("Failed: ") + (it.message ?: ""),
                                     )
                                 }
                         }
-                    }) { androidx.compose.material3.Text(tr("На телефон", "Use phone")) }
+                    }) { androidx.compose.material3.Text(localizedString("Use phone")) }
                     androidx.compose.material3.TextButton(onClick = { offer = null }) {
-                        androidx.compose.material3.Text(tr("Остаться", "Stay"))
+                        androidx.compose.material3.Text(localizedString("Stay"))
                     }
                 }
             },

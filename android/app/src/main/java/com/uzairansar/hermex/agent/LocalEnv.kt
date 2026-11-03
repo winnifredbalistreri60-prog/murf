@@ -225,14 +225,14 @@ object LocalEnv {
     internal fun localConnectUserMessage(t: Throwable): String? {
         val chain = generateSequence(t) { it.cause }.toList()
         if (chain.any { it is java.net.ConnectException || it is java.net.SocketTimeoutException }) {
-            return tr("Сначала дождитесь запуска среды", "Wait for the environment to finish starting")
+            return context.localizedString("Wait for the environment to finish starting")
         }
         val m = chain.mapNotNull { it.message }.joinToString(" ")
         if (m.contains("Failed to connect", ignoreCase = true) ||
             m.contains("Connection refused", ignoreCase = true) ||
             m.contains("failed to connect", ignoreCase = true)
         ) {
-            return tr("Сначала дождитесь запуска среды", "Wait for the environment to finish starting")
+            return context.localizedString("Wait for the environment to finish starting")
         }
         return null
     }
@@ -254,7 +254,7 @@ object LocalEnv {
         onBusy: (String) -> Unit = {},
         onLog: (String) -> Unit = {},
     ): Result<Unit> = runCatching {
-        onBusy(tr("Проверка локальной среды", "Checking local environment"))
+        onBusy(context.localizedString("Checking local environment"))
         var h = health()
         if (h == null) {
             if (!Termux.isInstalled(context)) {
@@ -269,12 +269,12 @@ object LocalEnv {
                     "Grant MURF the “Run commands in Termux” permission (Phone & Termux)",
                 ))
             }
-            onBusy(tr("Синхронизация скриптов…", "Syncing scripts…"))
+            onBusy(context.localizedString("Syncing scripts…"))
             val push = runCatching { pushScripts(context) }.getOrNull()
             if (push != null && push.error != null) {
                 onLog(push.combined().takeLast(1500))
             }
-            onBusy(tr("Запуск служб (в фоне, без окна Termux)…", "Starting services (background, no Termux window)…"))
+            onBusy(context.localizedString("Starting services (background, no Termux window)…"))
             // Detached: UI остаётся в MURF; murf-local start nohup-ит svc и пишет svc.log
             startDetached(context)
             val deadline = System.currentTimeMillis() + 180_000L
@@ -286,7 +286,7 @@ object LocalEnv {
                 onBusy(
                     startBusyLabel(
                         waited,
-                        tr("Ожидание запуска среды", "Waiting for environment"),
+                        context.localizedString("Waiting for environment"),
                     ),
                 )
                 if (System.currentTimeMillis() - lastLogAt >= 4_000L) {
@@ -319,20 +319,20 @@ object LocalEnv {
 
         val existing = localAccount(auth)
         if (existing != null) {
-            onBusy(tr("Переключение на телефон", "Switching to phone"))
+            onBusy(context.localizedString("Switching to phone"))
             auth.activate(existing.id)
             return@runCatching
         }
 
-        onBusy(tr("Первый вход в локальный WebUI", "First login to local WebUI"))
+        onBusy(context.localizedString("First login to local WebUI"))
         val r = Termux.run(context, "murf-local creds", timeoutMs = 60_000)
         r.error?.let { error(it) }
         val j = runCatching { JSONObject(r.stdout.lines().last { it.startsWith("{") }) }.getOrElse {
-            error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
+            error(context.localizedString("Local environment is not installed (no WebUI password)"))
         }
         val pw = j.optString("password")
         if (pw.isBlank()) {
-            error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
+            error(context.localizedString("Local environment is not installed (no WebUI password)"))
         }
         try {
             when (val res = auth.addServer(URL, pw, displayName = DISPLAY_NAME, initials = "ТЛ", headerLogoColorHex = "#4CAF50")) {
@@ -345,7 +345,7 @@ object LocalEnv {
     }
 
     suspend fun switchToServer(auth: AuthRepository): Result<Unit> = runCatching {
-        val s = serverAccount(auth) ?: error(tr("Нет профиля сервера", "No server profile"))
+        val s = serverAccount(auth) ?: error(context.localizedString("No server profile"))
         auth.activate(s.id)
     }
 
@@ -357,14 +357,14 @@ object LocalEnv {
                 .newCall(Request.Builder().url(server.newBuilder().encodedPath("/phone/api/local/export").build())
                     .header("X-Agent-App", "1")
                     .post(body.toRequestBody("application/json".toMediaType())).build())
-                .execute().use { r -> if (!r.isSuccessful) error(tr("сервер: HTTP ", "server: HTTP ") + r.code); JSONObject(r.body!!.string()) }
+                .execute().use { r -> if (!r.isSuccessful) error(context.localizedString("server: HTTP ") + r.code); JSONObject(r.body!!.string()) }
         }
-        if (!resp.optBoolean("ok")) error(resp.optString("error", tr("ошибка выгрузки", "export failed")))
+        if (!resp.optBoolean("ok")) error(resp.optString("error", context.localizedString("export failed")))
         val url = resp.getString("url")
         val r = Termux.run(context, "murf-local import " + Termux.shellQuote(url) + if (withSecrets) " --with-secrets" else "", timeoutMs = 300_000)
         if (r.error != null) error(r.error)
-        return tr("Перенесено: ", "Transferred: ") + resp.optJSONArray("included")?.let { a -> (0 until a.length()).joinToString { a.getString(it) } } +
-            " (${resp.optLong("size") / 1024} " + tr("КБ", "KB") + ")\n" + r.stdout.trim().takeLast(600)
+        return context.localizedString("Transferred: ") + resp.optJSONArray("included")?.let { a -> (0 until a.length()).joinToString { a.getString(it) } } +
+            " (${resp.optLong("size") / 1024} " + context.localizedString("KB") + ")\n" + r.stdout.trim().takeLast(600)
     }
 
     // ---------- батарея / фон ----------
