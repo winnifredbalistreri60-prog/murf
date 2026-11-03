@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.ui.chat
 
+import com.uzairansar.hermex.ui.localization.localizedStringFormat
 import android.animation.ValueAnimator
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -565,7 +566,7 @@ private fun ChatCodeBlock(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val title = (language?.takeIf { it.isNotBlank() } ?: "code") +
-                    if (collapsible) " · " + com.uzairansar.hermex.agent.tr("$totalLines строк", "$totalLines lines") else ""
+                    if (collapsible) " · " + localizedStringFormat("%1\$d lines", totalLines) else ""
                 Text(
                     title,
                     modifier = Modifier.weight(1f),
@@ -624,9 +625,9 @@ private fun ChatCodeBlock(
                 ) {
                     Text(
                         if (expanded) {
-                            com.uzairansar.hermex.agent.tr("Свернуть", "Collapse")
+                            localizedString("Collapse")
                         } else {
-                            com.uzairansar.hermex.agent.tr("Показать всё ($totalLines строк)", "Show all ($totalLines lines)")
+                            localizedStringFormat("Show all (%1\$d lines)", totalLines)
                         },
                     )
                 }

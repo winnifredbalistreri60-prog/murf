@@ -1410,4 +1410,23 @@
     <string name="l10n_b89b2aed6c6c2f10">Наведите камеру на QR из «murf pair» или из MURF на другом устройстве</string>
     <string name="l10n_508e429c23a8a111">Агент работает</string>
     <string name="l10n_5166d2d19f8d6974">в очереди: %1$d</string>
+    <string name="l10n_3f6322ad49062d3d">%1$d строк</string>
+    <string name="l10n_be6eb1fc3b05bf9d">Свернуть</string>
+    <string name="l10n_8a1428c9884d223b">Показать всё (%1$d строк)</string>
+    <string name="l10n_fc1e5327aea06a90">Язык / Language</string>
+    <string name="l10n_b8352b44a588721c">Язык приложения</string>
+    <string name="l10n_37a8eec1ce19687d">по умолчанию</string>
+    <string name="l10n_6cdfd271da635d49">выбрано</string>
+    <string name="l10n_daee7606b339f3c3">Сбросить</string>
+    <string name="l10n_b698e15185fe4390">Нужна авторизация: вставьте API-токен провайдера (как «Paste a key» в DeepSeek Harness).</string>
+    <string name="l10n_f2afe430b6c72b37">Путник — широкополая шляпа</string>
+    <string name="l10n_7204cfb85fa87b29">Мастер — кепка</string>
+    <string name="l10n_45080ce3794f3fbe">Звездочёт — колпак</string>
+    <string name="l10n_8b55b40b8814cd66">Художник — берет</string>
+    <string name="l10n_9fc33340a643dde2">Ромашка — шляпка с цветком</string>
+    <string name="l10n_d0a9428403ebfdb7">Механик — шлем</string>
+    <string name="l10n_7f259193e9b4450c">Франт — цилиндр</string>
+    <string name="l10n_3be58851adb2abe1">Лыжник — шапка с помпоном</string>
+    <string name="l10n_7ebc48c084068120">Поварёнок — колпак повара</string>
+    <string name="l10n_f8d5aaf471f2061e">Рыбак — соломенная шляпа</string>
 </resources>

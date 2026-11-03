@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -104,10 +105,7 @@ object MurfProviders {
         if (isAuthorized(c)) return null
         val sel = selected(c)
         return if (sel == null) {
-            tr(
-                "Нужна авторизация: вставьте API-токен провайдера (как «Paste a key» в DeepSeek Harness).",
-                "Authorization required: paste a provider API token (like “Paste a key” in DeepSeek Harness).",
-            )
+            c.localizedString("Authorization required: paste a provider API token (like “Paste a key” in DeepSeek Harness).")
         } else {
             tr(
                 "Токен для «${sel.first}» не сохранён. Вставьте ключ в блок «Авторизация» ниже.",

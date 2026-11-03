@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.app.Activity
 import android.app.LocaleManager
 import android.content.Context
@@ -126,13 +127,13 @@ fun LanguageSettingsRow(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(com.uzairansar.hermex.R.drawable.ic_lucide_languages), contentDescription = null)
-        Text(tr("Язык / Language", "Language / Язык"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Text(localizedString("Language / Язык"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Text(AppLanguage.nativeName(current), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyMedium)
     }
     if (open) {
         AlertDialog(
             onDismissRequest = { open = false },
-            title = { Text(tr("Язык приложения", "App language")) },
+            title = { Text(localizedString("App language")) },
             text = {
                 LazyColumn(Modifier.heightIn(max = 460.dp)) {
                     items(AppLanguage.TAGS) { tag ->
@@ -155,7 +156,7 @@ fun LanguageSettingsRow(modifier: Modifier = Modifier) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { open = false }) { Text(tr("Закрыть", "Close")) } },
+            confirmButton = { TextButton(onClick = { open = false }) { Text(localizedString("Close")) } },
         )
     }
 }

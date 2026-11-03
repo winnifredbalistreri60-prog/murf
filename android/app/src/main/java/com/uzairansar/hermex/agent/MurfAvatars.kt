@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -298,13 +299,13 @@ fun MurfAvatarPicker(current: MurfAvatarSpec, isDefault: Boolean, backend: Strin
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MurfBotAvatar(current, backend, size = 48.dp)
             Column(Modifier.weight(1f)) {
-                Text(tr(current.hat.ru, current.hat.en), style = MaterialTheme.typography.bodyMedium)
+                Text(localizedString(current.hat.en), style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    if (isDefault) tr("по умолчанию", "default") else tr("выбрано", "custom"),
+                    if (isDefault) localizedString("default") else localizedString("custom"),
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (!isDefault) Text(tr("Сбросить", "Reset"), color = MaterialTheme.colorScheme.primary,
+            if (!isDefault) Text(localizedString("Reset"), color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelLarge, modifier = Modifier.clickable { onPick(null) }.padding(6.dp))
         }
         MurfHat.entries.chunked(5).forEach { row ->
@@ -314,7 +315,7 @@ fun MurfAvatarPicker(current: MurfAvatarSpec, isDefault: Boolean, backend: Strin
                     Box(Modifier.clip(RoundedCornerShape(12.dp))
                         .border(if (sel) 2.dp else 0.dp, if (sel) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(12.dp))
                         .clickable { onPick(current.copy(hat = h)) }.padding(2.dp)) {
-                        MurfBotAvatar(current.copy(hat = h), backend, size = 36.dp, showBadge = false, description = tr(h.ru, h.en))
+                        MurfBotAvatar(current.copy(hat = h), backend, size = 36.dp, showBadge = false, description = localizedString(h.en))
                     }
                 }
             }
