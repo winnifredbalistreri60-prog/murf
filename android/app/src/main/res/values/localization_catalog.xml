@@ -1754,4 +1754,63 @@
     <string name="l10n_9133c72b8c01e3ea" formatted="false">"PDF to Downloads"</string>
     <string name="l10n_164793048f7f5ae4" formatted="false">"MURF — message"</string>
     <string name="l10n_eba7bab6c47453b8" formatted="false">"Run code in Termux"</string>
+    <string name="l10n_4b5e84be0e45d1f4" formatted="false">"Check"</string>
+    <string name="l10n_9108488c0166ed29" formatted="false">"Server updates"</string>
+    <string name="l10n_77b91f8b6f85b7f7" formatted="false">"checking…"</string>
+    <string name="l10n_95389dd7f2717364" formatted="false">"up to date"</string>
+    <string name="l10n_1d5ee313d50a7f8a" formatted="false">"unavailable"</string>
+    <string name="l10n_739a78ab08e86252" formatted="false">"version unknown"</string>
+    <string name="l10n_27aa1e7ff6746e49" formatted="false">"Installed from an archive — update WebUI manually on the server."</string>
+    <string name="l10n_42e2c41136fb417a" formatted="false">"unavailable: "</string>
+    <string name="l10n_3edad1f7a0d0c906" formatted="false">"previous update not finished"</string>
+    <string name="l10n_887a0a455a55a3e0" formatted="false">"The previous update did not finish (npm dependency install failed). “Update” will complete it."</string>
+    <string name="l10n_d000998a5bfb0b1e" formatted="false">"Checked: "</string>
+    <string name="l10n_2992250d61406734" formatted="false">"auto every "</string>
+    <string name="l10n_27d5482eebd075de" formatted="false">"h"</string>
+    <string name="l10n_485a3d15e78bebb2" formatted="false">"Dry run"</string>
+    <string name="l10n_1284ea9b447e93e2" formatted="false">"Agent update"</string>
+    <string name="l10n_ab67ef22f62aabed" formatted="false">" · running"</string>
+    <string name="l10n_023ae7ed523995f5" formatted="false">" · succeeded"</string>
+    <string name="l10n_d28de188fd14dacf" formatted="false">" · failed"</string>
+    <string name="l10n_5a78980ea4d2d5fc" formatted="false">"Server is restarting, waiting for a response…"</string>
+    <string name="l10n_7951b4d1d4432650" formatted="false">"Rolled back to the previous version."</string>
+    <string name="l10n_bc591a3160650bd7" formatted="false">"Backup: "</string>
+    <string name="l10n_bf99824b042a2ee7" formatted="false">"Update Hermes Agent?"</string>
+    <string name="l10n_73e08376d6a79c20" formatted="false">"What will happen on the server:\n"</string>
+    <string name="l10n_432ff5e8ded5000a" formatted="false">"1. Backup: hermes-agent, ~/.hermes settings, state.db and local patches (git stash) → ~/hermes-backups.\n"</string>
+    <string name="l10n_8c57917601c76439" formatted="false">"finish the previous update"</string>
+    <string name="l10n_c3c7279f589b64cb" formatted="false">"3. Restart of the gateway and WebUI — the Telegram bot and chats will be unavailable for 1–3 minutes; Telegram messages arriving meanwhile may be missed.\n"</string>
+    <string name="l10n_3777171122df7786" formatted="false">"4. Check: API, Telegram, WebUI. On failure — automatic rollback from the backup.\n\n"</string>
+    <string name="l10n_c00fd4bdd7a48bb2" formatted="false">"“Dry run” only makes the backup and checks, without updating or restarting."</string>
+    <string name="l10n_e431cba220288a68" formatted="false">"Update Hermes WebUI?"</string>
+    <string name="l10n_d984f22b475afa65" formatted="false">"WebUI will download the update and restart. Open chats will briefly disconnect and reconnect automatically."</string>
+    <string name="l10n_e43dbbaafd10aabe" formatted="false">"Update log"</string>
+    <string name="l10n_e21ec737e4718777" formatted="false">"MURF: phone bridge is on"</string>
+    <string name="l10n_12bcf5727b4a280c" formatted="false">"The agent can request actions on the phone (with confirmation)"</string>
+    <string name="l10n_d7425a576e96b3eb" formatted="false">"Not logged in to the app"</string>
+    <string name="l10n_10ae97b6ae571937" formatted="false">"Session expired — log in again"</string>
+    <string name="l10n_82c3b919bf5abe8e" formatted="false">"SMS reading is disabled in MURF (Phone → SMS)"</string>
+    <string name="l10n_0415f2f557ac90cc" formatted="false">"The user did not confirm the request in time"</string>
+    <string name="l10n_3ba666c17635474d" formatted="false">"The user declined the request"</string>
+    <string name="l10n_80b20c47b29717a7" formatted="false">"error/declined"</string>
+    <string name="l10n_3ad0e3698278f45b" formatted="false">"Allow"</string>
+    <string name="l10n_b057e949be96752f" formatted="false">"no download_url"</string>
+    <string name="l10n_2d8e3df65492f023" formatted="false">"Notification shown"</string>
+    <string name="l10n_e19bb9012977f17a" formatted="false">"No notification permission"</string>
+    <string name="l10n_76c62da5e7d648c6" formatted="false">"Battery: "</string>
+    <string name="l10n_202471e19160edb8" formatted="false">"charging: "</string>
+    <string name="l10n_662a41f7e5de6e99" formatted="false">"Phone bridge"</string>
+    <string name="l10n_5cb6663c129fbb46" formatted="false">"MURF requests to the phone"</string>
+    <string name="l10n_2d8aa60b38a47987" formatted="false">"MURF messages"</string>
+    <string name="l10n_4db5ebe9837cafd1" formatted="false">"Could not get status: %1$s"</string>
+    <string name="l10n_4c7a8d14589cd600" formatted="false">"Request failed: %1$s"</string>
+    <string name="l10n_188a2cdef85523a8" formatted="false">"Log unavailable: %1$s"</string>
+    <string name="l10n_bb7aaffa3e9f7013" formatted="false">"update available · %1$s"</string>
+    <string name="l10n_fd39388c2ad3ee27" formatted="false">"version %1$s"</string>
+    <string name="l10n_c23713f4ac0f55ec" formatted="false">"latest release %1$s"</string>
+    <string name="l10n_acf5b956d803de72" formatted="false">"Server responded %1$d"</string>
+    <string name="l10n_2610de5701652a5c" formatted="false">"Unknown tool %1$s"</string>
+    <string name="l10n_f4c57f30bd9f5cea" formatted="false">"Agent requests: %1$s"</string>
+    <string name="l10n_0d42800306b7aa49" formatted="false">"download: HTTP %1$d"</string>
+    <string name="l10n_5759b79328c6e381" formatted="false">"Copied %1$d characters"</string>
 </resources>

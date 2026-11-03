@@ -35,11 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.uzairansar.hermex.ui.localization.localizedString
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -159,12 +162,12 @@ private fun ComponentRow(
                 if (checking) {
                     CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(tr("Проверяю…", "Checking…"))
+                    Text(localizedString("Checking…"))
                 } else {
-                    Text(tr("Проверить", "Check"))
+                    Text(localizedString("Check"))
                 }
             }
-            Button(onClick = onUpdate, enabled = updateEnabled && !busy) { Text(tr("Обновить", "Update")) }
+            Button(onClick = onUpdate, enabled = updateEnabled && !busy) { Text(localizedString("Update")) }
         }
     }
 }
@@ -188,6 +191,7 @@ fun ServerUpdatesSection(
     webUiGitUpdateBehind: Int?,
     onWebUiGitUpdate: () -> Unit,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<JSONObject?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -201,7 +205,7 @@ fun ServerUpdatesSection(
             .onSuccess { status = it; error = null; serverRestarting = false; AgentUpdateBadge.set(it) }
             .onFailure {
                 val running = status?.optBoolean("running") == true
-                if (running) serverRestarting = true else error = tr("Не удалось получить статус: ${it.message}", "Could not get status: ${it.message}")
+                if (running) serverRestarting = true else error = context.localizedStringFormat("Could not get status: %1\$s", it.message)
             }
     }
 
@@ -224,14 +228,14 @@ fun ServerUpdatesSection(
                     delay(800)
                     load()
                 }
-                .onFailure { error = tr("Ошибка запроса: ${it.message}", "Request failed: ${it.message}") }
+                .onFailure { error = context.localizedStringFormat("Request failed: %1\$s", it.message) }
         }
     }
 
     val agentBehind = status?.optJSONObject("check")?.optInt("behind", 0) ?: 0
     Spacer(Modifier.height(10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.testTag("server_updates")) {
-        Text(tr("Обновления сервера", "Server updates"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(localizedString("Server updates"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
 
         // --- Hermes WebUI ---
         val w = status?.optJSONObject("webui")
@@ -239,18 +243,18 @@ fun ServerUpdatesSection(
         val wLatest = w?.optString("latest")?.takeIf { it.isNotBlank() && it != "null" }
         val wGitBehind = webUiGitUpdateBehind?.takeIf { it > 0 }
         val (wStatus, wColor) = when {
-            status == null -> tr("проверяю…", "checking…") to MaterialTheme.colorScheme.secondary
-            wGitBehind != null -> tr("доступно обновление · $wGitBehind", "update available · $wGitBehind") to Amber
-            w?.optBoolean("update_available") == true -> tr("доступно обновление · $wLatest", "update available · $wLatest") to Amber
-            wVer != null && wLatest != null -> tr("актуально", "up to date") to Green
-            else -> tr("недоступно", "unavailable") to MaterialTheme.colorScheme.secondary
+            status == null -> localizedString("checking…") to MaterialTheme.colorScheme.secondary
+            wGitBehind != null -> localizedStringFormat("update available · %1\$s", wGitBehind) to Amber
+            w?.optBoolean("update_available") == true -> localizedStringFormat("update available · %1\$s", wLatest) to Amber
+            wVer != null && wLatest != null -> localizedString("up to date") to Green
+            else -> localizedString("unavailable") to MaterialTheme.colorScheme.secondary
         }
         ComponentRow(
             title = "Hermes WebUI",
-            version = listOfNotNull(wVer?.let { tr("версия $it", "version $it") }, wLatest?.let { tr("последний релиз $it", "latest release $it") }).joinToString(" · ").ifBlank { tr("версия неизвестна", "version unknown") },
+            version = listOfNotNull(wVer?.let { localizedStringFormat("version %1\$s", it) }, wLatest?.let { localizedStringFormat("latest release %1\$s", it) }).joinToString(" · ").ifBlank { localizedString("version unknown") },
             status = wStatus,
             statusColor = wColor,
-            note = if (wGitBehind == null && w?.optBoolean("git") == false) tr("Установлен из архива — обновление WebUI делается вручную на сервере.", "Installed from an archive — update WebUI manually on the server.") else null,
+            note = if (wGitBehind == null && w?.optBoolean("git") == false) localizedString("Installed from an archive — update WebUI manually on the server.") else null,
             checking = false,
             busy = running,
             updateEnabled = wGitBehind != null,
@@ -265,12 +269,12 @@ fun ServerUpdatesSection(
         val available = c?.optBoolean("update_available") == true
         val pendingTail = c?.optBoolean("pending_tail") == true
         val (aStatus, aColor) = when {
-            c == null && checking -> tr("проверяю…", "checking…") to MaterialTheme.colorScheme.secondary
-            c == null -> tr("недоступно", "unavailable") to MaterialTheme.colorScheme.secondary
-            c.optBoolean("ok").not() -> tr("недоступно: ", "unavailable: ") + c.optString("error").take(80) to Red
+            c == null && checking -> localizedString("checking…") to MaterialTheme.colorScheme.secondary
+            c == null -> localizedString("unavailable") to MaterialTheme.colorScheme.secondary
+            c.optBoolean("ok").not() -> localizedString("unavailable: ") + c.optString("error").take(80) to Red
             available -> tr("доступно обновление · $behind ${plural(behind, "коммит", "коммита", "коммитов")}", "update available · $behind commit" + (if (behind == 1) "" else "s")) to Amber
-            pendingTail -> tr("предыдущее обновление не завершено", "previous update not finished") to Amber
-            else -> tr("актуально", "up to date") to Green
+            pendingTail -> localizedString("previous update not finished") to Amber
+            else -> localizedString("up to date") to Green
         }
         val aVersion = c?.let {
             listOfNotNull(
@@ -280,8 +284,8 @@ fun ServerUpdatesSection(
             ).joinToString(" · ")
         } ?: "—"
         val aNote = buildList {
-            if (pendingTail) add(tr("Прошлое обновление не завершено (сбой установки npm-зависимостей). «Обновить» его доделает.", "The previous update did not finish (npm dependency install failed). “Update” will complete it."))
-            c?.optString("checked")?.takeIf { it.isNotBlank() }?.let { add(tr("Проверено: ", "Checked: ") + "$it (Hermes) · " + tr("авто раз в ", "auto every ") + "${status?.optInt("check_every_hours", 3)} " + tr("ч", "h")) }
+            if (pendingTail) add(localizedString("The previous update did not finish (npm dependency install failed). “Update” will complete it."))
+            c?.optString("checked")?.takeIf { it.isNotBlank() }?.let { add(localizedString("Checked: ") + "$it (Hermes) · " + localizedString("auto every ") + "${status?.optInt("check_every_hours", 3)} " + localizedString("h")) }
         }.joinToString("\n").ifBlank { null }
         ComponentRow(
             title = "Hermes Agent",
@@ -300,7 +304,7 @@ fun ServerUpdatesSection(
         // --- ход/итог последнего обновления ---
         val job = status?.optJSONObject("job")
         if (job != null) {
-            val mode = if (job.optString("mode") == "dry-run") tr("Пробный запуск", "Dry run") else tr("Обновление агента", "Agent update")
+            val mode = if (job.optString("mode") == "dry-run") localizedString("Dry run") else localizedString("Agent update")
             val jobOk = if (job.isNull("ok")) null else job.optBoolean("ok")
             Column(
                 Modifier
@@ -318,9 +322,9 @@ fun ServerUpdatesSection(
                     }
                     Text(
                         "$mode · ${job.optString("started")}" + when {
-                            running -> tr(" · выполняется", " · running")
-                            jobOk == true -> tr(" · успешно", " · succeeded")
-                            jobOk == false -> tr(" · ошибка", " · failed")
+                            running -> localizedString(" · running")
+                            jobOk == true -> localizedString(" · succeeded")
+                            jobOk == false -> localizedString(" · failed")
                             else -> ""
                         },
                         style = MaterialTheme.typography.bodySmall,
@@ -337,18 +341,18 @@ fun ServerUpdatesSection(
                         color = if (s.optString("status") == "failed") Red else MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                if (serverRestarting) Text(tr("Сервер перезапускается, жду ответа…", "Server is restarting, waiting for a response…"), style = MaterialTheme.typography.bodySmall, color = Amber)
+                if (serverRestarting) Text(localizedString("Server is restarting, waiting for a response…"), style = MaterialTheme.typography.bodySmall, color = Amber)
                 job.optString("message").takeIf { it.isNotBlank() }?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = if (jobOk == false) Red else Green)
                 }
-                if (job.optBoolean("rolled_back")) Text(tr("Выполнен откат на прежнюю версию.", "Rolled back to the previous version."), style = MaterialTheme.typography.bodySmall, color = Amber)
-                Text(tr("Бэкап: ", "Backup: ") + job.optString("backup_dir"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                if (job.optBoolean("rolled_back")) Text(localizedString("Rolled back to the previous version."), style = MaterialTheme.typography.bodySmall, color = Amber)
+                Text(localizedString("Backup: ") + job.optString("backup_dir"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
                 TextButton(onClick = {
                     scope.launch {
                         logText = runCatching { withContext(Dispatchers.IO) { ServerUpdatesApi.log(server, cookieJar) } }
-                            .getOrElse { tr("Журнал недоступен: ${it.message}", "Log unavailable: ${it.message}") }
+                            .getOrElse { context.localizedStringFormat("Log unavailable: %1\$s", it.message) }
                     }
-                }) { Text(tr("Журнал", "Log")) }
+                }) { Text(localizedString("Log")) }
             }
         }
         error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Red) }
@@ -357,30 +361,30 @@ fun ServerUpdatesSection(
     if (confirmAgent) {
         AlertDialog(
             onDismissRequest = { confirmAgent = false },
-            title = { Text(tr("Обновить Hermes Agent?", "Update Hermes Agent?")) },
+            title = { Text(localizedString("Update Hermes Agent?")) },
             text = {
                 Text(
-                    tr("Что будет сделано на сервере:\n", "What will happen on the server:\n") +
-                        tr("1. Резервная копия: hermes-agent, настройки ~/.hermes, база state.db и локальные патчи (git stash) → ~/hermes-backups.\n", "1. Backup: hermes-agent, ~/.hermes settings, state.db and local patches (git stash) → ~/hermes-backups.\n") +
-                        "2. hermes update (" + (if (agentBehind > 0) tr("$agentBehind ${plural(agentBehind, "коммит", "коммита", "коммитов")}", "$agentBehind commit" + (if (agentBehind == 1) "" else "s")) else tr("доделать прошлое обновление", "finish the previous update")) + ").\n" +
-                        tr("3. Перезапуск шлюза и WebUI — Telegram-бот и чаты будут недоступны 1–3 минуты; сообщения, пришедшие в Telegram в это время, бот может пропустить.\n", "3. Restart of the gateway and WebUI — the Telegram bot and chats will be unavailable for 1–3 minutes; Telegram messages arriving meanwhile may be missed.\n") +
-                        tr("4. Проверка: API, Telegram, WebUI. При ошибке — автоматический откат из копии.\n\n", "4. Check: API, Telegram, WebUI. On failure — automatic rollback from the backup.\n\n") +
-                        tr("«Пробный запуск» сделает только копию и проверки, без обновления и перезапусков.", "“Dry run” only makes the backup and checks, without updating or restarting."),
+                    localizedString("What will happen on the server:\n") +
+                        localizedString("1. Backup: hermes-agent, ~/.hermes settings, state.db and local patches (git stash) → ~/hermes-backups.\n") +
+                        "2. hermes update (" + (if (agentBehind > 0) tr("$agentBehind ${plural(agentBehind, "коммит", "коммита", "коммитов")}", "$agentBehind commit" + (if (agentBehind == 1) "" else "s")) else localizedString("finish the previous update")) + ").\n" +
+                        localizedString("3. Restart of the gateway and WebUI — the Telegram bot and chats will be unavailable for 1–3 minutes; Telegram messages arriving meanwhile may be missed.\n") +
+                        localizedString("4. Check: API, Telegram, WebUI. On failure — automatic rollback from the backup.\n\n") +
+                        localizedString("“Dry run” only makes the backup and checks, without updating or restarting."),
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     confirmAgent = false
                     post("/phone/api/ops/agent-update/apply", JSONObject().put("confirm", "update"))
-                }) { Text(tr("Обновить", "Update")) }
+                }) { Text(localizedString("Update")) }
             },
             dismissButton = {
                 Row {
                     TextButton(onClick = {
                         confirmAgent = false
                         post("/phone/api/ops/agent-update/apply", JSONObject().put("dry_run", true))
-                    }) { Text(tr("Пробный запуск", "Dry run")) }
-                    TextButton(onClick = { confirmAgent = false }) { Text(tr("Отмена", "Cancel")) }
+                    }) { Text(localizedString("Dry run")) }
+                    TextButton(onClick = { confirmAgent = false }) { Text(localizedString("Cancel")) }
                 }
             },
             modifier = Modifier.testTag("agent_update_confirm"),
@@ -389,22 +393,22 @@ fun ServerUpdatesSection(
     if (confirmWebUi) {
         AlertDialog(
             onDismissRequest = { confirmWebUi = false },
-            title = { Text(tr("Обновить Hermes WebUI?", "Update Hermes WebUI?")) },
-            text = { Text(tr("WebUI скачает обновление и перезапустится. Открытые чаты ненадолго отключатся и переподключатся сами.", "WebUI will download the update and restart. Open chats will briefly disconnect and reconnect automatically.")) },
-            confirmButton = { TextButton(onClick = { confirmWebUi = false; onWebUiGitUpdate() }) { Text(tr("Обновить", "Update")) } },
-            dismissButton = { TextButton(onClick = { confirmWebUi = false }) { Text(tr("Отмена", "Cancel")) } },
+            title = { Text(localizedString("Update Hermes WebUI?")) },
+            text = { Text(localizedString("WebUI will download the update and restart. Open chats will briefly disconnect and reconnect automatically.")) },
+            confirmButton = { TextButton(onClick = { confirmWebUi = false; onWebUiGitUpdate() }) { Text(localizedString("Update")) } },
+            dismissButton = { TextButton(onClick = { confirmWebUi = false }) { Text(localizedString("Cancel")) } },
         )
     }
     logText?.let { text ->
         AlertDialog(
             onDismissRequest = { logText = null },
-            title = { Text(tr("Журнал обновления", "Update log")) },
+            title = { Text(localizedString("Update log")) },
             text = {
                 Box(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                     SelectionContainer { Text(text.takeLast(8000), fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
                 }
             },
-            confirmButton = { TextButton(onClick = { logText = null }) { Text(tr("Закрыть", "Close")) } },
+            confirmButton = { TextButton(onClick = { logText = null }) { Text(localizedString("Close")) } },
         )
     }
 }
@@ -418,3 +422,10 @@ private fun plural(n: Int, one: String, few: String, many: String): String {
         else -> many
     }
 }
+
+@Composable
+private fun localizedStringFormat(template: String, vararg args: Any?): String =
+    localizedString(template).format(*args)
+
+private fun Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)

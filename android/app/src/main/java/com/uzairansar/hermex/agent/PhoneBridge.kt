@@ -20,6 +20,7 @@ import androidx.core.app.ServiceCompat
 import com.uzairansar.hermex.HermexApplication
 import com.uzairansar.hermex.MainActivity
 import com.uzairansar.hermex.data.repository.AuthState
+import com.uzairansar.hermex.ui.localization.localizedString
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -194,8 +195,8 @@ class PhoneBridgeService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val n = NotificationCompat.Builder(this, CH_BRIDGE)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle(tr("MURF: мост «Телефон» включён", "MURF: phone bridge is on"))
-            .setContentText(tr("Агент может запрашивать действия на телефоне (с подтверждением)", "The agent can request actions on the phone (with confirmation)"))
+            .setContentTitle(this.localizedString("MURF: phone bridge is on"))
+            .setContentText(this.localizedString("The agent can request actions on the phone (with confirmation)"))
             .setOngoing(true)
             .setContentIntent(openAppIntent(this))
             .build()
@@ -239,7 +240,7 @@ class PhoneBridgeService : Service() {
         while (scope.isActive) {
             val base = target()
             if (base == null) {
-                if (!local) PhoneBridge.state.update { st(it, local, false, tr("Не выполнен вход в приложение", "Not logged in to the app")) }
+                if (!local) PhoneBridge.state.update { st(it, local, false, this.localizedString("Not logged in to the app")) }
                 delay(if (local) 30_000 else 10_000); continue
             }
             if (local && LocalEnv.health() == null) { delay(20_000); continue }
@@ -261,7 +262,7 @@ class PhoneBridgeService : Service() {
                 http.newCall(Request.Builder().url(url).get().build()).execute().use { resp ->
                     when {
                         resp.code == 401 || resp.code == 403 -> {
-                            PhoneBridge.state.update { st(it, local, false, tr("Сессия истекла — войдите в приложение заново", "Session expired — log in again")) }
+                            PhoneBridge.state.update { st(it, local, false, this.localizedString("Session expired — log in again")) }
                             delay(15_000)
                         }
                         resp.code == 204 -> PhoneBridge.state.update { st(it, local, true, null) }
@@ -277,7 +278,7 @@ class PhoneBridgeService : Service() {
                             scope.launch { handle(http, base, req) }
                         }
                         else -> {
-                            PhoneBridge.state.update { st(it, local, false, tr("Сервер ответил ${resp.code}", "Server responded ${resp.code}")) }
+                            PhoneBridge.state.update { st(it, local, false, this.localizedStringFormat("Server responded %1\$d", resp.code)) }
                             delay(backoff)
                         }
                     }
@@ -306,9 +307,9 @@ class PhoneBridgeService : Service() {
         val tool = PhoneTool.of(req.tool)
         val timeoutSec = req.raw["timeout"]?.jsonPrimitive?.intOrNull ?: 120
         val result: JsonObject = if (tool == null) {
-            fail(tr("Неизвестный инструмент ${req.tool}", "Unknown tool ${req.tool}"))
+            fail(this.localizedStringFormat("Unknown tool %1\$s", req.tool))
         } else if (tool == PhoneTool.Sms && !PhoneBridgeSettings.smsEnabled(this)) {
-            fail(tr("Чтение SMS выключено в приложении MURF (Телефон → SMS)", "SMS reading is disabled in MURF (Phone → SMS)"))
+            fail(this.localizedString("SMS reading is disabled in MURF (Phone → SMS)"))
         } else {
             val outside = (tool == PhoneTool.FileRead || tool == PhoneTool.FileWrite) && !PhoneControl.resolve(req.arg("path").orEmpty()).second
             val needAsk = tool.screenControl || outside || (tool.risky && req.tool !in PhoneBridgeSettings.autoAllowed(this)) ||
@@ -321,11 +322,11 @@ class PhoneBridgeService : Service() {
             when (allowed) {
                 "always" -> { PhoneBridgeSettings.setAutoAllowed(this, req.tool, true); execute(http, req, tool) }
                 "allow" -> execute(http, req, tool)
-                "timeout" -> fail(tr("Пользователь не подтвердил запрос вовремя", "The user did not confirm the request in time"))
-                else -> fail(tr("Пользователь отклонил запрос", "The user declined the request"))
+                "timeout" -> fail(this.localizedString("The user did not confirm the request in time"))
+                else -> fail(this.localizedString("The user declined the request"))
             }
         }
-        PhoneBridge.log(req.tool, req.summary, if (result["ok"]?.jsonPrimitive?.content == "true") tr("выполнено", "done") else tr("ошибка/отказ", "error/declined"))
+        PhoneBridge.log(req.tool, req.summary, if (result["ok"]?.jsonPrimitive?.content == "true") tr("выполнено", "done") else this.localizedString("error/declined"))
         runCatching {
             val body = buildJsonObject { put("id", req.id); result.forEach { (k, v) -> put(k, v) } }
             post(http, base, "phone/api/result", body.toString())
@@ -343,15 +344,15 @@ class PhoneBridgeService : Service() {
         )
         val n = NotificationCompat.Builder(this, CH_CONFIRM)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle(tr("Агент просит: ${tool.title}", "Agent requests: ${tool.title}"))
+            .setContentTitle(this.localizedStringFormat("Agent requests: %1\$s", tool.title))
             .setContentText(req.summary.ifBlank { tool.title })
             .setStyle(NotificationCompat.BigTextStyle().bigText(req.summary.ifBlank { tool.title }))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setContentIntent(openAppIntent(this, "phone"))
-            .addAction(0, tr("Разрешить", "Allow"), action("allow", 1))
-            .addAction(0, tr("Отклонить", "Deny"), action("deny", 2))
-            .addAction(0, tr("Всегда", "Always"), action("always", 3))
+            .addAction(0, this.localizedString("Allow"), action("allow", 1))
+            .addAction(0, this.localizedString("Deny"), action("deny", 2))
+            .addAction(0, this.localizedString("Always"), action("always", 3))
             .setAutoCancel(true)
             .build()
         runCatching { NotificationManagerCompat.from(this).notify(req.id.hashCode(), n) }
@@ -401,12 +402,12 @@ class PhoneBridgeService : Service() {
                 fromTermux(Termux.run(this, "curl -sS --fail --data-binary @${q(path)} ${q("$upload?name=" + java.net.URLEncoder.encode(name, "UTF-8"))}", timeoutMs = 280_000))
             }
             PhoneTool.PushFile -> {
-                val url = req.raw["download_url"]?.jsonPrimitive?.contentOrNull ?: return fail(tr("нет download_url", "no download_url"))
+                val url = req.raw["download_url"]?.jsonPrimitive?.contentOrNull ?: return fail(this.localizedString("no download_url"))
                 val bytes = http.newCall(Request.Builder().url(url).get().build()).execute().use { r ->
-                    if (!r.isSuccessful) return fail(tr("скачивание: HTTP ${r.code}", "download: HTTP ${r.code}")); r.body!!.bytes()
+                    if (!r.isSuccessful) return fail(this.localizedStringFormat("download: HTTP %1\$d", r.code)); r.body!!.bytes()
                 }
                 val name = req.arg("name") ?: "file"
-                ok(tr("Сохранено: ", "Saved: ") + AgentShare.saveToDownloads(this, name, "application/octet-stream", bytes))
+                ok(this.localizedString("Saved: ") + AgentShare.saveToDownloads(this, name, "application/octet-stream", bytes))
             }
             PhoneTool.ClipGet -> fromTermux(Termux.run(this, "termux-clipboard-get", timeoutMs = 30_000))
             PhoneTool.ClipSet -> {
@@ -414,7 +415,7 @@ class PhoneBridgeService : Service() {
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("MURF", text))
                 }
-                ok(tr("Скопировано ${text.length} символов", "Copied ${text.length} characters"))
+                ok(this.localizedStringFormat("Copied %1\$d characters", text.length))
             }
             PhoneTool.Notify -> {
                 val n = NotificationCompat.Builder(this, CH_AGENT)
@@ -424,11 +425,11 @@ class PhoneBridgeService : Service() {
                     .setStyle(NotificationCompat.BigTextStyle().bigText(req.arg("text").orEmpty()))
                     .setContentIntent(openAppIntent(this)).setAutoCancel(true).build()
                 runCatching { NotificationManagerCompat.from(this).notify((System.currentTimeMillis() % 100000).toInt() + 5000, n) }
-                    .fold({ ok(tr("Уведомление показано", "Notification shown")) }, { fail(tr("Нет разрешения на уведомления", "No notification permission")) })
+                    .fold({ ok(this.localizedString("Notification shown")) }, { fail(this.localizedString("No notification permission")) })
             }
             PhoneTool.Battery -> {
                 val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
-                ok(tr("Заряд: ", "Battery: ") + "${bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)}%, " + tr("заряжается: ", "charging: ") + (if (bm.isCharging) tr("да", "yes") else tr("нет", "no")))
+                ok(this.localizedString("Battery: ") + "${bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)}%, " + this.localizedString("charging: ") + (if (bm.isCharging) this.localizedString("yes") else this.localizedString("no")))
             }
             PhoneTool.Network -> ok(PhoneControl.network(this))
             PhoneTool.ListApps -> ok(PhoneControl.listApps(this, req.arg("query")))
@@ -468,9 +469,9 @@ class PhoneBridgeService : Service() {
         fun ensureChannels(c: Context) {
             if (Build.VERSION.SDK_INT < 26) return
             val nm = c.getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(NotificationChannel(CH_BRIDGE, tr("Мост «Телефон»", "Phone bridge"), NotificationManager.IMPORTANCE_LOW))
-            nm.createNotificationChannel(NotificationChannel(CH_CONFIRM, tr("Запросы MURF к телефону", "MURF requests to the phone"), NotificationManager.IMPORTANCE_HIGH))
-            nm.createNotificationChannel(NotificationChannel(CH_AGENT, tr("Сообщения MURF", "MURF messages"), NotificationManager.IMPORTANCE_DEFAULT))
+            nm.createNotificationChannel(NotificationChannel(CH_BRIDGE, c.localizedString("Phone bridge"), NotificationManager.IMPORTANCE_LOW))
+            nm.createNotificationChannel(NotificationChannel(CH_CONFIRM, c.localizedString("MURF requests to the phone"), NotificationManager.IMPORTANCE_HIGH))
+            nm.createNotificationChannel(NotificationChannel(CH_AGENT, c.localizedString("MURF messages"), NotificationManager.IMPORTANCE_DEFAULT))
         }
 
         fun openAppIntent(c: Context, route: String? = null): PendingIntent {
@@ -483,3 +484,6 @@ class PhoneBridgeService : Service() {
 
 @Suppress("unused")
 private fun Notification.noop() = Unit
+
+private fun Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)
