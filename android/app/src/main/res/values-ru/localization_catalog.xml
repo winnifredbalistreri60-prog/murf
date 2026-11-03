@@ -1969,4 +1969,76 @@
     <string name="l10n_12d456570c946959" formatted="false">"Предложения новых ботов"</string>
     <string name="l10n_114904eea2ec9b1a" formatted="false">"Зачем: "</string>
     <string name="l10n_2b03b59293b6fc71" formatted="false">"Отклонить"</string>
+    <string name="l10n_de07fdde17775516" formatted="false">"Среда на телефоне"</string>
+    <string name="l10n_639a40e82b9a96f0" formatted="false">"Подключение"</string>
+    <string name="l10n_757391f51c1969c3" formatted="false">"Сервер Hermes"</string>
+    <string name="l10n_5fb9fe3083ca282d" formatted="false">" (не добавлен)"</string>
+    <string name="l10n_d05573794bee988c" formatted="false">"Предлагать телефон, если сервер недоступен"</string>
+    <string name="l10n_43b665874c96fe01" formatted="false">"Чаты, экран (смотреть/управлять) и настройки работают с выбранным профилем."</string>
+    <string name="l10n_9b5b81e2bc788b9d" formatted="false">"Нужен Termux (F-Droid/GitHub) и разрешение «Запуск команд в Termux» — настройте в разделе «Телефон и Termux»."</string>
+    <string name="l10n_1e8ad4314ac9ff7e" formatted="false">"Скрипты MURF в Termux ещё не установлены — нажмите «Установить»."</string>
+    <string name="l10n_71ee9f80d31980ab" formatted="false">"Среда не установлена"</string>
+    <string name="l10n_1a4f630ac1b69fd0" formatted="false">"Остановлена"</string>
+    <string name="l10n_73fab08a2b80a484" formatted="false">"API агента (127.0.0.1:8642)"</string>
+    <string name="l10n_93c49e5b3f04c7b6" formatted="false">"Рабочий стол (экран)"</string>
+    <string name="l10n_5f802016e33bf804" formatted="false">"Вход в провайдера xAI"</string>
+    <string name="l10n_d5ddc2b0987952ec" formatted="false">"Прокси для провайдера: включён"</string>
+    <string name="l10n_268f14bbfe119c1e" formatted="false">"Диагностика"</string>
+    <string name="l10n_73751ae1dd788c8b" formatted="false">"Проверяет все части среды (Ubuntu, службы, порты, файлы и WebSocket экрана, VNC, ограничения Android) и показывает короткий отчёт. Его можно отправить разработчику."</string>
+    <string name="l10n_37921121be9b4bce" formatted="false">"Termux (диагностика)"</string>
+    <string name="l10n_e09ec65087510d37" formatted="false">"Провайдер (вход из среды)"</string>
+    <string name="l10n_df9a37819e837a75" formatted="false">"Вход xAI выполняется внутри локальной среды (device-code): откройте ссылку, подтвердите код в браузере телефона."</string>
+    <string name="l10n_8896f60bd24e306f" formatted="false">"Войти в провайдера"</string>
+    <string name="l10n_abb9a172a69bbc43" formatted="false">"Проверить доступ"</string>
+    <string name="l10n_fe5ac2244b0e3f92" formatted="false">"✅ Вход выполнен"</string>
+    <string name="l10n_ec4c5f7943b3b575" formatted="false">"❌ Вход не удался"</string>
+    <string name="l10n_a6fb491f31df347f" formatted="false">"Ожидание подтверждения…"</string>
+    <string name="l10n_332d59ffbe3f34b9" formatted="false">"Прокси (необязательно)"</string>
+    <string name="l10n_6d242291d3dfc2d4" formatted="false">"Сохранить прокси"</string>
+    <string name="l10n_06f0e210b27d4d62" formatted="false">"Выключить"</string>
+    <string name="l10n_53fa504e91dd76c5" formatted="false">"Из Ирана api.x.ai отвечает 403 — нужен VPN на телефоне (весь трафик, включая Termux) или прокси."</string>
+    <string name="l10n_f823b0b8e42f55b5" formatted="false">"Скопировать настройки с сервера"</string>
+    <string name="l10n_3f51e7b9a226bdf9" formatted="false">"Переносит config.yaml (модель, провайдер), навыки (skills), память и SOUL.md. Серверный MCP agent_tools не переносится."</string>
+    <string name="l10n_514bdc03cc7996cb" formatted="false">"Вместе с секретами (вход xAI и API-ключи)"</string>
+    <string name="l10n_f6f346b928c69a11" formatted="false">"Скопировать с сервера"</string>
+    <string name="l10n_16069fd6db3c12c6" formatted="false">"Нет профиля сервера."</string>
+    <string name="l10n_0a7fe563a2f9f08b" formatted="false">"Батарея и фон (важно)"</string>
+    <string name="l10n_4b03f1a76d7b279d" formatted="false">"Android/OriginOS выгружает фоновые процессы. Чтобы среда не умирала:\n"</string>
+    <string name="l10n_6acf4a695f5b30dd" formatted="false">"MURF: без оптимизации батареи"</string>
+    <string name="l10n_6b7b357fa79cf590" formatted="false">"Удаление"</string>
+    <string name="l10n_6e599b72b073c2f2" formatted="false">"Удаляет Ubuntu со всем содержимым (агент, вход, чаты локальной среды). Профиль на сервере не затрагивается."</string>
+    <string name="l10n_54907830fa53689b" formatted="false">"Перенести секреты?"</string>
+    <string name="l10n_ac32de3e4eb2de9e" formatted="false">"На телефон будут скопированы токены входа xAI (auth.json) и API-ключи провайдеров с сервера. "</string>
+    <string name="l10n_c304771c7bb7dbd7" formatted="false">"Удалить локальную среду?"</string>
+    <string name="l10n_ea70964e858913c9" formatted="false">"Будет удалена Ubuntu (~4 ГБ) со всеми данными локального агента."</string>
+    <string name="l10n_c77d0b7f4c9f49c3" formatted="false">"Переключение на сервер"</string>
+    <string name="l10n_03d2fbcaa2fdfb35" formatted="false">"Подключено к серверу Hermes"</string>
+    <string name="l10n_4e05732bf984d57f" formatted="false">"Подготовка установки"</string>
+    <string name="l10n_a71ee1d4ac5c2b7a" formatted="false">"Остановка"</string>
+    <string name="l10n_5885b6b440fd19ce" formatted="false">"Диагностика (до 1 мин)"</string>
+    <string name="l10n_c04f45edc9380cee" formatted="false">"MURF — диагностика локальной среды"</string>
+    <string name="l10n_a44d35311325e654" formatted="false">"Отправить отчёт"</string>
+    <string name="l10n_d0170b294f2d4ffb" formatted="false">"Отчёт скопирован"</string>
+    <string name="l10n_f6824dcbeabbcf0b" formatted="false">"Проверка сети"</string>
+    <string name="l10n_aab63f85c7f1cd14" formatted="false">"Открыть ссылку"</string>
+    <string name="l10n_39868c869677162c" formatted="false">"Код скопирован"</string>
+    <string name="l10n_a68ee4167406a050" formatted="false">"Прокси"</string>
+    <string name="l10n_1b7ea0bc6410e6ed" formatted="false">"Перенос настроек"</string>
+    <string name="l10n_7ef31c0587f97afd" formatted="false">"MURF: батарея"</string>
+    <string name="l10n_6434fb5aeb99467c" formatted="false">"Termux: настройки"</string>
+    <string name="l10n_687b8eca22b585a3" formatted="false">"Экран vivo не найден — откройте «i Менеджер» → Управление приложениями"</string>
+    <string name="l10n_829d53abd3bbd783" formatted="false">"vivo: автозапуск/фон"</string>
+    <string name="l10n_6f64f32db4f702cd" formatted="false">"Для разработчиков"</string>
+    <string name="l10n_32aae745cd72743a" formatted="false">"Удалить локальную среду"</string>
+    <string name="l10n_35f4cede4350ad4c" formatted="false">"Да, перенести"</string>
+    <string name="l10n_8eecdde079a90927" formatted="false">"Ошибка: "</string>
+    <string name="l10n_d50ea51aac16650c" formatted="false">"Агент целиком на телефоне: Ubuntu (proot) в Termux — Hermes Agent 0.21.5, WebUI, рабочий стол XFCE и браузер. "</string>
+    <string name="l10n_7a8b53922cb77059" formatted="false">"Сервер остаётся основным, телефон — запасной вариант. Docker и systemd здесь недоступны."</string>
+    <string name="l10n_06aff170d237da8d" formatted="false">"Установка запущена в фоне (без окна Termux). Займёт 20–60 мин и ~4 ГБ — прогресс и журнал здесь в MURF."</string>
+    <string name="l10n_849726b70967ec42" formatted="false">"1) MURF и Termux — «Без ограничений» в батарее; 2) vivo: разрешить автозапуск и «высокое потребление в фоне»;\n"</string>
+    <string name="l10n_e52f566fc922109b" formatted="false">"3) Для разработчиков → «Отключить ограничения дочерних процессов» (иначе Android 12+ убивает процессы Termux сверх 32);\n"</string>
+    <string name="l10n_dfb986b7d77b8ad7" formatted="false">"4) уведомление Termux с «Acquire wakelock» оставляйте."</string>
+    <string name="l10n_348358d395a3adf8" formatted="false">"Любой, кто получит доступ к телефону/Termux, сможет ими воспользоваться. Токен OAuth может обновиться на одном устройстве и "</string>
+    <string name="l10n_3a459618845efaa5" formatted="false">"перестать работать на другом — тогда просто войдите заново. Продолжить?"</string>
+    <string name="l10n_4f42605d3b0b6f73" formatted="false">"Удаление запущено в фоне"</string>
 </resources>

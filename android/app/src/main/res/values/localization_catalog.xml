@@ -1969,4 +1969,76 @@
     <string name="l10n_12d456570c946959" formatted="false">"Proposed bots"</string>
     <string name="l10n_114904eea2ec9b1a" formatted="false">"Why: "</string>
     <string name="l10n_2b03b59293b6fc71" formatted="false">"Reject"</string>
+    <string name="l10n_de07fdde17775516" formatted="false">"Phone environment"</string>
+    <string name="l10n_639a40e82b9a96f0" formatted="false">"Connection"</string>
+    <string name="l10n_757391f51c1969c3" formatted="false">"Hermes server"</string>
+    <string name="l10n_5fb9fe3083ca282d" formatted="false">" (not added)"</string>
+    <string name="l10n_d05573794bee988c" formatted="false">"Offer the phone when the server is unreachable"</string>
+    <string name="l10n_43b665874c96fe01" formatted="false">"Chats, screen (view/control) and settings use the selected profile."</string>
+    <string name="l10n_9b5b81e2bc788b9d" formatted="false">"Requires Termux (F-Droid/GitHub) and the “Run commands in Termux” permission — set it up in “Phone &amp; Termux”."</string>
+    <string name="l10n_1e8ad4314ac9ff7e" formatted="false">"MURF scripts are not installed in Termux yet — tap “Install”."</string>
+    <string name="l10n_71ee9f80d31980ab" formatted="false">"Environment not installed"</string>
+    <string name="l10n_1a4f630ac1b69fd0" formatted="false">"Stopped"</string>
+    <string name="l10n_73fab08a2b80a484" formatted="false">"Agent API (127.0.0.1:8642)"</string>
+    <string name="l10n_93c49e5b3f04c7b6" formatted="false">"Desktop (screen)"</string>
+    <string name="l10n_5f802016e33bf804" formatted="false">"xAI provider login"</string>
+    <string name="l10n_d5ddc2b0987952ec" formatted="false">"Provider proxy: on"</string>
+    <string name="l10n_268f14bbfe119c1e" formatted="false">"Diagnostics"</string>
+    <string name="l10n_73751ae1dd788c8b" formatted="false">"Checks every part of the environment (Ubuntu, services, ports, screen files and WebSocket, VNC, Android limits) and shows a short report you can send to the developer."</string>
+    <string name="l10n_37921121be9b4bce" formatted="false">"Termux (diagnostics)"</string>
+    <string name="l10n_e09ec65087510d37" formatted="false">"Provider (login from the environment)"</string>
+    <string name="l10n_df9a37819e837a75" formatted="false">"xAI login runs inside the local environment (device code): open the link and confirm the code in the phone browser."</string>
+    <string name="l10n_8896f60bd24e306f" formatted="false">"Log in to provider"</string>
+    <string name="l10n_abb9a172a69bbc43" formatted="false">"Check access"</string>
+    <string name="l10n_fe5ac2244b0e3f92" formatted="false">"✅ Logged in"</string>
+    <string name="l10n_ec4c5f7943b3b575" formatted="false">"❌ Login failed"</string>
+    <string name="l10n_a6fb491f31df347f" formatted="false">"Waiting for confirmation…"</string>
+    <string name="l10n_332d59ffbe3f34b9" formatted="false">"Proxy (optional)"</string>
+    <string name="l10n_6d242291d3dfc2d4" formatted="false">"Save proxy"</string>
+    <string name="l10n_06f0e210b27d4d62" formatted="false">"Turn off"</string>
+    <string name="l10n_53fa504e91dd76c5" formatted="false">"In some regions api.x.ai answers 403 — use a VPN on the phone (all traffic, including Termux) or a proxy."</string>
+    <string name="l10n_f823b0b8e42f55b5" formatted="false">"Copy settings from server"</string>
+    <string name="l10n_3f51e7b9a226bdf9" formatted="false">"Transfers config.yaml (model, provider), skills, memory and SOUL.md. The server-only agent_tools MCP is not transferred."</string>
+    <string name="l10n_514bdc03cc7996cb" formatted="false">"Include secrets (xAI login and API keys)"</string>
+    <string name="l10n_f6f346b928c69a11" formatted="false">"Copy from server"</string>
+    <string name="l10n_16069fd6db3c12c6" formatted="false">"No server profile."</string>
+    <string name="l10n_0a7fe563a2f9f08b" formatted="false">"Battery &amp; background (important)"</string>
+    <string name="l10n_4b03f1a76d7b279d" formatted="false">"Android/OriginOS kills background processes. To keep the environment alive:\n"</string>
+    <string name="l10n_6acf4a695f5b30dd" formatted="false">"MURF: no battery optimization"</string>
+    <string name="l10n_6b7b357fa79cf590" formatted="false">"Removal"</string>
+    <string name="l10n_6e599b72b073c2f2" formatted="false">"Removes Ubuntu with everything inside (agent, login, local chats). The server profile is not affected."</string>
+    <string name="l10n_54907830fa53689b" formatted="false">"Transfer secrets?"</string>
+    <string name="l10n_ac32de3e4eb2de9e" formatted="false">"xAI login tokens (auth.json) and provider API keys will be copied from the server to the phone. "</string>
+    <string name="l10n_c304771c7bb7dbd7" formatted="false">"Remove local environment?"</string>
+    <string name="l10n_ea70964e858913c9" formatted="false">"Ubuntu (~4 GB) will be removed with all local agent data."</string>
+    <string name="l10n_c77d0b7f4c9f49c3" formatted="false">"Switching to server"</string>
+    <string name="l10n_03d2fbcaa2fdfb35" formatted="false">"Connected to Hermes server"</string>
+    <string name="l10n_4e05732bf984d57f" formatted="false">"Preparing installation"</string>
+    <string name="l10n_a71ee1d4ac5c2b7a" formatted="false">"Stopping"</string>
+    <string name="l10n_5885b6b440fd19ce" formatted="false">"Diagnostics (up to 1 min)"</string>
+    <string name="l10n_c04f45edc9380cee" formatted="false">"MURF — local environment diagnostics"</string>
+    <string name="l10n_a44d35311325e654" formatted="false">"Send report"</string>
+    <string name="l10n_d0170b294f2d4ffb" formatted="false">"Report copied"</string>
+    <string name="l10n_f6824dcbeabbcf0b" formatted="false">"Network check"</string>
+    <string name="l10n_aab63f85c7f1cd14" formatted="false">"Open link"</string>
+    <string name="l10n_39868c869677162c" formatted="false">"Code copied"</string>
+    <string name="l10n_a68ee4167406a050" formatted="false">"Proxy"</string>
+    <string name="l10n_1b7ea0bc6410e6ed" formatted="false">"Transferring settings"</string>
+    <string name="l10n_7ef31c0587f97afd" formatted="false">"MURF: battery"</string>
+    <string name="l10n_6434fb5aeb99467c" formatted="false">"Termux: settings"</string>
+    <string name="l10n_687b8eca22b585a3" formatted="false">"vivo screen not found — open “i Manager” → App management"</string>
+    <string name="l10n_829d53abd3bbd783" formatted="false">"vivo: autostart/background"</string>
+    <string name="l10n_6f64f32db4f702cd" formatted="false">"Developer options"</string>
+    <string name="l10n_32aae745cd72743a" formatted="false">"Remove local environment"</string>
+    <string name="l10n_35f4cede4350ad4c" formatted="false">"Yes, transfer"</string>
+    <string name="l10n_8eecdde079a90927" formatted="false">"Error: "</string>
+    <string name="l10n_d50ea51aac16650c" formatted="false">"The whole agent on the phone: Ubuntu (proot) in Termux — Hermes Agent 0.21.5, WebUI, XFCE desktop and browser. "</string>
+    <string name="l10n_7a8b53922cb77059" formatted="false">"The server stays primary, the phone is a fallback. Docker and systemd are not available here."</string>
+    <string name="l10n_06aff170d237da8d" formatted="false">"Installation started in the background (no Termux window). Takes 20–60 min and ~4 GB — progress and log stay in MURF."</string>
+    <string name="l10n_849726b70967ec42" formatted="false">"1) MURF and Termux — “Unrestricted” battery; 2) vivo: allow autostart and “high background power use”;\n"</string>
+    <string name="l10n_e52f566fc922109b" formatted="false">"3) Developer options → “Disable child process restrictions” (otherwise Android 12+ kills Termux processes beyond 32);\n"</string>
+    <string name="l10n_dfb986b7d77b8ad7" formatted="false">"4) keep the Termux notification with “Acquire wakelock”."</string>
+    <string name="l10n_348358d395a3adf8" formatted="false">"Anyone with access to the phone/Termux can use them. An OAuth token may refresh on one device and "</string>
+    <string name="l10n_3a459618845efaa5" formatted="false">"stop working on the other — then just log in again. Continue?"</string>
+    <string name="l10n_4f42605d3b0b6f73" formatted="false">"Removal started in the background"</string>
 </resources>
