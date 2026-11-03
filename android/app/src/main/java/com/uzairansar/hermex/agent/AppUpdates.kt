@@ -41,6 +41,11 @@ import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import okhttp3.CacheControl
+import androidx.work.BackoffPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 
 /**
  * MURF: обновления внутри приложения.
@@ -59,6 +64,9 @@ object AppUpdates {
     private const val RETRY_MAX_MS = 30 * 60_000L
     private const val AUTO_CHECK_MAX_RETRIES = 5
     private const val MANIFEST_MAX_BYTES = 64 * 1024L
+
+    /** Уникальное имя работы скачивания (ExistingWorkPolicy.KEEP дедуплицирует). */
+    internal const val UNIQUE_WORK_NAME = "murf-update-download"
 
     data class Info(val versionCode: Int, val versionName: String, val url: String, val sha256: String, val size: Long, val notes: String)
 
@@ -207,58 +215,98 @@ object AppUpdates {
         runCatching { context.startActivity(i) }
     }
 
-    /** Скачать, проверить и установить. */
+    /**
+     * Запустить скачивание и установку. Загрузка выполняется в [AppUpdateDownloadWorker]
+     * (WorkManager) — переживает смерть процесса, в отличие от прежней корутины в scope.
+     * Дедупликация: явная проверка фазы + ExistingWorkPolicy.KEEP по уникальному имени
+     * (после смерти процесса фаза сбрасывается в Idle, но KEEP не даст второй копии).
+     */
     fun downloadAndInstall(context: Context, info: Info) {
         val app = context.applicationContext
         if (!canInstallPackages(app)) {
             _phase.value = Phase.NeedsPermission(info)
             return
         }
+        if (_phase.value is Phase.Downloading || _phase.value is Phase.Installing) return
         _phase.value = Phase.Downloading(info, 0f)
-        scope.launch {
-            val dir = File(app.cacheDir, "murf-update").apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() }
-            val file = File(dir, "murf-${info.versionCode}.apk")
-            val err = runCatching {
-                http.newCall(Request.Builder().url(info.url).build()).execute().use { r ->
-                    if (!r.isSuccessful) error("HTTP ${r.code}")
-                    val body = r.body!!
-                    val total = body.contentLength().takeIf { it > 0 } ?: info.size
-                    val md = MessageDigest.getInstance("SHA-256")
-                    var done = 0L
-                    var lastEmit = 0L
-                    body.byteStream().use { input ->
-                        file.outputStream().use { out ->
-                            val buf = ByteArray(64 * 1024)
-                            while (true) {
-                                val n = input.read(buf)
-                                if (n < 0) break
-                                out.write(buf, 0, n); md.update(buf, 0, n); done += n
-                                if (done > 200L * 1024 * 1024) error(tr("файл слишком большой", "file too large"))
-                                if (total > 0 && done - lastEmit > 256 * 1024) {
-                                    lastEmit = done
-                                    _phase.value = Phase.Downloading(info, (done.toFloat() / total).coerceIn(0f, 1f))
-                                }
+        // Data воркера ограничена 10КБ — все строки короткие (notes урезан ещё при разборе манифеста).
+        val request = OneTimeWorkRequestBuilder<AppUpdateDownloadWorker>()
+            .setInputData(
+                workDataOf(
+                    AppUpdateDownloadWorker.KEY_URL to info.url,
+                    AppUpdateDownloadWorker.KEY_SHA256 to info.sha256,
+                    AppUpdateDownloadWorker.KEY_SIZE to info.size,
+                    AppUpdateDownloadWorker.KEY_VERSION_CODE to info.versionCode,
+                    AppUpdateDownloadWorker.KEY_VERSION_NAME to info.versionName,
+                    AppUpdateDownloadWorker.KEY_NOTES to info.notes.take(2000),
+                ),
+            )
+            // IOException в воркере → Result.retry(); между попытками экспоненциальный backoff от 30с.
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(app).enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, request)
+    }
+
+    /** Фазы для AppUpdateDownloadWorker — UI читает их через [phase]. */
+    internal fun setDownloadingProgress(info: Info, pct: Float) {
+        _phase.value = Phase.Downloading(info, pct.coerceIn(0f, 1f))
+    }
+
+    internal fun setInstalling(info: Info) {
+        _phase.value = Phase.Installing(info)
+    }
+
+    internal fun setFailed(message: String, info: Info?) {
+        _phase.value = Phase.Failed(message, info)
+    }
+
+    /**
+     * Скачивание APK + все проверки (прогресс по 256КБ, лимит 200МБ, SHA-256, размер,
+     * verifyArchive). IOException — сетевые сбои (воркер их ретраит); прочие исключения —
+     * файл/манифест повреждены. Частично скачанный файл удаляется при любой ошибке.
+     */
+    internal fun downloadVerifiedApk(context: Context, info: Info, onProgress: (Float) -> Unit): File {
+        val app = context.applicationContext
+        val dir = File(app.cacheDir, "murf-update").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }
+        val file = File(dir, "murf-${info.versionCode}.apk")
+        try {
+            http.newCall(Request.Builder().url(info.url).build()).execute().use { r ->
+                if (!r.isSuccessful) error("HTTP ${r.code}")
+                val body = r.body!!
+                val total = body.contentLength().takeIf { it > 0 } ?: info.size
+                val md = MessageDigest.getInstance("SHA-256")
+                var done = 0L
+                var lastEmit = 0L
+                body.byteStream().use { input ->
+                    file.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            out.write(buf, 0, n); md.update(buf, 0, n); done += n
+                            if (done > 200L * 1024 * 1024) error(tr("файл слишком большой", "file too large"))
+                            if (total > 0 && done - lastEmit > 256 * 1024) {
+                                lastEmit = done
+                                onProgress((done.toFloat() / total).coerceIn(0f, 1f))
                             }
                         }
                     }
-                    val sha = md.digest().joinToString("") { "%02x".format(it) }
-                    if (sha != info.sha256) error(tr("контрольная сумма не совпала — файл повреждён или подменён", "checksum mismatch — the file is damaged or tampered with"))
-                    if (info.size > 0 && done != info.size) error(tr("размер файла не совпал", "file size mismatch"))
                 }
-                verifyArchive(app, file, info)
-            }.exceptionOrNull()
-            if (err != null) {
-                file.delete()
-                _phase.value = Phase.Failed(tr("Обновление не установлено: ${err.message}", "Update not installed: ${err.message}"), info)
-                return@launch
+                val sha = md.digest().joinToString("") { "%02x".format(it) }
+                if (sha != info.sha256) error(tr("контрольная сумма не совпала — файл повреждён или подменён", "checksum mismatch — the file is damaged or tampered with"))
+                if (info.size > 0 && done != info.size) error(tr("размер файла не совпал", "file size mismatch"))
             }
-            _phase.value = Phase.Installing(info)
-            runCatching { install(app, file) }.onFailure {
-                _phase.value = Phase.Failed(tr("Установщик Android не запустился: ${it.message}", "Android installer failed: ${it.message}"), info)
-            }
+            verifyArchive(app, file, info)
+        } catch (t: Throwable) {
+            file.delete()
+            throw t
         }
+        return file
     }
+
+    /** Установка через PackageInstaller (файл установки не удаляем — как и раньше). */
+    internal fun installApk(context: Context, file: File) = install(context, file)
 
     /** Тот же пакет, новее, та же подпись, что у установленного приложения. */
     @Suppress("DEPRECATION")
