@@ -1385,4 +1385,17 @@
     <string name="l10n_3e44c920427e845d" formatted="false">"Переключить"</string>
     <string name="l10n_7298d7ed988425fb" formatted="false">"Убрать из индекса"</string>
     <string name="l10n_435367d05b81fd7e" formatted="false">"Голосовой ввод. Удерживайте, чтобы записать голосовую заметку."</string>
+    <string name="l10n_0eb3fa9b31314e09">Проверка локальной среды</string>
+    <string name="l10n_0a330520cbf091d4">Установите Termux (F-Droid/GitHub) — без него локальная среда не запустится</string>
+    <string name="l10n_90f299c0e517db61">Дайте MURF разрешение «Запуск команд в Termux» (Телефон и Termux)</string>
+    <string name="l10n_3e02ab6015add6a9">Синхронизация скриптов…</string>
+    <string name="l10n_4f3d37e50169a39b">Запуск служб (в фоне, без окна Termux)…</string>
+    <string name="l10n_ca13f076ff53fe91">Ожидание запуска среды</string>
+    <string name="l10n_806ba038949903e5">Среда ещё не установлена — откройте «Локальная среда» → Установить (идёт в фоне, без окна Termux).</string>
+    <string name="l10n_4c9c1ba1ae8688f9">Среда не поднялась за 3 мин. Проверьте журнал ниже или «Локальная среда» → Диагностика.</string>
+    <string name="l10n_bbef969f2f5dfb27">Переключение на телефон</string>
+    <string name="l10n_a0177d3635f0366f">Первый вход в локальный WebUI</string>
+    <string name="l10n_6be6544e85f9f9a8">Локальная среда не установлена (нет пароля WebUI)</string>
+    <string name="l10n_c0bea1d3edf59104">ошибка выгрузки</string>
+    <string name="l10n_315b39a0fc19fb45">КБ</string>
 </resources>

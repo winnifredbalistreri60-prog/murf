@@ -11,6 +11,7 @@ import android.util.Base64
 import com.uzairansar.hermex.data.repository.AddServerResult
 import com.uzairansar.hermex.data.repository.AuthRepository
 import com.uzairansar.hermex.data.secure.ServerAccount
+import com.uzairansar.hermex.ui.localization.localizedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -254,27 +255,21 @@ object LocalEnv {
         onBusy: (String) -> Unit = {},
         onLog: (String) -> Unit = {},
     ): Result<Unit> = runCatching {
-        onBusy(tr("Проверка локальной среды", "Checking local environment"))
+        onBusy(context.localizedString("Checking local environment"))
         var h = health()
         if (h == null) {
             if (!Termux.isInstalled(context)) {
-                error(tr(
-                    "Установите Termux (F-Droid/GitHub) — без него локальная среда не запустится",
-                    "Install Termux (F-Droid/GitHub) — the local environment cannot start without it",
-                ))
+                error(context.localizedString("Install Termux (F-Droid/GitHub) — the local environment cannot start without it"))
             }
             if (!Termux.hasPermission(context)) {
-                error(tr(
-                    "Дайте MURF разрешение «Запуск команд в Termux» (Телефон и Termux)",
-                    "Grant MURF the “Run commands in Termux” permission (Phone & Termux)",
-                ))
+                error(context.localizedString("Grant MURF the “Run commands in Termux” permission (Phone & Termux)"))
             }
-            onBusy(tr("Синхронизация скриптов…", "Syncing scripts…"))
+            onBusy(context.localizedString("Syncing scripts…"))
             val push = runCatching { pushScripts(context) }.getOrNull()
             if (push != null && push.error != null) {
                 onLog(push.combined().takeLast(1500))
             }
-            onBusy(tr("Запуск служб (в фоне, без окна Termux)…", "Starting services (background, no Termux window)…"))
+            onBusy(context.localizedString("Starting services (background, no Termux window)…"))
             // Detached: UI остаётся в MURF; murf-local start nohup-ит svc и пишет svc.log
             startDetached(context)
             val deadline = System.currentTimeMillis() + 180_000L
@@ -286,7 +281,7 @@ object LocalEnv {
                 onBusy(
                     startBusyLabel(
                         waited,
-                        tr("Ожидание запуска среды", "Waiting for environment"),
+                        context.localizedString("Waiting for environment"),
                     ),
                 )
                 if (System.currentTimeMillis() - lastLogAt >= 4_000L) {
@@ -295,10 +290,7 @@ object LocalEnv {
                     if (waited in 6..14) {
                         val st = runCatching { status(context) }.getOrNull()
                         if (st != null && st.scripts && !st.installed) {
-                            error(tr(
-                                "Среда ещё не установлена — откройте «Локальная среда» → Установить (идёт в фоне, без окна Termux).",
-                                "Environment is not installed yet — open Local environment → Install (runs in background, no Termux window).",
-                            ))
+                            error(context.localizedString("Environment is not installed yet — open Local environment → Install (runs in background, no Termux window)."))
                         }
                     }
                 }
@@ -309,30 +301,27 @@ object LocalEnv {
                 val tail = runCatching { startLogTail(context, 50) }.getOrDefault("")
                 if (tail.isNotBlank()) onLog(tail)
                 error(
-                    tr(
-                        "Среда не поднялась за 3 мин. Проверьте журнал ниже или «Локальная среда» → Диагностика.",
-                        "Environment did not come up in 3 min. Check the log below or Local environment → Diagnostics.",
-                    ),
+                    context.localizedString("Environment did not come up in 3 min. Check the log below or Local environment → Diagnostics."),
                 )
             }
         }
 
         val existing = localAccount(auth)
         if (existing != null) {
-            onBusy(tr("Переключение на телефон", "Switching to phone"))
+            onBusy(context.localizedString("Switching to phone"))
             auth.activate(existing.id)
             return@runCatching
         }
 
-        onBusy(tr("Первый вход в локальный WebUI", "First login to local WebUI"))
+        onBusy(context.localizedString("First login to local WebUI"))
         val r = Termux.run(context, "murf-local creds", timeoutMs = 60_000)
         r.error?.let { error(it) }
         val j = runCatching { JSONObject(r.stdout.lines().last { it.startsWith("{") }) }.getOrElse {
-            error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
+            error(context.localizedString("Local environment is not installed (no WebUI password)"))
         }
         val pw = j.optString("password")
         if (pw.isBlank()) {
-            error(tr("Локальная среда не установлена (нет пароля WebUI)", "Local environment is not installed (no WebUI password)"))
+            error(context.localizedString("Local environment is not installed (no WebUI password)"))
         }
         try {
             when (val res = auth.addServer(URL, pw, displayName = DISPLAY_NAME, initials = "ТЛ", headerLogoColorHex = "#4CAF50")) {
@@ -359,12 +348,12 @@ object LocalEnv {
                     .post(body.toRequestBody("application/json".toMediaType())).build())
                 .execute().use { r -> if (!r.isSuccessful) error(tr("сервер: HTTP ", "server: HTTP ") + r.code); JSONObject(r.body!!.string()) }
         }
-        if (!resp.optBoolean("ok")) error(resp.optString("error", tr("ошибка выгрузки", "export failed")))
+        if (!resp.optBoolean("ok")) error(resp.optString("error", context.localizedString("export failed")))
         val url = resp.getString("url")
         val r = Termux.run(context, "murf-local import " + Termux.shellQuote(url) + if (withSecrets) " --with-secrets" else "", timeoutMs = 300_000)
         if (r.error != null) error(r.error)
         return tr("Перенесено: ", "Transferred: ") + resp.optJSONArray("included")?.let { a -> (0 until a.length()).joinToString { a.getString(it) } } +
-            " (${resp.optLong("size") / 1024} " + tr("КБ", "KB") + ")\n" + r.stdout.trim().takeLast(600)
+            " (${resp.optLong("size") / 1024} " + context.localizedString("KB") + ")\n" + r.stdout.trim().takeLast(600)
     }
 
     // ---------- батарея / фон ----------

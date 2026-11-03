@@ -7,6 +7,19 @@ import com.uzairansar.hermex.R
 
 internal object AndroidLocalizationCatalog {
     private val resourcesByEnglishText: Map<String, Int> = mapOf(
+        "Checking local environment" to R.string.l10n_0eb3fa9b31314e09,
+        "Install Termux (F-Droid/GitHub) — the local environment cannot start without it" to R.string.l10n_0a330520cbf091d4,
+        "Grant MURF the “Run commands in Termux” permission (Phone & Termux)" to R.string.l10n_90f299c0e517db61,
+        "Syncing scripts…" to R.string.l10n_3e02ab6015add6a9,
+        "Starting services (background, no Termux window)…" to R.string.l10n_4f3d37e50169a39b,
+        "Waiting for environment" to R.string.l10n_ca13f076ff53fe91,
+        "Environment is not installed yet — open Local environment → Install (runs in background, no Termux window)." to R.string.l10n_806ba038949903e5,
+        "Environment did not come up in 3 min. Check the log below or Local environment → Diagnostics." to R.string.l10n_4c9c1ba1ae8688f9,
+        "Switching to phone" to R.string.l10n_bbef969f2f5dfb27,
+        "First login to local WebUI" to R.string.l10n_a0177d3635f0366f,
+        "Local environment is not installed (no WebUI password)" to R.string.l10n_6be6544e85f9f9a8,
+        "export failed" to R.string.l10n_c0bea1d3edf59104,
+        "KB" to R.string.l10n_315b39a0fc19fb45,
         "" to R.string.l10n_da39a3ee5e6b4b0d,
         "%@ " to R.string.l10n_c5f4841e88283b20,
         "%@ (copy)" to R.string.l10n_f4bf1c5a87391cee,
