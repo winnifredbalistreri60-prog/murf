@@ -1452,4 +1452,29 @@
     <string name="l10n_cf7be51b362087e5">Скачиваю… %1$d%%</string>
     <string name="l10n_1b0fb105245ea54c">Скачивание обновления</string>
     <string name="l10n_69c489257f6eda3f">Прогресс скачивания обновления MURF</string>
+    <string name="l10n_aa92815051589722" formatted="false">"Подключитесь к серверу Hermes по адресу HTTPS, QR-коду или коду привязки."</string>
+    <string name="l10n_71cab770b1d9e800" formatted="false">"Настроить модели на телефоне (необязательно)"</string>
+    <string name="l10n_165261e57129a8a6" formatted="false">"Для агента Harness на телефоне. Для входа на сервер Hermes этот ключ не нужен."</string>
+    <string name="l10n_fd35edb7df56fb0e" formatted="false">"QR-код"</string>
+    <string name="l10n_ab45ae5b415e0ca6" formatted="false">"Код вручную"</string>
+    <string name="l10n_13d9489a55932511" formatted="false">"Свой VDS"</string>
+    <string name="l10n_480a30a87cab177b" formatted="false">"Агент на телефоне (DeepSeek Harness, без сервера)"</string>
+    <string name="l10n_659cea7e6bbc8ee1">"Страница %1$d из %2$d"</string>
+    <string name="l10n_0ac8cb34aa770383" formatted="false">"✋ Экран у вас"</string>
+    <string name="l10n_5cc847f94fce7046" formatted="false">"Экран"</string>
+    <string name="l10n_a6178414f2e086a2" formatted="false">"Связь с сервером…"</string>
+    <string name="l10n_ffba0590b27c1f42" formatted="false">"Сервер не умеет ставить агента на паузу — договоритесь с ним в чате."</string>
+    <string name="l10n_bfcf68d417be51a6" formatted="false">"Агент ждёт и не трогает экран"</string>
+    <string name="l10n_fe96eecad3f5c68d" formatted="false">"Управление включено"</string>
+    <string name="l10n_0b3d23576c3374f0" formatted="false">"Я закончила"</string>
+    <string name="l10n_a6c0d18b55cb17bf" formatted="false">"Локальная среда на телефоне запущена."</string>
+    <string name="l10n_885f05ac9c52bc6b" formatted="false">"Локальная среда на телефоне сейчас не запущена — её можно запустить в разделе «Локальная среда»."</string>
+    <string name="l10n_42a4e21b073bed17" formatted="false">"Сервер недоступен"</string>
+    <string name="l10n_3d2fd8d0eb726989" formatted="false">"Сервер недоступен. Проверьте сеть или адрес и попробуйте снова. "</string>
+    <string name="l10n_b79b51547bdd66bb" formatted="false">"Сервер снова отвечает"</string>
+    <string name="l10n_69c8a92291421197" formatted="false">"Сервер недоступен. Проверьте сеть или адрес и попробуйте снова."</string>
+    <string name="l10n_6988b16a8fd21194" formatted="false">"Переподключить"</string>
+    <string name="l10n_9500beffe7383ed0" formatted="false">"Не удалось: "</string>
+    <string name="l10n_f6927596badc2251" formatted="false">"На телефон"</string>
+    <string name="l10n_ae768f766f75b0f4" formatted="false">"Остаться"</string>
 </resources>

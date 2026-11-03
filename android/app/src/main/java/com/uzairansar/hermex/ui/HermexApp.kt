@@ -1,6 +1,5 @@
 package com.uzairansar.hermex.ui
 
-import com.uzairansar.hermex.agent.tr
 
 import com.uzairansar.hermex.agent.horizontalSwipeNav
 import android.content.Intent
@@ -1036,20 +1035,17 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
             com.uzairansar.hermex.agent.LocalEnv.health() == null) return@LaunchedEffect
         checked = true
         if (!com.uzairansar.hermex.agent.LocalEnv.reachable(server)) {
-            offer = if (com.uzairansar.hermex.agent.LocalEnv.health() != null) tr("Локальная среда на телефоне запущена.", "The local environment on the phone is running.")
-            else tr("Локальная среда на телефоне сейчас не запущена — её можно запустить в разделе «Локальная среда».", "The local environment on the phone is not running — you can start it in “Local environment”.")
+            offer = if (com.uzairansar.hermex.agent.LocalEnv.health() != null) context.localizedString("The local environment on the phone is running.")
+            else context.localizedString("The local environment on the phone is not running — you can start it in “Local environment”.")
         }
     }
     offer?.let { text ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { offer = null },
-            title = { androidx.compose.material3.Text(tr("Сервер недоступен", "Server unreachable")) },
+            title = { androidx.compose.material3.Text(localizedString("Server unreachable")) },
             text = {
                 androidx.compose.material3.Text(
-                    tr(
-                        "Сервер недоступен. Проверьте сеть или адрес и попробуйте снова. ",
-                        "Server unreachable. Check the network or address and try again. ",
-                    ) + (server?.host?.let { "$it. " } ?: "") + text,
+                    localizedString("Server unreachable. Check the network or address and try again. ") + (server?.host?.let { "$it. " } ?: "") + text,
                 )
             },
             confirmButton = {
@@ -1060,19 +1056,16 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
                             offer = null
                             com.uzairansar.hermex.agent.AgentShare.toast(
                                 context,
-                                tr("Сервер снова отвечает", "Server is responding again"),
+                                context.localizedString("Server is responding again"),
                             )
                         } else {
                             com.uzairansar.hermex.agent.AgentShare.toast(
                                 context,
-                                tr(
-                                    "Сервер недоступен. Проверьте сеть или адрес и попробуйте снова.",
-                                    "Server unreachable. Check the network or address and try again.",
-                                ),
+                                context.localizedString("Server unreachable. Check the network or address and try again."),
                             )
                         }
                     }
-                }) { androidx.compose.material3.Text(tr("Переподключить", "Reconnect")) }
+                }) { androidx.compose.material3.Text(localizedString("Reconnect")) }
             },
             dismissButton = {
                 androidx.compose.foundation.layout.Row {
@@ -1083,13 +1076,13 @@ private fun LocalFallbackOffer(container: AppContainer, authState: AuthState) {
                                 .onFailure {
                                     com.uzairansar.hermex.agent.AgentShare.toast(
                                         context,
-                                        tr("Не удалось: ", "Failed: ") + (it.message ?: ""),
+                                        context.localizedString("Failed: ") + (it.message ?: ""),
                                     )
                                 }
                         }
-                    }) { androidx.compose.material3.Text(tr("На телефон", "Use phone")) }
+                    }) { androidx.compose.material3.Text(localizedString("Use phone")) }
                     androidx.compose.material3.TextButton(onClick = { offer = null }) {
-                        androidx.compose.material3.Text(tr("Остаться", "Stay"))
+                        androidx.compose.material3.Text(localizedString("Stay"))
                     }
                 }
             },

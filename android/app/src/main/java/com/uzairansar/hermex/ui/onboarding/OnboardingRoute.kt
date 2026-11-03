@@ -802,10 +802,7 @@ private fun OnboardingConnectPage(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                com.uzairansar.hermex.agent.tr(
-                    "Подключитесь к серверу Hermes по адресу HTTPS, QR-коду или коду привязки.",
-                    "Connect to a Hermes server using its HTTPS URL, QR code or pairing code.",
-                ),
+                localizedString("Connect to a Hermes server using its HTTPS URL, QR code or pairing code."),
                 color = Color.White.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -903,18 +900,12 @@ private fun OnboardingConnectPage(
         }
         if (!showPhoneProvider) {
             TextButton(onClick = { showPhoneProvider = true }) {
-                Text(com.uzairansar.hermex.agent.tr(
-                    "Настроить модели на телефоне (необязательно)",
-                    "Set up on-phone models (optional)",
-                ))
+                Text(localizedString("Set up on-phone models (optional)"))
             }
         }
         if (showPhoneProvider) {
             Text(
-                com.uzairansar.hermex.agent.tr(
-                    "Для агента Harness на телефоне. Для входа на сервер Hermes этот ключ не нужен.",
-                    "For the Harness agent on this phone. This key is not needed to sign in to a Hermes server.",
-                ),
+                localizedString("For the Harness agent on this phone. This key is not needed to sign in to a Hermes server."),
                 color = Color.White.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -1122,21 +1113,21 @@ private fun OnboardingBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OnboardingActionButton(
-                    label = com.uzairansar.hermex.agent.tr("QR-код", "Scan QR"),
+                    label = localizedString("Scan QR"),
                     primary = false,
                     enabled = !isBusy,
                     modifier = Modifier.weight(1f),
                     onClick = onScanQr,
                 )
                 OnboardingActionButton(
-                    label = com.uzairansar.hermex.agent.tr("Код вручную", "Enter code"),
+                    label = localizedString("Enter code"),
                     primary = false,
                     enabled = !isBusy,
                     modifier = Modifier.weight(1f),
                     onClick = onManualPair,
                 )
                 OnboardingActionButton(
-                    label = com.uzairansar.hermex.agent.tr("Свой VDS", "My VDS"),
+                    label = localizedString("My VDS"),
                     primary = false,
                     enabled = !isBusy,
                     modifier = Modifier.weight(1f),
@@ -1162,7 +1153,7 @@ private fun OnboardingBottomBar(
                         .padding(horizontal = 8.dp, vertical = 12.dp),
                 )
                 Text(
-                    text = com.uzairansar.hermex.agent.tr("Агент на телефоне (DeepSeek Harness, без сервера)", "On-phone agent (DeepSeek Harness, no server)"),
+                    text = localizedString("On-phone agent (DeepSeek Harness, no server)"),
                     color = Color.White.copy(alpha = 0.55f),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
@@ -1182,7 +1173,7 @@ private fun OnboardingPageIndicator(
     pageCount: Int,
     currentPage: Int,
 ) {
-    val pageDescription = com.uzairansar.hermex.agent.tr("Страница ${currentPage + 1} из $pageCount", "Page ${currentPage + 1} of $pageCount")
+    val pageDescription = localizedStringFormat("Page %1\$d of %2\$d", currentPage + 1, pageCount)
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.semantics {

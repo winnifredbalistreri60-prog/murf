@@ -141,8 +141,8 @@ fun LocalScreenGuard(server: HttpUrl, webView: () -> WebView?, onReload: () -> U
             onDismissRequest = { log = null },
             title = { Text(localizedString("Screen log")) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { SelectionContainer { Text(t, fontFamily = FontFamily.Monospace, fontSize = 10.sp) } } },
-            confirmButton = { TextButton(onClick = { log = null }) { Text(tr("Закрыть", "Close")) } },
-            dismissButton = { TextButton(onClick = { AgentShare.copy(context, t); AgentShare.toast(context, tr("Скопировано", "Copied")) }) { Text(tr("Копировать", "Copy")) } },
+            confirmButton = { TextButton(onClick = { log = null }) { Text(localizedString("Close")) } },
+            dismissButton = { TextButton(onClick = { AgentShare.copy(context, t); AgentShare.toast(context, context.localizedString("Copied")) }) { Text(localizedString("Copy")) } },
         )
     }
 }

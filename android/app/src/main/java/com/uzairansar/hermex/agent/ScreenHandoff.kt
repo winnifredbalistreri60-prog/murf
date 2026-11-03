@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -169,14 +170,14 @@ fun ScreenHandoffBanner(modifier: androidx.compose.ui.Modifier = androidx.compos
         ) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.weight(1f)) {
                 androidx.compose.material3.Text(
-                    if (st.holding) tr("✋ Экран у вас", "✋ You have the screen") else tr("Экран", "Screen"),
+                    if (st.holding) localizedString("✋ You have the screen") else localizedString("Screen"),
                     color = androidx.compose.ui.graphics.Color(0xFFFFD36B), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                 )
                 val sub = st.error ?: when {
-                    st.busy -> tr("Связь с сервером…", "Contacting the server…")
-                    st.supported == false -> tr("Сервер не умеет ставить агента на паузу — договоритесь с ним в чате.", "The server can't pause the agent — tell it in chat.")
-                    st.agentPaused -> tr("Агент ждёт и не трогает экран", "The agent waits and won't touch the screen")
-                    else -> tr("Управление включено", "Control is on")
+                    st.busy -> localizedString("Contacting the server…")
+                    st.supported == false -> localizedString("The server can't pause the agent — tell it in chat.")
+                    st.agentPaused -> localizedString("The agent waits and won't touch the screen")
+                    else -> localizedString("Control is on")
                 }
                 androidx.compose.material3.Text(sub, color = androidx.compose.ui.graphics.Color(0xFFE8DCC4), fontSize = 11.sp, maxLines = 2)
             }
@@ -186,7 +187,7 @@ fun ScreenHandoffBanner(modifier: androidx.compose.ui.Modifier = androidx.compos
                     modifier = androidx.compose.ui.Modifier.testTag("screen_handoff_done"),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFF5C400), contentColor = androidx.compose.ui.graphics.Color(0xFF111111)),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                ) { androidx.compose.material3.Text(tr("Я закончила", "I'm done"), fontSize = 13.sp) }
+                ) { androidx.compose.material3.Text(localizedString("I'm done"), fontSize = 13.sp) }
             } else {
                 androidx.compose.material3.TextButton(onClick = { ScreenHandoff.clearError() }) { androidx.compose.material3.Text("OK") }
             }

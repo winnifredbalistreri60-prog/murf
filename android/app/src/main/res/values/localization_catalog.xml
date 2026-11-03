@@ -1452,4 +1452,29 @@
     <string name="l10n_cf7be51b362087e5">Downloading… %1$d%%</string>
     <string name="l10n_1b0fb105245ea54c">Update download</string>
     <string name="l10n_69c489257f6eda3f">MURF update download progress</string>
+    <string name="l10n_aa92815051589722" formatted="false">"Connect to a Hermes server using its HTTPS URL, QR code or pairing code."</string>
+    <string name="l10n_71cab770b1d9e800" formatted="false">"Set up on-phone models (optional)"</string>
+    <string name="l10n_165261e57129a8a6" formatted="false">"For the Harness agent on this phone. This key is not needed to sign in to a Hermes server."</string>
+    <string name="l10n_fd35edb7df56fb0e" formatted="false">"Scan QR"</string>
+    <string name="l10n_ab45ae5b415e0ca6" formatted="false">"Enter code"</string>
+    <string name="l10n_13d9489a55932511" formatted="false">"My VDS"</string>
+    <string name="l10n_480a30a87cab177b" formatted="false">"On-phone agent (DeepSeek Harness, no server)"</string>
+    <string name="l10n_659cea7e6bbc8ee1">"Page %1$d of %2$d"</string>
+    <string name="l10n_0ac8cb34aa770383" formatted="false">"✋ You have the screen"</string>
+    <string name="l10n_5cc847f94fce7046" formatted="false">"Screen"</string>
+    <string name="l10n_a6178414f2e086a2" formatted="false">"Contacting the server…"</string>
+    <string name="l10n_ffba0590b27c1f42" formatted="false">"The server can\'t pause the agent — tell it in chat."</string>
+    <string name="l10n_bfcf68d417be51a6" formatted="false">"The agent waits and won\'t touch the screen"</string>
+    <string name="l10n_fe96eecad3f5c68d" formatted="false">"Control is on"</string>
+    <string name="l10n_0b3d23576c3374f0" formatted="false">"I\'m done"</string>
+    <string name="l10n_a6c0d18b55cb17bf" formatted="false">"The local environment on the phone is running."</string>
+    <string name="l10n_885f05ac9c52bc6b" formatted="false">"The local environment on the phone is not running — you can start it in “Local environment”."</string>
+    <string name="l10n_42a4e21b073bed17" formatted="false">"Server unreachable"</string>
+    <string name="l10n_3d2fd8d0eb726989" formatted="false">"Server unreachable. Check the network or address and try again. "</string>
+    <string name="l10n_b79b51547bdd66bb" formatted="false">"Server is responding again"</string>
+    <string name="l10n_69c8a92291421197" formatted="false">"Server unreachable. Check the network or address and try again."</string>
+    <string name="l10n_6988b16a8fd21194" formatted="false">"Reconnect"</string>
+    <string name="l10n_9500beffe7383ed0" formatted="false">"Failed: "</string>
+    <string name="l10n_f6927596badc2251" formatted="false">"Use phone"</string>
+    <string name="l10n_ae768f766f75b0f4" formatted="false">"Stay"</string>
 </resources>
