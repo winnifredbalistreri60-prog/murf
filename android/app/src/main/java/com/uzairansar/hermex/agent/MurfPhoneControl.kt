@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.ComponentName
@@ -88,17 +89,17 @@ object PhoneControl {
 
     fun network(c: Context): String {
         val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return tr("Нет сети", "No network")
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return c.localizedString("No network")
         val type = when {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> tr("мобильная", "cellular")
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> c.localizedString("cellular")
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-            else -> tr("другая", "other")
+            else -> c.localizedString("other")
         }
-        return tr("Сеть: ", "Network: ") + type +
-            tr(", интернет: ", ", internet: ") + (if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) tr("да", "yes") else tr("нет", "no")) +
-            ", VPN: " + (if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) tr("да", "yes") else tr("нет", "no")) +
-            tr(", лимитная: ", ", metered: ") + (if (cm.isActiveNetworkMetered) tr("да", "yes") else tr("нет", "no"))
+        return c.localizedString("Network: ") + type +
+            c.localizedString(", internet: ") + (if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) c.localizedString("yes") else c.localizedString("no")) +
+            ", VPN: " + (if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) c.localizedString("yes") else c.localizedString("no")) +
+            c.localizedString(", metered: ") + (if (cm.isActiveNetworkMetered) c.localizedString("yes") else c.localizedString("no"))
     }
 
     fun listApps(c: Context, query: String?): String {
@@ -107,7 +108,7 @@ object PhoneControl {
             .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }.distinctBy { it.second }
             .filter { q -> query.isNullOrBlank() || q.first.contains(query, true) || q.second.contains(query, true) }
             .sortedBy { it.first.lowercase() }
-        return apps.take(300).joinToString("\n") { "${it.first} — ${it.second}" }.ifBlank { tr("Ничего не найдено", "Nothing found") }
+        return apps.take(300).joinToString("\n") { "${it.first} — ${it.second}" }.ifBlank { c.localizedString("Nothing found") }
     }
 
     fun openApp(c: Context, pkgOrLabel: String): Pair<Boolean, String> {
@@ -115,35 +116,35 @@ object PhoneControl {
         val pkg = if (pm.getLaunchIntentForPackage(pkgOrLabel) != null) pkgOrLabel else
             pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
                 .firstOrNull { it.loadLabel(pm).toString().equals(pkgOrLabel, true) }?.activityInfo?.packageName
-        val i = pkg?.let { pm.getLaunchIntentForPackage(it) } ?: return false to tr("Приложение не найдено: ", "App not found: ") + pkgOrLabel
+        val i = pkg?.let { pm.getLaunchIntentForPackage(it) } ?: return false to c.localizedString("App not found: ") + pkgOrLabel
         return runCatching { c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            .fold({ true to tr("Открыто: ", "Opened: ") + pkg }, { false to (it.message ?: "error") })
+            .fold({ true to c.localizedString("Opened: ") + pkg }, { false to (it.message ?: "error") })
     }
 
     fun openUrl(c: Context, url: String): Pair<Boolean, String> {
         val u = Uri.parse(url)
-        if (u.scheme !in setOf("http", "https", "geo", "tel", "mailto", "market")) return false to tr("Схема не разрешена", "Scheme not allowed")
+        if (u.scheme !in setOf("http", "https", "geo", "tel", "mailto", "market")) return false to c.localizedString("Scheme not allowed")
         return runCatching { c.startActivity(Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            .fold({ true to tr("Открыто", "Opened") }, { false to (it.message ?: "error") })
+            .fold({ true to c.localizedString("Opened") }, { false to (it.message ?: "error") })
     }
 
     fun share(c: Context, text: String): Pair<Boolean, String> = runCatching {
         c.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "MURF")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }.fold({ true to tr("Открыто окно «Поделиться» — выбор за пользователем", "Share sheet opened — the user chooses") }, { false to (it.message ?: "error") })
+    }.fold({ true to c.localizedString("Share sheet opened — the user chooses") }, { false to (it.message ?: "error") })
 
     fun notifications(c: Context, limit: Int): Pair<Boolean, String> {
-        if (!MurfNotificationListener.enabled(c)) return false to tr("Нет доступа к уведомлениям: MURF → Телефон → «Читать уведомления»", "No notification access: MURF → Phone → Read notifications")
+        if (!MurfNotificationListener.enabled(c)) return false to c.localizedString("No notification access: MURF → Phone → Read notifications")
         val f = SimpleDateFormat("dd.MM HH:mm", Locale.ROOT)
         val l = synchronized(MurfNotificationListener.recent) { MurfNotificationListener.recent.take(limit.coerceIn(1, 50)) }
         return true to l.joinToString("\n") { "${f.format(Date(it.time))} [${it.pkg}] ${it.title}: ${it.text}" }
-            .ifBlank { tr("Новых уведомлений с момента включения нет", "No notifications since access was granted") }
+            .ifBlank { c.localizedString("No notifications since access was granted") }
     }
 
     /** Дерево элементов активного окна: текст, id, кликабельность, координаты центра. */
     fun screenView(max: Int): Pair<Boolean, String> {
         val s = svc() ?: return false to noSvc
-        val root = s.rootInActiveWindow ?: return false to tr("Окно недоступно", "No active window")
+        val root = s.rootInActiveWindow ?: return false to s.localizedString("No active window")
         val sb = StringBuilder("app: ${root.packageName}\n"); var n = 0
         fun walk(node: AccessibilityNodeInfo?, depth: Int) {
             if (node == null || n >= max) return
@@ -165,7 +166,7 @@ object PhoneControl {
 
     suspend fun screenshot(c: Context): Pair<Boolean, String> {
         val s = svc() ?: return false to noSvc
-        if (Build.VERSION.SDK_INT < 30) return false to tr("Снимок экрана — с Android 11", "Screenshots need Android 11+")
+        if (Build.VERSION.SDK_INT < 30) return false to c.localizedString("Screenshots need Android 11+")
         val bmp: Bitmap = withTimeoutOrNull(10_000) {
             suspendCancellableCoroutine<Bitmap?> { cont ->
                 s.takeScreenshot(Display.DEFAULT_DISPLAY, c.mainExecutor, object : AccessibilityService.TakeScreenshotCallback {
@@ -175,13 +176,13 @@ object PhoneControl {
                     override fun onFailure(code: Int) { cont.resume(null) }
                 })
             }
-        } ?: return false to tr("Снимок не получился", "Screenshot failed")
+        } ?: return false to c.localizedString("Screenshot failed")
         val dir = File(c.getExternalFilesDir(null), "screens").apply { mkdirs() }
         val f = File(dir, "screen-${System.currentTimeMillis()}.jpg")
         f.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 70, it) }
         dir.listFiles()?.sortedBy { it.lastModified() }?.dropLast(10)?.forEach { it.delete() }
         val (_, tree) = screenView(150)
-        return true to tr("Снимок сохранён на телефоне: ", "Screenshot saved on phone: ") + f.absolutePath + " (${bmp.width}×${bmp.height})\n" + tree
+        return true to c.localizedString("Screenshot saved on phone: ") + f.absolutePath + " (${bmp.width}×${bmp.height})\n" + tree
     }
 
     private suspend fun gesture(path: Path, ms: Long): Boolean {
@@ -230,12 +231,12 @@ object PhoneControl {
         if (MurfAccessibilityService.userHasControl) return false to userControl
         val s = svc() ?: return false to noSvc
         val f = s.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            ?: return false to tr("Нет поля ввода в фокусе — сначала нажмите на поле", "No focused input — tap a field first")
+            ?: return false to s.localizedString("No focused input — tap a field first")
         val cur = f.text?.toString().orEmpty().takeUnless { f.isShowingHintText }.orEmpty()
         val ok = f.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, cur + text)
         })
-        return ok to if (ok) tr("Введено ${text.length} символов", "Typed ${text.length} characters") else tr("Поле не принимает ввод", "Field rejected input")
+        return ok to if (ok) s.localizedStringFormat("Typed %1\$d characters", text.length) else s.localizedString("Field rejected input")
     }
 
     fun key(k: String): Pair<Boolean, String> {
@@ -246,7 +247,7 @@ object PhoneControl {
             "home" -> AccessibilityService.GLOBAL_ACTION_HOME
             "recents" -> AccessibilityService.GLOBAL_ACTION_RECENTS
             "notifications" -> AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
-            else -> return false to tr("Кнопки: back, home, recents, notifications", "Keys: back, home, recents, notifications")
+            else -> return false to s.localizedString("Keys: back, home, recents, notifications")
         }
         return s.performGlobalAction(a) to k
     }
@@ -267,3 +268,6 @@ object PhoneControl {
         return abs to inside
     }
 }
+
+private fun Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    localizedString(template).format(*args)

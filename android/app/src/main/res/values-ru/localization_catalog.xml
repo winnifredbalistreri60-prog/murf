@@ -1608,4 +1608,46 @@
     <string name="l10n_56e2f5d3634ea4aa" formatted="false">"Позже"</string>
     <string name="l10n_f53127fe116a9cfe" formatted="false">"Не удалось проверить обновления: %1$s"</string>
     <string name="l10n_db85dd80547326d2" formatted="false">"Android не установил обновление: %1$s"</string>
+    <string name="l10n_dfda134d4f6fe139" formatted="false">"Экран ещё не показан — нечего сохранять"</string>
+    <string name="l10n_5b56d13b7a5e196c" formatted="false">"Снимок экрана агента"</string>
+    <string name="l10n_4d9f3906b5b271ef" formatted="false">"Сохранено: "</string>
+    <string name="l10n_0d6f946d2503215a" formatted="false">"Экран агента"</string>
+    <string name="l10n_029320ad166c1807" formatted="false">"Снимок экрана"</string>
+    <string name="l10n_9ad03892eed18647" formatted="false">"Поделиться снимком"</string>
+    <string name="l10n_e6c6ba80cbeebfc4" formatted="false">"Снимок в Загрузки"</string>
+    <string name="l10n_69fe4a75bcd54694" formatted="false">"Снимок в Google Диск"</string>
+    <string name="l10n_616588eb312eced1" formatted="false">"Тап — клик, удержание — правый клик, 2 пальца — прокрутка"</string>
+    <string name="l10n_9b4c6c8590e918ed" formatted="false">"Только просмотр"</string>
+    <string name="l10n_14425047311fc5bf" formatted="false">"Скрыть превью"</string>
+    <string name="l10n_5f1d2f2942f245e0" formatted="false">"Закрыть экран"</string>
+    <string name="l10n_5471de3adc7733fc" formatted="false">"Агент работает — в эфире"</string>
+    <string name="l10n_5fd6f5cc89340db3" formatted="false">"Ожидание задачи"</string>
+    <string name="l10n_d72e311c4ddaf4ac" formatted="false">"Свернуть"</string>
+    <string name="l10n_674fe2acd0d5f47b" formatted="false">"На весь экран"</string>
+    <string name="l10n_0281882baf8488c3" formatted="false">"⚠ агент работает"</string>
+    <string name="l10n_31b2f1cdb2e93ebb" formatted="false">"Перетащите, чтобы изменить ширину"</string>
+    <string name="l10n_a5b3016a2e593637" formatted="false">"Нет сети"</string>
+    <string name="l10n_000f4ef5a9a4092d" formatted="false">"мобильная"</string>
+    <string name="l10n_d9298a10d1b07358" formatted="false">"другая"</string>
+    <string name="l10n_fb03e6f0814acab9" formatted="false">"Сеть: "</string>
+    <string name="l10n_c3b8f07c433a2c1f" formatted="false">", интернет: "</string>
+    <string name="l10n_8a798890fe938171" formatted="false">"да"</string>
+    <string name="l10n_9390298f3fb0c5b1" formatted="false">"нет"</string>
+    <string name="l10n_c5c80f955d92756d" formatted="false">", лимитная: "</string>
+    <string name="l10n_9f5cac3cf2edba63" formatted="false">"Ничего не найдено"</string>
+    <string name="l10n_e0a4d63c6f49e46f" formatted="false">"Приложение не найдено: "</string>
+    <string name="l10n_2d0fae826acc3a3c" formatted="false">"Открыто: "</string>
+    <string name="l10n_c3b7739012f71d74" formatted="false">"Схема не разрешена"</string>
+    <string name="l10n_b19fb8d1b395b333" formatted="false">"Открыто"</string>
+    <string name="l10n_23f5fc8eee817ebb" formatted="false">"Открыто окно «Поделиться» — выбор за пользователем"</string>
+    <string name="l10n_b5171672aa8707ed" formatted="false">"Нет доступа к уведомлениям: MURF → Телефон → «Читать уведомления»"</string>
+    <string name="l10n_58ca19f145842230" formatted="false">"Новых уведомлений с момента включения нет"</string>
+    <string name="l10n_0594586c144e521b" formatted="false">"Окно недоступно"</string>
+    <string name="l10n_8c179856b06d6641" formatted="false">"Снимок экрана — с Android 11"</string>
+    <string name="l10n_4417364bebab2a33" formatted="false">"Снимок не получился"</string>
+    <string name="l10n_5925e7b61a171060" formatted="false">"Снимок сохранён на телефоне: "</string>
+    <string name="l10n_dd666764262f0938" formatted="false">"Нет поля ввода в фокусе — сначала нажмите на поле"</string>
+    <string name="l10n_1abe1aae9537fce8" formatted="false">"Введено %1$d символов"</string>
+    <string name="l10n_61994cec8ef1489d" formatted="false">"Поле не принимает ввод"</string>
+    <string name="l10n_6995587b8d7981b5" formatted="false">"Кнопки: back, home, recents, notifications"</string>
 </resources>
