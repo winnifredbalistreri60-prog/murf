@@ -39,6 +39,7 @@ import com.uzairansar.hermex.agent.AgentShare
 import com.uzairansar.hermex.agent.LocalEnv
 import com.uzairansar.hermex.agent.Termux
 import com.uzairansar.hermex.agent.tr
+import com.uzairansar.hermex.ui.localization.localizedString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -111,34 +112,34 @@ fun LocalScreenGuard(server: HttpUrl, webView: () -> WebView?, onReload: () -> U
                 Modifier.fillMaxWidth().background(Color(0xF01C1C22), RoundedCornerShape(14.dp)).padding(12.dp).testTag("local_screen_problem"),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(tr("Экран не подключился", "The screen did not connect"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(localizedString("The screen did not connect"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 Text(p, color = Color(0xFFE0E0E6), fontSize = 13.sp, lineHeight = 17.sp)
                 busy?.let { Text("⏳ $it…", color = Color(0xFF8AB4FF), fontSize = 12.sp) }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = busy == null, onClick = {
-                        if (!Termux.hasPermission(context)) { AgentShare.toast(context, tr("Нет разрешения на команды Termux — «Телефон и Termux»", "No Termux command permission — see “Phone & Termux”")); return@Button }
-                        busy = tr("Перезапуск экрана (до 1,5 мин)", "Restarting the screen (up to 1.5 min)")
+                        if (!Termux.hasPermission(context)) { AgentShare.toast(context, context.localizedString("No Termux command permission — see “Phone & Termux”")); return@Button }
+                        busy = context.localizedString("Restarting the screen (up to 1.5 min)")
                         scope.launch {
                             val r = LocalEnv.restartScreen(context)
                             busy = null
                             AgentShare.toast(context, r.stdout.lines().lastOrNull { it.isNotBlank() } ?: r.combined().take(200))
                             onReload(); round++
                         }
-                    }) { Text(tr("Перезапустить экран", "Restart screen")) }
+                    }) { Text(localizedString("Restart screen")) }
                     OutlinedButton(enabled = busy == null, onClick = {
-                        busy = tr("Журнал", "Log")
+                        busy = context.localizedString("Log")
                         scope.launch { log = LocalEnv.screenLogs(context); busy = null }
-                    }) { Text(tr("Показать журнал", "Show log")) }
-                    TextButton(onClick = { dismissed = true }) { Text(tr("Скрыть", "Hide")) }
+                    }) { Text(localizedString("Show log")) }
+                    TextButton(onClick = { dismissed = true }) { Text(localizedString("Hide")) }
                 }
-                Text(tr("Полная проверка: «Локальная среда» → «Диагностика».", "Full check: “Local environment” → “Diagnostics”."), color = Color(0xFF9A9AA2), fontSize = 11.sp)
+                Text(localizedString("Full check: “Local environment” → “Diagnostics”."), color = Color(0xFF9A9AA2), fontSize = 11.sp)
             }
         }
     }
     log?.let { t ->
         AlertDialog(
             onDismissRequest = { log = null },
-            title = { Text(tr("Журнал экрана", "Screen log")) },
+            title = { Text(localizedString("Screen log")) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { SelectionContainer { Text(t, fontFamily = FontFamily.Monospace, fontSize = 10.sp) } } },
             confirmButton = { TextButton(onClick = { log = null }) { Text(tr("Закрыть", "Close")) } },
             dismissButton = { TextButton(onClick = { AgentShare.copy(context, t); AgentShare.toast(context, tr("Скопировано", "Copied")) }) { Text(tr("Копировать", "Copy")) } },

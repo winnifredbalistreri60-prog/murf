@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
@@ -20,11 +21,12 @@ fun rememberMurfQrScanner(onResult: (String) -> Unit): () -> Unit {
     val launcher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.takeIf { it.isNotBlank() }?.let { latest.value(it) }
     }
+    val prompt = localizedString("Point the camera at the QR from `murf pair` or from MURF on another device")
     return {
         launcher.launch(
             ScanOptions()
                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                .setPrompt(tr("Наведите камеру на QR из «murf pair» или из MURF на другом устройстве", "Point the camera at the QR from `murf pair` or from MURF on another device"))
+                .setPrompt(prompt)
                 .setBeepEnabled(false)
                 .setOrientationLocked(false),
         )

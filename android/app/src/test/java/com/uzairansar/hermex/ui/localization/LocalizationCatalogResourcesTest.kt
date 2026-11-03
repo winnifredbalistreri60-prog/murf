@@ -10,6 +10,25 @@ import org.w3c.dom.Element
 
 class LocalizationCatalogResourcesTest {
     @Test
+    fun everyCatalogMapEntryReferencesExistingResources() {
+        val source = File("src/main/java/com/uzairansar/hermex/ui/localization/AndroidLocalizationCatalog.kt").readText()
+        val maps = source.substringAfter("resourcesByEnglishText:").substringBefore("@StringRes")
+        val entries = maps.lineSequence().filter { it.contains(" to R.") }.toList()
+        assertTrue("No catalog map entries found", entries.isNotEmpty())
+        val english = resources("values")
+        val russian = resources("values-ru")
+        val reference = Regex("R\\.(string|plurals)\\.(\\w+)")
+        for (entry in entries) {
+            val match = reference.find(entry)
+            assertNotNull("Invalid catalog map entry: $entry", match)
+            if (match == null) continue
+            val key = match.groupValues[1] to match.groupValues[2]
+            assertTrue("Missing English resource $key", key in english)
+            assertTrue("Missing Russian resource $key", key in russian)
+        }
+    }
+
+    @Test
     fun catalogEntriesHaveMatchingEnglishAndRussianPlaceholders() {
         val source = File("src/main/java/com/uzairansar/hermex/ui/localization/AndroidLocalizationCatalog.kt").readText()
         val references = Regex("R\\.(string|plurals)\\.(\\w+)").findAll(source)

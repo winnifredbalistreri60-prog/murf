@@ -1398,4 +1398,14 @@
     <string name="l10n_6be6544e85f9f9a8">Локальная среда не установлена (нет пароля WebUI)</string>
     <string name="l10n_c0bea1d3edf59104">ошибка выгрузки</string>
     <string name="l10n_315b39a0fc19fb45">КБ</string>
+    <string name="l10n_66127b4a5afec206">Экран не подключился</string>
+    <string name="l10n_722c598c2b7ed6c7">Нет разрешения на команды Termux — «Телефон и Termux»</string>
+    <string name="l10n_005a764eb08aae42">Перезапуск экрана (до 1,5 мин)</string>
+    <string name="l10n_8fff61586b97d98b">Перезапустить экран</string>
+    <string name="l10n_8bf95ea372568c7a">Журнал</string>
+    <string name="l10n_4f4aa4117318a8dd">Показать журнал</string>
+    <string name="l10n_34d8b60fe25332f7">Скрыть</string>
+    <string name="l10n_4f9ab93b0ff7d06d">Полная проверка: «Локальная среда» → «Диагностика».</string>
+    <string name="l10n_bfe484148d59f946">Журнал экрана</string>
+    <string name="l10n_b89b2aed6c6c2f10">Наведите камеру на QR из «murf pair» или из MURF на другом устройстве</string>
 </resources>

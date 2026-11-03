@@ -1398,4 +1398,14 @@
     <string name="l10n_6be6544e85f9f9a8">Local environment is not installed (no WebUI password)</string>
     <string name="l10n_c0bea1d3edf59104">export failed</string>
     <string name="l10n_315b39a0fc19fb45">KB</string>
+    <string name="l10n_66127b4a5afec206">The screen did not connect</string>
+    <string name="l10n_722c598c2b7ed6c7">No Termux command permission — see “Phone &amp; Termux”</string>
+    <string name="l10n_005a764eb08aae42">Restarting the screen (up to 1.5 min)</string>
+    <string name="l10n_8fff61586b97d98b">Restart screen</string>
+    <string name="l10n_8bf95ea372568c7a">Log</string>
+    <string name="l10n_4f4aa4117318a8dd">Show log</string>
+    <string name="l10n_34d8b60fe25332f7">Hide</string>
+    <string name="l10n_4f9ab93b0ff7d06d">Full check: “Local environment” → “Diagnostics”.</string>
+    <string name="l10n_bfe484148d59f946">Screen log</string>
+    <string name="l10n_b89b2aed6c6c2f10">Point the camera at the QR from `murf pair` or from MURF on another device</string>
 </resources>
