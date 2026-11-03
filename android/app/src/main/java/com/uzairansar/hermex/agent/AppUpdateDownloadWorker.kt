@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -39,7 +40,7 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val info = readInfo() ?: run {
             AppUpdates.setFailed(
-                tr("Обновление не установлено: повреждены данные задачи", "Update not installed: work input is invalid"),
+                applicationContext.localizedString("Update not installed: work input is invalid"),
                 null,
             )
             return Result.failure()
@@ -69,7 +70,7 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
             runCatching { AppUpdates.installApk(applicationContext, file) }
                 .onFailure {
                     AppUpdates.setFailed(
-                        tr("Установщик Android не запустился: ${it.message}", "Android installer failed: ${it.message}"),
+                        applicationContext.localizedStringFormat("Android installer failed: %1\$s", it.message),
                         info,
                     )
                 }
@@ -82,12 +83,12 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
                 AppUpdates.setDownloadingProgress(info, 0f)
                 Result.retry()
             } else {
-                AppUpdates.setFailed(tr("Обновление не установлено: ${e.message}", "Update not installed: ${e.message}"), info)
+                AppUpdates.setFailed(applicationContext.localizedStringFormat("Update not installed: %1\$s", e.message), info)
                 Result.failure()
             }
         } catch (e: Exception) {
             // Контрольная сумма, размер, verifyArchive и т.п. — ретраи не помогут.
-            AppUpdates.setFailed(tr("Обновление не установлено: ${e.message}", "Update not installed: ${e.message}"), info)
+            AppUpdates.setFailed(applicationContext.localizedStringFormat("Update not installed: %1\$s", e.message), info)
             Result.failure()
         }
     }
@@ -129,8 +130,8 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
         val pct = (progress * 100).coerceIn(0f, 100f)
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hermex_launcher_monochrome)
-            .setContentTitle(tr("Обновление MURF ${info.versionName}", "MURF update ${info.versionName}"))
-            .setContentText(tr("Скачиваю… ${pct.toInt()}%", "Downloading… ${pct.toInt()}%"))
+            .setContentTitle(context.localizedStringFormat("MURF update %1\$s", info.versionName))
+            .setContentText(context.localizedStringFormat("Downloading… %1\$d%%", pct.toInt()))
             .setProgress(100, pct.toInt(), false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -143,8 +144,8 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, tr("Скачивание обновления", "Update download"), NotificationManager.IMPORTANCE_LOW).apply {
-                description = tr("Прогресс скачивания обновления MURF", "MURF update download progress")
+            NotificationChannel(CHANNEL_ID, context.localizedString("Update download"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = context.localizedString("MURF update download progress")
                 setShowBadge(false)
             },
         )
@@ -165,3 +166,6 @@ class AppUpdateDownloadWorker(appContext: Context, params: WorkerParameters) :
         const val KEY_NOTES = "notes"
     }
 }
+
+private fun android.content.Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)

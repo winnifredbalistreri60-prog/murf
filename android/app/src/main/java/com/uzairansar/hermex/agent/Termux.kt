@@ -1,5 +1,6 @@
 package com.uzairansar.hermex.agent
 
+import com.uzairansar.hermex.ui.localization.localizedString
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -99,8 +100,8 @@ object Termux {
 
     /** Фоновый запуск с ожиданием результата. Никогда не открывает Activity Termux (SESSION_ACTION 2). */
     suspend fun run(context: Context, command: String, workdir: String? = null, timeoutMs: Long = 120_000): TermuxResult {
-        if (!isInstalled(context)) return TermuxResult("", "", null, tr("Termux не установлен", "Termux is not installed"))
-        if (!hasPermission(context)) return TermuxResult("", "", null, tr("Нет разрешения «Запуск команд в Termux» для приложения MURF", "MURF lacks the “Run commands in Termux” permission"))
+        if (!isInstalled(context)) return TermuxResult("", "", null, context.localizedString("Termux is not installed"))
+        if (!hasPermission(context)) return TermuxResult("", "", null, context.localizedString("MURF lacks the “Run commands in Termux” permission"))
         val id = ids.incrementAndGet()
         val deferred = CompletableDeferred<TermuxResult>()
         waiting[id] = deferred
@@ -112,9 +113,9 @@ object Termux {
         return try {
             start(context, intent)
             withTimeoutOrNull(timeoutMs) { deferred.await() }
-                ?: TermuxResult("", "", null, tr("Termux не ответил за ${timeoutMs / 1000} с (проверьте allow-external-apps и что Termux открывался хотя бы раз)", "Termux did not answer within ${timeoutMs / 1000} s (check allow-external-apps and that Termux was opened at least once)"))
+                ?: TermuxResult("", "", null, context.localizedStringFormat("Termux did not answer within %1\$d s (check allow-external-apps and that Termux was opened at least once)", timeoutMs / 1000))
         } catch (e: Exception) {
-            TermuxResult("", "", null, tr("Не удалось запустить Termux: ${e.message}", "Could not start Termux: ${e.message}"))
+            TermuxResult("", "", null, context.localizedStringFormat("Could not start Termux: %1\$s", e.message))
         } finally {
             waiting.remove(id)
         }
@@ -132,7 +133,7 @@ class TermuxResultReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra(Termux.EXTRA_ID, -1)
         val bundle = intent.getBundleExtra("result")
         val res = if (bundle == null) {
-            TermuxResult("", "", null, tr("Пустой ответ Termux", "Empty response from Termux"))
+            TermuxResult("", "", null, context.localizedString("Empty response from Termux"))
         } else {
             val err = bundle.getInt("err", -1)
             val errmsg = bundle.getString("errmsg")
@@ -146,3 +147,6 @@ class TermuxResultReceiver : BroadcastReceiver() {
         Termux.deliver(id, res)
     }
 }
+
+private fun android.content.Context.localizedStringFormat(template: String, vararg args: Any?): String =
+    String.format(localizedString(template), *args)

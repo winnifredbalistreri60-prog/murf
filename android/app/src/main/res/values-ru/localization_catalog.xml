@@ -1440,4 +1440,16 @@
     <string name="l10n_b9200e62549787c9">"сервер: HTTP "</string>
     <string name="l10n_1a1a632240719299">"Перенесено: "</string>
     <string name="l10n_5602379699b7c63d">Локальный WebUI не принял пароль (%1$s)</string>
+    <string name="l10n_3be74a3a71c0a2a1">Termux не установлен</string>
+    <string name="l10n_779225fdbe1abab9">Нет разрешения «Запуск команд в Termux» для приложения MURF</string>
+    <string name="l10n_de8f95454ca0ff9b">Termux не ответил за %1$d с (проверьте allow-external-apps и что Termux открывался хотя бы раз)</string>
+    <string name="l10n_a773264a031f2b18">Не удалось запустить Termux: %1$s</string>
+    <string name="l10n_50a5406b7bcd0735">Пустой ответ Termux</string>
+    <string name="l10n_35d30a0396cc1928">Обновление не установлено: повреждены данные задачи</string>
+    <string name="l10n_3cfc680651ade783">Установщик Android не запустился: %1$s</string>
+    <string name="l10n_28ac9c56bdc23ff9">Обновление не установлено: %1$s</string>
+    <string name="l10n_09233a0d8447de0c">Обновление MURF %1$s</string>
+    <string name="l10n_cf7be51b362087e5">Скачиваю… %1$d%%</string>
+    <string name="l10n_1b0fb105245ea54c">Скачивание обновления</string>
+    <string name="l10n_69c489257f6eda3f">Прогресс скачивания обновления MURF</string>
 </resources>

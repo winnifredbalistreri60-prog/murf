@@ -7,6 +7,18 @@ import com.uzairansar.hermex.R
 
 internal object AndroidLocalizationCatalog {
     private val resourcesByEnglishText: Map<String, Int> = mapOf(
+        "MURF update download progress" to R.string.l10n_69c489257f6eda3f,
+        "Update download" to R.string.l10n_1b0fb105245ea54c,
+        "Downloading… %1\$d%%" to R.string.l10n_cf7be51b362087e5,
+        "MURF update %1\$s" to R.string.l10n_09233a0d8447de0c,
+        "Update not installed: %1\$s" to R.string.l10n_28ac9c56bdc23ff9,
+        "Android installer failed: %1\$s" to R.string.l10n_3cfc680651ade783,
+        "Update not installed: work input is invalid" to R.string.l10n_35d30a0396cc1928,
+        "Empty response from Termux" to R.string.l10n_50a5406b7bcd0735,
+        "Could not start Termux: %1\$s" to R.string.l10n_a773264a031f2b18,
+        "Termux did not answer within %1\$d s (check allow-external-apps and that Termux was opened at least once)" to R.string.l10n_de8f95454ca0ff9b,
+        "MURF lacks the “Run commands in Termux” permission" to R.string.l10n_779225fdbe1abab9,
+        "Termux is not installed" to R.string.l10n_3be74a3a71c0a2a1,
         "Approvals" to R.string.l10n_2bfc3471571e5c00,
         "The agent is waiting for approval of a risky action" to R.string.l10n_23ab7e337a2d93a1,
         "Open the chat to allow or deny." to R.string.l10n_67a19e6eca930448,

@@ -1440,4 +1440,16 @@
     <string name="l10n_b9200e62549787c9">"server: HTTP "</string>
     <string name="l10n_1a1a632240719299">"Transferred: "</string>
     <string name="l10n_5602379699b7c63d">Local WebUI rejected the password (%1$s)</string>
+    <string name="l10n_3be74a3a71c0a2a1">Termux is not installed</string>
+    <string name="l10n_779225fdbe1abab9">MURF lacks the “Run commands in Termux” permission</string>
+    <string name="l10n_de8f95454ca0ff9b">Termux did not answer within %1$d s (check allow-external-apps and that Termux was opened at least once)</string>
+    <string name="l10n_a773264a031f2b18">Could not start Termux: %1$s</string>
+    <string name="l10n_50a5406b7bcd0735">Empty response from Termux</string>
+    <string name="l10n_35d30a0396cc1928">Update not installed: work input is invalid</string>
+    <string name="l10n_3cfc680651ade783">Android installer failed: %1$s</string>
+    <string name="l10n_28ac9c56bdc23ff9">Update not installed: %1$s</string>
+    <string name="l10n_09233a0d8447de0c">MURF update %1$s</string>
+    <string name="l10n_cf7be51b362087e5">Downloading… %1$d%%</string>
+    <string name="l10n_1b0fb105245ea54c">Update download</string>
+    <string name="l10n_69c489257f6eda3f">MURF update download progress</string>
 </resources>
