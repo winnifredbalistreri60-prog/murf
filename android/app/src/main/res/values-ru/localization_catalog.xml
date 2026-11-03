@@ -1923,4 +1923,50 @@
     <string name="l10n_85138174c21cde19" formatted="false">"Сессия клиента: %1$s"</string>
     <string name="l10n_674824c97e45babc" formatted="false">"Запомнен адрес: %1$s"</string>
     <string name="l10n_a792d481144366d1" formatted="false">"Агент просит: %1$s"</string>
+    <string name="l10n_4ca88ea465a93d07" formatted="false">"Боты"</string>
+    <string name="l10n_66d3c0528e6cf229" formatted="false">"Новый бот"</string>
+    <string name="l10n_64100655484d7086" formatted="false">"Ботов пока нет. Нажмите «+», чтобы создать первого."</string>
+    <string name="l10n_ee9946c82d4a077c" formatted="false">"Персонаж"</string>
+    <string name="l10n_39f27dad2a33f7dd" formatted="false">"Инструкции / характер"</string>
+    <string name="l10n_6c018b9ab16fccab" formatted="false">"Бэкенд: "</string>
+    <string name="l10n_d49fe2c403943824" formatted="false">"не установлен"</string>
+    <string name="l10n_be1f94b2be0039e4" formatted="false">"Профиль Hermes: "</string>
+    <string name="l10n_1cde0652f29b481f" formatted="false">"Модель (необязательно)"</string>
+    <string name="l10n_f76ea91dd86e350b" formatted="false">"пусто — модель по умолчанию у бэкенда"</string>
+    <string name="l10n_b1127b64f89c5344" formatted="false">"Рабочая папка на сервере"</string>
+    <string name="l10n_8f48f06e9b414845" formatted="false">"пусто — "</string>
+    <string name="l10n_2f81a22de0af5e9e" formatted="false">"Доступ"</string>
+    <string name="l10n_b2dd3e573970f4e8" formatted="false">"Безопасный (по умолчанию): песочница папки, запрос разрешений"</string>
+    <string name="l10n_b629ee329faaac97" formatted="false">"Только чтение (план, без изменений)"</string>
+    <string name="l10n_589cf3ce793f463b" formatted="false">"Как в конфиге CLI — может быть полный доступ"</string>
+    <string name="l10n_d3f624a2e982cd8a" formatted="false">"Создан ботом второго уровня — создавать ботов не может"</string>
+    <string name="l10n_1de169475a8463c3" formatted="false">"Разрешить этому боту предлагать новых ботов"</string>
+    <string name="l10n_f633250bb7f46e24" formatted="false">"Удалить бота"</string>
+    <string name="l10n_7e560b8cd527746a" formatted="false">"Подключить CLI к боту?"</string>
+    <string name="l10n_f3ed010561b56ea7" formatted="false">"Удалятся бот и его чаты в MURF. Рабочая папка на сервере останется."</string>
+    <string name="l10n_3a3192e2791c5786" formatted="false">"Бот"</string>
+    <string name="l10n_39e77e9e1bf46a03" formatted="false">"Чатов пока нет — начните новый."</string>
+    <string name="l10n_83791ae169e62bb4" formatted="false">"Передать"</string>
+    <string name="l10n_d7e754ecb5e7dc6f" formatted="false">"Сообщение боту"</string>
+    <string name="l10n_3650db40befe51a8" formatted="false">"ждёт вашего ответа"</string>
+    <string name="l10n_34b4deb072eb10a8" formatted="false">"бот работает…"</string>
+    <string name="l10n_5ff6db8a32151419" formatted="false">"Агент просит разрешение"</string>
+    <string name="l10n_9e717e6677adcd0a" formatted="false">"Отклонено / истекло"</string>
+    <string name="l10n_84a9e0aa3b227142" formatted="false">"Передать задачу другому боту"</string>
+    <string name="l10n_f3ef0420f470c206" formatted="false">"Других ботов нет."</string>
+    <string name="l10n_23e3b2e28d911611" formatted="false">"CLI на сервере"</string>
+    <string name="l10n_b3361ca22d39eb32" formatted="false">"вход выполнен"</string>
+    <string name="l10n_c99cba814f1d3056" formatted="false">"нет входа"</string>
+    <string name="l10n_50d8b4a941c26b89" formatted="false">"вход неизвестен"</string>
+    <string name="l10n_d7cbc723a4ffdfad" formatted="false">"разрешения спрашиваются в MURF"</string>
+    <string name="l10n_2c1184c4f1a1aadc" formatted="false">"без вопросов (песочница CLI)"</string>
+    <string name="l10n_b543c2bdef0b8b22" formatted="false">"Способ: "</string>
+    <string name="l10n_2909f5e997196098" formatted="false">"Профили Hermes: "</string>
+    <string name="l10n_d05194e94011fb00" formatted="false">"Запуски ботов"</string>
+    <string name="l10n_7a8b1c283d427ac0" formatted="false">"Запусков пока не было."</string>
+    <string name="l10n_355bcc577d7183bf" formatted="false">"Завершённые"</string>
+    <string name="l10n_9117b28b696f0fa0" formatted="false">"подзадача"</string>
+    <string name="l10n_12d456570c946959" formatted="false">"Предложения новых ботов"</string>
+    <string name="l10n_114904eea2ec9b1a" formatted="false">"Зачем: "</string>
+    <string name="l10n_2b03b59293b6fc71" formatted="false">"Отклонить"</string>
 </resources>

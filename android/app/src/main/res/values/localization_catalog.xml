@@ -1923,4 +1923,50 @@
     <string name="l10n_85138174c21cde19" formatted="false">"Client session: %1$s"</string>
     <string name="l10n_674824c97e45babc" formatted="false">"Remembered address: %1$s"</string>
     <string name="l10n_a792d481144366d1" formatted="false">"Agent asks: %1$s"</string>
+    <string name="l10n_4ca88ea465a93d07" formatted="false">"Bots"</string>
+    <string name="l10n_66d3c0528e6cf229" formatted="false">"New bot"</string>
+    <string name="l10n_64100655484d7086" formatted="false">"No bots yet. Tap “+” to create one."</string>
+    <string name="l10n_ee9946c82d4a077c" formatted="false">"Character"</string>
+    <string name="l10n_39f27dad2a33f7dd" formatted="false">"Instructions / persona"</string>
+    <string name="l10n_6c018b9ab16fccab" formatted="false">"Backend: "</string>
+    <string name="l10n_d49fe2c403943824" formatted="false">"not installed"</string>
+    <string name="l10n_be1f94b2be0039e4" formatted="false">"Hermes profile: "</string>
+    <string name="l10n_1cde0652f29b481f" formatted="false">"Model (optional)"</string>
+    <string name="l10n_f76ea91dd86e350b" formatted="false">"empty — backend default"</string>
+    <string name="l10n_b1127b64f89c5344" formatted="false">"Working folder on the server"</string>
+    <string name="l10n_8f48f06e9b414845" formatted="false">"empty — "</string>
+    <string name="l10n_2f81a22de0af5e9e" formatted="false">"Access"</string>
+    <string name="l10n_b2dd3e573970f4e8" formatted="false">"Safe (default): folder sandbox, approval prompts"</string>
+    <string name="l10n_b629ee329faaac97" formatted="false">"Read-only (plan, no changes)"</string>
+    <string name="l10n_589cf3ce793f463b" formatted="false">"As in CLI config — may be full access"</string>
+    <string name="l10n_d3f624a2e982cd8a" formatted="false">"Second-level bot — cannot create bots"</string>
+    <string name="l10n_1de169475a8463c3" formatted="false">"Allow this bot to propose new bots"</string>
+    <string name="l10n_f633250bb7f46e24" formatted="false">"Delete bot"</string>
+    <string name="l10n_7e560b8cd527746a" formatted="false">"Connect the CLI to this bot?"</string>
+    <string name="l10n_f3ed010561b56ea7" formatted="false">"The bot and its MURF chats will be removed. The working folder on the server stays."</string>
+    <string name="l10n_3a3192e2791c5786" formatted="false">"Bot"</string>
+    <string name="l10n_39e77e9e1bf46a03" formatted="false">"No chats yet — start a new one."</string>
+    <string name="l10n_83791ae169e62bb4" formatted="false">"Hand off"</string>
+    <string name="l10n_d7e754ecb5e7dc6f" formatted="false">"Message the bot"</string>
+    <string name="l10n_3650db40befe51a8" formatted="false">"waiting for your answer"</string>
+    <string name="l10n_34b4deb072eb10a8" formatted="false">"bot is working…"</string>
+    <string name="l10n_5ff6db8a32151419" formatted="false">"The agent asks for permission"</string>
+    <string name="l10n_9e717e6677adcd0a" formatted="false">"Denied / expired"</string>
+    <string name="l10n_84a9e0aa3b227142" formatted="false">"Hand the task to another bot"</string>
+    <string name="l10n_f3ef0420f470c206" formatted="false">"No other bots."</string>
+    <string name="l10n_23e3b2e28d911611" formatted="false">"CLIs on the server"</string>
+    <string name="l10n_b3361ca22d39eb32" formatted="false">"logged in"</string>
+    <string name="l10n_c99cba814f1d3056" formatted="false">"not logged in"</string>
+    <string name="l10n_50d8b4a941c26b89" formatted="false">"unknown"</string>
+    <string name="l10n_d7cbc723a4ffdfad" formatted="false">"approvals shown in MURF"</string>
+    <string name="l10n_2c1184c4f1a1aadc" formatted="false">"no prompts (CLI sandbox)"</string>
+    <string name="l10n_b543c2bdef0b8b22" formatted="false">"Method: "</string>
+    <string name="l10n_2909f5e997196098" formatted="false">"Hermes profiles: "</string>
+    <string name="l10n_d05194e94011fb00" formatted="false">"Bot runs"</string>
+    <string name="l10n_7a8b1c283d427ac0" formatted="false">"No runs yet."</string>
+    <string name="l10n_355bcc577d7183bf" formatted="false">"Finished"</string>
+    <string name="l10n_9117b28b696f0fa0" formatted="false">"subtask"</string>
+    <string name="l10n_12d456570c946959" formatted="false">"Proposed bots"</string>
+    <string name="l10n_114904eea2ec9b1a" formatted="false">"Why: "</string>
+    <string name="l10n_2b03b59293b6fc71" formatted="false">"Reject"</string>
 </resources>
