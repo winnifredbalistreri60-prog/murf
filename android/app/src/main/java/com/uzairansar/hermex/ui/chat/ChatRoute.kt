@@ -223,6 +223,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import com.uzairansar.hermex.ui.localization.localizedString
+import com.uzairansar.hermex.ui.localization.localizedPluralString
 import com.uzairansar.hermex.ui.workspace.WorkspaceManagerDialog
 import com.uzairansar.hermex.ui.localization.localizedStringFormat
 
@@ -2001,6 +2002,7 @@ private fun ChatTopBar(
             Box {
                 HermexIconButton(
                     label = localizedString("Session actions"),
+                    iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_ellipsis,
                     symbol = "\u22ef",
                     onClick = { actionsExpanded = true },
                     tonalContainerColor = Color.Transparent,
@@ -2845,7 +2847,7 @@ private fun ComposerSurface(
                 )
                 if (state.showsReasoningControl) {
                     HermexSelectorPill(
-                        label = ReasoningEffortOption.titleFor(state.selectedReasoning),
+                        label = localizedString(ReasoningEffortOption.titleFor(state.selectedReasoning)),
                         onClick = onOpenReasoningPicker,
                         enabled = state.reasoningOptions.isNotEmpty() && !state.isStreaming && !state.isViewingCachedData && !state.isRunningSessionAction,
                         leadingIcon = com.uzairansar.hermex.R.drawable.ic_lucide_brain,
@@ -3099,7 +3101,7 @@ private fun ComposerSecondaryBar(
     ) {
         if (showsWorkspace) {
             HermexSelectorPill(
-                label = state.workspaceTitle,
+                label = if (state.workspaceTitle == "Home") localizedString("Home") else state.workspaceTitle,
                 onClick = onOpenWorkspacePicker,
                 enabled = !state.isStreaming && !state.isViewingCachedData && !state.isRunningSessionAction,
                 leadingIcon = com.uzairansar.hermex.R.drawable.ic_lucide_folder,
@@ -4039,7 +4041,7 @@ private fun WorkspacePickerDialog(
                 }
                 items(savedRows, key = { "saved-${it.path}" }) { row ->
                     SelectorRow(
-                        title = row.displayTitle,
+                        title = if (row.displayTitle == "Home") localizedString("Home") else row.displayTitle,
                         subtitle = row.path,
                         selected = row.path == effectiveSelected,
                         onClick = { selectWorkspace(row.path) },
@@ -6085,7 +6087,8 @@ private fun ToolActivityCard(
     val expanded = userToggledExpansion ?: startsExpanded
     val hasFailure = tools.any { it.isError == true }
     val accentColor = if (hasFailure) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
-    val summary = tools.joinToString(", ") { it.displayName }.ifBlank { "Tool activity" }
+    val toolLabel = localizedString("Tool")
+    val summary = tools.joinToString(", ") { if (it.displayName == "Tool") toolLabel else it.displayName }.ifBlank { "Tool activity" }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -6113,7 +6116,7 @@ private fun ToolActivityCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = if (tools.size == 1) "Tool" else "${tools.size} tools",
+                text = if (tools.size == 1) localizedString("Tool") else localizedPluralString("%lld tools", tools.size),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -6181,7 +6184,7 @@ private fun ToolCallCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = tool.displayName,
+                text = if (tool.displayName == "Tool") localizedString("Tool") else tool.displayName,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,

@@ -2041,4 +2041,31 @@
     <string name="l10n_348358d395a3adf8" formatted="false">"Anyone with access to the phone/Termux can use them. An OAuth token may refresh on one device and "</string>
     <string name="l10n_3a459618845efaa5" formatted="false">"stop working on the other — then just log in again. Continue?"</string>
     <string name="l10n_4f42605d3b0b6f73" formatted="false">"Removal started in the background"</string>
+    <string name="l10n_28b043b6f13edced" formatted="false">"Main Page"</string>
+    <string name="l10n_c7f937836f5d82d5" formatted="false">"Choose"</string>
+    <string name="l10n_2e5f79bb94a8c40b" formatted="false">"Checking..."</string>
+    <string name="l10n_742ab447c91df152" formatted="false">"Session actions"</string>
+    <string name="l10n_3a78695388b38b5c" formatted="false">"Home"</string>
+    <string name="l10n_ed5eb9a37e2d8231" formatted="false">"now"</string>
+    <string name="l10n_7d1b8b2a473b8b0a" formatted="false">"Turn off entries you do not use to shorten the top of the session list."</string>
+    <plurals name="l10n_7bd77faa5954d935">
+        <item quantity="one">"%d tool"</item>
+        <item quantity="other">"%d tools"</item>
+    </plurals>
+    <plurals name="l10n_c787cfd491ea7127">
+        <item quantity="one">"%d min ago"</item>
+        <item quantity="other">"%d min ago"</item>
+    </plurals>
+    <plurals name="l10n_0b90f1d001b11002">
+        <item quantity="one">"%d hr ago"</item>
+        <item quantity="other">"%d hr ago"</item>
+    </plurals>
+    <plurals name="l10n_ed8b8470828a08e8">
+        <item quantity="one">"%d day ago"</item>
+        <item quantity="other">"%d days ago"</item>
+    </plurals>
+    <plurals name="l10n_201935ff118c494b">
+        <item quantity="one">"%d wk ago"</item>
+        <item quantity="other">"%d wk ago"</item>
+    </plurals>
 </resources>

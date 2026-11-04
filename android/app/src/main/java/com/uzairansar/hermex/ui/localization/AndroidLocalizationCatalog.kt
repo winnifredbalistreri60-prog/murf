@@ -7,6 +7,14 @@ import com.uzairansar.hermex.R
 
 internal object AndroidLocalizationCatalog {
     private val resourcesByEnglishText: Map<String, Int> = mapOf(
+        "Main Page" to R.string.l10n_28b043b6f13edced,
+        "Choose" to R.string.l10n_c7f937836f5d82d5,
+        "Checking..." to R.string.l10n_2e5f79bb94a8c40b,
+        "Session actions" to R.string.l10n_742ab447c91df152,
+        "Home" to R.string.l10n_3a78695388b38b5c,
+        "now" to R.string.l10n_ed5eb9a37e2d8231,
+        "Turn off entries you do not use to shorten the top of the session list." to R.string.l10n_7d1b8b2a473b8b0a,
+
         "Reject" to R.string.l10n_2b03b59293b6fc71,
         "Why: " to R.string.l10n_114904eea2ec9b1a,
         "Proposed bots" to R.string.l10n_12d456570c946959,
@@ -1954,6 +1962,11 @@ internal object AndroidLocalizationCatalog {
     )
 
     private val pluralsByEnglishText: Map<String, Int> = mapOf(
+        "%lld tools" to R.plurals.l10n_7bd77faa5954d935,
+        "%lld min ago" to R.plurals.l10n_c787cfd491ea7127,
+        "%lld hr ago" to R.plurals.l10n_0b90f1d001b11002,
+        "%lld days ago" to R.plurals.l10n_ed8b8470828a08e8,
+        "%lld wk ago" to R.plurals.l10n_201935ff118c494b,
         "%lld Cards" to R.plurals.l10n_ec77970ef773212e,
         "%lld Dependents" to R.plurals.l10n_8d777c131031fa2e,
         "%lld Prerequisites" to R.plurals.l10n_66a4be0dc2595729,

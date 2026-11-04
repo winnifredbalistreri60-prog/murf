@@ -125,6 +125,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToLong
 import com.uzairansar.hermex.ui.localization.localizedString
+import com.uzairansar.hermex.ui.localization.localizedPluralString
 import com.uzairansar.hermex.ui.localization.localizedStringFormat
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -1675,6 +1676,7 @@ private fun SessionRow(
     onExport: (SessionExportFormat) -> Unit,
 ) {
     val metadata = session.sessionRowMetadataLabel(showsMessageCount, showsWorkspace)
+    val sessionActions = localizedString("Session actions")
     val mutationActionsEnabled = !isMutating && !session.isSessionReadOnly
     val rowMinimumHeight = if (metadata != null || session.isActiveStreaming || isViewingCachedData || session.isSessionReadOnly) 54.dp else 46.dp
     Column(
@@ -1698,7 +1700,7 @@ private fun SessionRow(
                     .testTag("session_row_${session.stableId}")
                     .combinedClickable(
                         onClick = onOpen,
-                        onLongClickLabel = "Session actions",
+                        onLongClickLabel = sessionActions,
                         onLongClick = { if (!isMutating) onToggleActions() },
                     )
                     .padding(horizontal = 8.dp, vertical = 10.dp),
@@ -1732,7 +1734,7 @@ private fun SessionRow(
                             modifier = Modifier.padding(start = 6.dp),
                         )
                     }
-                    session.relativeDate?.let {
+                    session.relativeDate()?.let {
                         Spacer(Modifier.width(8.dp))
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary, maxLines = 1)
                     }
@@ -2114,46 +2116,33 @@ private val SessionSummary.isActiveStreaming: Boolean
 private val SessionSummary.displayTitle: String
     get() = title?.trim()?.takeIf { it.isNotBlank() } ?: "Untitled Session"
 
+@Composable
 private fun SessionSummary.sessionRowMetadataLabel(
     showsMessageCount: Boolean,
     showsWorkspace: Boolean,
 ): String? = listOfNotNull(
-        messageCount?.takeIf { showsMessageCount && it >= 0 }?.let(::messageCountLabel),
+        messageCount?.takeIf { showsMessageCount && it >= 0 }?.let { localizedPluralString("%lld messages", it) },
         workspace?.takeIf { showsWorkspace && it.isNotBlank() }?.sessionWorkspaceDisplayName(),
     ).joinToString(" \u2022 ").ifBlank { null }
-
-private val SessionSummary.metadataLabel: String?
-    get() = listOfNotNull(
-        messageCount?.takeIf { it >= 0 }?.let(::messageCountLabel),
-        workspace?.takeIf { it.isNotBlank() }?.sessionWorkspaceDisplayName(),
-        model?.takeIf { it.isNotBlank() },
-    ).joinToString(" \u00b7 ").ifBlank { "No metadata" }
 
 private fun String.sessionWorkspaceDisplayName(): String {
     val normalized = trim()
     return if ('\\' in normalized) normalized else normalized.substringAfterLast('/')
 }
 
-private fun messageCountLabel(count: Int): String =
-    "$count ${if (count == 1) "message" else "messages"}"
-
-private val SessionSummary.relativeDate: String?
-    get() {
-        val timestamp = lastMessageAt ?: updatedAt ?: createdAt ?: return null
-        val millis = (timestamp * 1000).roundToLong()
-        val then = runCatching { Instant.ofEpochMilli(millis) }.getOrNull() ?: return null
-        val seconds = Duration.between(then, Instant.now()).seconds.coerceAtLeast(0)
-        return when {
-            seconds < 60 -> "now"
-            seconds < 3_600 -> "${seconds / 60} min ago"
-            seconds < 86_400 -> "${seconds / 3_600} hr ago"
-            seconds < 604_800 -> {
-                val days = seconds / 86_400
-                "$days ${if (days == 1L) "day" else "days"} ago"
-            }
-            else -> "${seconds / 604_800} wk ago"
-        }
+@Composable
+private fun SessionSummary.relativeDate(): String? {
+    val timestamp = lastMessageAt ?: updatedAt ?: createdAt ?: return null
+    val then = runCatching { Instant.ofEpochMilli((timestamp * 1000).roundToLong()) }.getOrNull() ?: return null
+    val seconds = Duration.between(then, Instant.now()).seconds.coerceAtLeast(0)
+    return when {
+        seconds < 60 -> localizedString("now")
+        seconds < 3_600 -> localizedPluralString("%lld min ago", (seconds / 60).toInt())
+        seconds < 86_400 -> localizedPluralString("%lld hr ago", (seconds / 3_600).toInt())
+        seconds < 604_800 -> localizedPluralString("%lld days ago", (seconds / 86_400).toInt())
+        else -> localizedPluralString("%lld wk ago", (seconds / 604_800).coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
     }
+}
 
 private suspend fun shareSessionExport(context: Context, export: SessionExportFile): Result<Unit> =
     runCatching {

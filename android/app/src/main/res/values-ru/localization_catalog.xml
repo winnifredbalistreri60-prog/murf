@@ -2041,4 +2041,41 @@
     <string name="l10n_348358d395a3adf8" formatted="false">"Любой, кто получит доступ к телефону/Termux, сможет ими воспользоваться. Токен OAuth может обновиться на одном устройстве и "</string>
     <string name="l10n_3a459618845efaa5" formatted="false">"перестать работать на другом — тогда просто войдите заново. Продолжить?"</string>
     <string name="l10n_4f42605d3b0b6f73" formatted="false">"Удаление запущено в фоне"</string>
+    <string name="l10n_28b043b6f13edced" formatted="false">"Главная страница"</string>
+    <string name="l10n_c7f937836f5d82d5" formatted="false">"Выбрать"</string>
+    <string name="l10n_2e5f79bb94a8c40b" formatted="false">"Проверка..."</string>
+    <string name="l10n_742ab447c91df152" formatted="false">"Действия с чатом"</string>
+    <string name="l10n_3a78695388b38b5c" formatted="false">"Домашняя папка"</string>
+    <string name="l10n_ed5eb9a37e2d8231" formatted="false">"только что"</string>
+    <string name="l10n_7d1b8b2a473b8b0a" formatted="false">"Отключите ненужные пункты, чтобы сократить верхнюю часть списка чатов."</string>
+    <plurals name="l10n_7bd77faa5954d935">
+        <item quantity="one">"%d инструмент"</item>
+        <item quantity="few">"%d инструмента"</item>
+        <item quantity="many">"%d инструментов"</item>
+        <item quantity="other">"%d инструмента"</item>
+    </plurals>
+    <plurals name="l10n_c787cfd491ea7127">
+        <item quantity="one">"%d минуту назад"</item>
+        <item quantity="few">"%d минуты назад"</item>
+        <item quantity="many">"%d минут назад"</item>
+        <item quantity="other">"%d минуты назад"</item>
+    </plurals>
+    <plurals name="l10n_0b90f1d001b11002">
+        <item quantity="one">"%d час назад"</item>
+        <item quantity="few">"%d часа назад"</item>
+        <item quantity="many">"%d часов назад"</item>
+        <item quantity="other">"%d часа назад"</item>
+    </plurals>
+    <plurals name="l10n_ed8b8470828a08e8">
+        <item quantity="one">"%d день назад"</item>
+        <item quantity="few">"%d дня назад"</item>
+        <item quantity="many">"%d дней назад"</item>
+        <item quantity="other">"%d дня назад"</item>
+    </plurals>
+    <plurals name="l10n_201935ff118c494b">
+        <item quantity="one">"%d неделю назад"</item>
+        <item quantity="few">"%d недели назад"</item>
+        <item quantity="many">"%d недель назад"</item>
+        <item quantity="other">"%d недели назад"</item>
+    </plurals>
 </resources>

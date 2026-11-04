@@ -243,7 +243,7 @@ fun SettingsRoute(
                 SettingsSection(title = "Appearance") {
                     SettingsPickerRow(
                         label = localizedString("Theme"),
-                        value = state.themeMode.label,
+                        value = localizedString(state.themeMode.label),
                         iconRes = com.uzairansar.hermex.R.drawable.ic_hermex_half_filled_theme_circle,
                         onClick = {
                             val nextIndex = (AppThemeMode.entries.indexOf(state.themeMode) + 1) % AppThemeMode.entries.size
@@ -267,7 +267,7 @@ fun SettingsRoute(
                         value = state.tintPrimaryActionsWithThemeColor,
                         onValueChange = viewModel::setTintPrimaryActionsWithThemeColor,
                     )
-                    SettingsFootnote("Apply your header color to these primary buttons.")
+                    SettingsFootnote(localizedString("Apply your header color to these primary buttons."))
                     SettingsDivider()
                     AppIconSettingsPicker(
                         selected = selectedAppIcon,
@@ -519,7 +519,7 @@ fun SettingsRoute(
                         value = state.mainPageDisplaySettings.showProjects,
                         onValueChange = viewModel::setShowProjectsSection,
                     )
-                    SettingsFootnote("Turn off entries you do not use to shorten the top of the session list.")
+                    SettingsFootnote(localizedString("Turn off entries you do not use to shorten the top of the session list."))
                 }
             }
             item {
@@ -1237,10 +1237,10 @@ private fun AppIconSettingsPicker(
         AppIconPreview(selected)
         Column(Modifier.weight(1f)) {
             Text(localizedString("App Icon"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text(selected.title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            Text(localizedString(selected.title), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
         }
         Text(
-            text = if (isExpanded) "Hide" else "Choose",
+            text = localizedString(if (isExpanded) "Hide" else "Choose"),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
@@ -1846,7 +1846,7 @@ private fun ServerUpdateControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HermexPillButton(
-            label = if (state.isCheckingForUpdates) "Checking..." else "Check for updates",
+            label = localizedString(if (state.isCheckingForUpdates) "Checking..." else "Check for updates"),
             onClick = viewModel::checkForUpdatesManually,
             enabled = !state.isCheckingForUpdates && !inFlight,
         )
