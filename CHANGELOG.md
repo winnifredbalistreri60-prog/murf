@@ -7,6 +7,15 @@ Security sections per release.
 
 ## [Unreleased]
 
+## [1.10.15-murf] - 2026-11-04
+
+### Changed
+- Full Russian/English localization via Android string resources.
+- Background update download via WorkManager; chat draft kept in state.
+
+### Security
+- VDS SSH host key pinned before sending the password; server CSRF/IP/umask/lock fixes; safe GET retry.
+
 ### Security
 - **VDS deploy (критично):** SSH-пароль/ключ больше не отправляются до верификации ключа хоста. `probe()` теперь двухфазный: анонимное соединение (без креденшелов) фиксирует ключ хоста, и только затем передаёт секреты по соединению, пинненному к этому ключу. Ранее `StrictHostKeyChecking=no` + sudo-проверка паролем в probe означали, что MITM мог получить root-пароль до показа отпечатка пользователю.
 - **Phone relay:** `POST /phone/api/drive-token` (перезапись rclone-конфига) теперь требует анти-CSRF заголовок `X-Agent-App`, как остальные POST-эндпоинты.

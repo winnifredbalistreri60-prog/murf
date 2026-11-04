@@ -7,6 +7,9 @@ import com.uzairansar.hermex.R
 
 internal object AndroidLocalizationCatalog {
     private val resourcesByEnglishText: Map<String, Int> = mapOf(
+        "Permissions, notifications, and app shortcuts" to R.string.l10n_m1015perm,
+        "Open in browser" to R.string.l10n_m1015open,
+        "Signing out..." to R.string.l10n_m1015sout,
         "Main Page" to R.string.l10n_28b043b6f13edced,
         "Choose" to R.string.l10n_c7f937836f5d82d5,
         "Checking..." to R.string.l10n_2e5f79bb94a8c40b,

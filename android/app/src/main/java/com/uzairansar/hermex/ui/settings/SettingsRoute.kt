@@ -626,7 +626,7 @@ fun SettingsRoute(
                 SettingsSection(title = "Android & Shortcuts") {
                     SettingsActionRow(
                         label = localizedString("Open Hermex Settings"),
-                        value = "Permissions, notifications, and app shortcuts",
+                        value = localizedString("Permissions, notifications, and app shortcuts"),
                         onClick = { openAndroidAppSettings(context) },
                     )
                 }
@@ -716,12 +716,12 @@ fun SettingsRoute(
                     )
                     SettingsActionRow(
                         label = localizedString("Privacy Policy"),
-                        value = "Open in browser",
+                        value = localizedString("Open in browser"),
                         onClick = { openExternalUrl(context, HermexAppLinks.PRIVACY_POLICY_URL) },
                     )
                     SettingsActionRow(
                         label = localizedString("Support"),
-                        value = "Open in browser",
+                        value = localizedString("Open in browser"),
                         onClick = { openExternalUrl(context, HermexAppLinks.SUPPORT_URL) },
                     )
                 }
@@ -741,7 +741,7 @@ fun SettingsRoute(
                     )
                     Spacer(Modifier.height(10.dp))
                     HermexPillButton(
-                        label = if (state.isSigningOut) "Signing out..." else "Sign Out of This Server",
+                        label = if (state.isSigningOut) localizedString("Signing out...") else localizedString("Sign Out of This Server"),
                         onClick = viewModel::signOut,
                         enabled = !state.isSigningOut && loggedIn != null,
                         filled = true,
