@@ -158,8 +158,12 @@ cmd_install() {
   [ $rc = 0 ] && echo "=== Готово. Запуск: murf-local start ===" || echo "=== Ошибка установки (код $rc), лог: $D/logs/install.log; повторный запуск продолжит с места остановки ==="
   return $rc
 }
-sync_inner() { # свежие скрипты из $D/inner → Ubuntu /opt/murf
+sync_inner() { # свежие скрипты из $D/inner → Ubuntu /opt/murf (+ сам супервизор murf-svc, если уже установлен)
   mkdir -p "$ROOTFS/opt/murf" && cp -f "$D/inner/"* "$ROOTFS/opt/murf/" && chmod 755 "$ROOTFS/opt/murf/"*.sh 2>/dev/null || true
+  if [ -f "$ROOTFS/usr/local/bin/murf-svc" ] && ! cmp -s "$ROOTFS/opt/murf/svc.sh" "$ROOTFS/usr/local/bin/murf-svc"; then
+    cp -f "$ROOTFS/opt/murf/svc.sh" "$ROOTFS/usr/local/bin/murf-svc.new" && chmod 755 "$ROOTFS/usr/local/bin/murf-svc.new" \
+      && mv -f "$ROOTFS/usr/local/bin/murf-svc.new" "$ROOTFS/usr/local/bin/murf-svc"
+  fi
 }
 cmd_svc_run() { # встроенный режим: служба MURF (LocalRuntimeService) держит этот процесс
   installed || { echo "среда не установлена"; return 2; }
@@ -172,7 +176,7 @@ cmd_start() {
   if $EMBEDDED; then echo "встроенный режим: запуск и остановка — кнопками в MURF (служба приложения)"; return 2; fi
   # свежие скрипты из ~/.murf-local (после pushScripts из APK) → Ubuntu /opt/murf
   if [ -d "$D/inner" ] && [ -d "$ROOTFS/usr" ]; then
-    mkdir -p "$ROOTFS/opt/murf" && cp -f "$D/inner/"* "$ROOTFS/opt/murf/" && chmod 755 "$ROOTFS/opt/murf/"*.sh 2>/dev/null || true
+    sync_inner
     # murf_api уже импортировал murf_dsh — перезапуск api подхватывает фикс без полного stop
     if svc_running; then
       inner /usr/local/bin/murf-svc restart api >/dev/null 2>&1 || true
