@@ -59,9 +59,13 @@ class LocalRuntimeService : Service() {
         return START_NOT_STICKY // после убийства системой не перезапускаемся сами: пользователь нажмёт «Запустить»
     }
 
+    /** «Стоп» во время установки: код 137 от SIGKILL — не ошибка, а отмена. */
+    @Volatile private var stopRequested = false
+
     private fun startInstall() {
         if (installJob?.isActive == true) return
         if (process?.isAlive == true) { set(Phase.RUNNING, tr("Сначала остановите среду", "Stop the environment first")); return }
+        stopRequested = false
         acquireWake()
         installJob = scope.launch {
             set(Phase.INSTALLING, tr("Установка: загрузка Ubuntu", "Installing: downloading Ubuntu"))
@@ -80,7 +84,8 @@ class LocalRuntimeService : Service() {
                 val rc = p.waitFor()
                 installProcess = null
                 EmbeddedRuntime.updateDiskUsage(this@LocalRuntimeService)
-                if (rc == 0) set(Phase.IDLE, tr("Установка завершена", "Installation finished"))
+                if (stopRequested) set(Phase.IDLE, tr("Установка прервана", "Installation cancelled"))
+                else if (rc == 0) set(Phase.IDLE, tr("Установка завершена", "Installation finished"))
                 else set(Phase.ERROR, tr("Ошибка установки (код $rc), см. журнал", "Installation failed (code $rc), see log"))
             } catch (e: java.util.concurrent.CancellationException) {
                 set(Phase.IDLE, tr("Установка прервана", "Installation cancelled"))
@@ -141,6 +146,7 @@ class LocalRuntimeService : Service() {
 
     private suspend fun stopAll() {
         set(Phase.STOPPING, tr("Остановка…", "Stopping…"))
+        stopRequested = true
         installJob?.cancel()
         installProcess?.let { killTree(it) }; installProcess = null
         val p = process
