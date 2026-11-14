@@ -204,7 +204,21 @@ object EmbeddedRuntime {
 
     /** Полное удаление Ubuntu (права u+rwx перед удалением, симлинки не разыменовываем). */
     fun deleteRootfs(c: Context) {
-        val root = rootfsDir(c).toPath()
+        deleteTree(rootfsDir(c))
+        for (n in listOf("progress.json", "disk.txt", "noseccomp")) File(hostDir(c), n).delete()
+        File(baseDir(c), "fakeproc").deleteRecursively()
+        File(baseDir(c), "tmp").deleteRecursively()
+    }
+
+    /**
+     * ~/.hermes/trash внутри Ubuntu: setup.sh откладывает туда каталоги с .l2s-хардлинками
+     * (кэш uv, окружения pm после неудачной попытки), которые изнутри proot не удаляются.
+     */
+    fun emptyTrash(c: Context) = deleteTree(File(rootfsDir(c), "root/.hermes/trash"))
+
+    /** Рекурсивное удаление без перехода по символическим ссылкам (права каталогов чиним по пути). */
+    fun deleteTree(dir: File) {
+        val root = dir.toPath()
         if (!java.nio.file.Files.exists(root, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return
         java.nio.file.Files.walkFileTree(root, object : java.nio.file.SimpleFileVisitor<java.nio.file.Path>() {
             override fun preVisitDirectory(dir: java.nio.file.Path, attrs: java.nio.file.attribute.BasicFileAttributes): java.nio.file.FileVisitResult {
@@ -224,8 +238,5 @@ object EmbeddedRuntime {
                 return java.nio.file.FileVisitResult.CONTINUE
             }
         })
-        for (n in listOf("progress.json", "disk.txt", "noseccomp")) File(hostDir(c), n).delete()
-        File(baseDir(c), "fakeproc").deleteRecursively()
-        File(baseDir(c), "tmp").deleteRecursively()
     }
 }

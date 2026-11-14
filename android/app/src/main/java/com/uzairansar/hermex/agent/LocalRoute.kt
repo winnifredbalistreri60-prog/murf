@@ -132,6 +132,11 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
         if (!envOk) return@LaunchedEffect
         while (true) {
             status = LocalEnv.status(context)
+            // баннер «Установка запущена… 20–60 мин» не оставляем висеть после ошибки установки
+            val st = status
+            if (st != null && st.stepState == "error" && !st.installing && message != null &&
+                runtimeState.phase != com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING &&
+                (message!!.startsWith("Установка запущена") || message!!.startsWith("Installation started"))) message = null
             delay(if (status?.installing == true || busy != null) 4000 else 15000)
         }
     }
@@ -243,8 +248,16 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                             else localizedString("MURF scripts are not installed in Termux yet — tap “Install”."))
                         else -> {
                             Check(s.installed, if (s.installed) tr("Среда установлена (murf-local ${s.version})", "Environment installed (murf-local ${s.version})") else localizedString("Environment not installed"))
-                            if (s.installing || (s.stepState == "running") || s.stepState == "error") {
-                                Text(tr("Установка: ${s.pct}% — ${s.stepMsg}", "Installing: ${s.pct}% — ${s.stepMsg}"), color = if (s.stepState == "error") MaterialTheme.colorScheme.error else Color.Unspecified)
+                            val ru = isRussianUi()
+                            val installFailed = s.stepState == "error" && !s.installing &&
+                                (!embedded || runtimeState.phase != com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING)
+                            if (installFailed) {
+                                Text(tr("Установка не завершена", "Installation failed"), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                                Text(InstallSteps.error(s.step, s.pct, s.stepMsg, ru), color = MaterialTheme.colorScheme.error)
+                                Text(tr("Нажмите «Установить» ещё раз: установка продолжится с места остановки. Подробности — «Журнал».",
+                                    "Tap “Install” to retry: it continues where it stopped. Details: “Log”."), style = MaterialTheme.typography.bodySmall)
+                            } else if (s.installing || s.stepState == "running" || (embedded && runtimeState.phase == com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING)) {
+                                Text(tr("Установка: ${s.pct}% — ", "Installing: ${s.pct}% — ") + InstallSteps.running(s.step, s.stepMsg, ru))
                                 LinearProgressIndicator(progress = { s.pct / 100f }, modifier = Modifier.fillMaxWidth())
                             }
                             Check(s.running, if (s.running) tr("Запущена", "Running") else localizedString("Stopped"))

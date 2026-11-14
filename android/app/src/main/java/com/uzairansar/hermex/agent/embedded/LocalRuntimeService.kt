@@ -66,14 +66,16 @@ class LocalRuntimeService : Service() {
         if (installJob?.isActive == true) return
         if (process?.isAlive == true) { set(Phase.RUNNING, tr("Сначала остановите среду", "Stop the environment first")); return }
         stopRequested = false
+        runCatching { androidx.core.app.NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID + 1) }
         acquireWake()
         installJob = scope.launch {
             set(Phase.INSTALLING, tr("Установка: загрузка Ubuntu", "Installing: downloading Ubuntu"))
             try {
                 EmbeddedRuntime.syncScripts(this@LocalRuntimeService)
+                runCatching { EmbeddedRuntime.emptyTrash(this@LocalRuntimeService) }
                 RootfsInstaller(this@LocalRuntimeService).run { !isActive }
                 selfTest()
-                EmbeddedRuntime.writeProgress(this@LocalRuntimeService, "done", 5, "inner", "Установка внутри Ubuntu")
+                EmbeddedRuntime.writeProgress(this@LocalRuntimeService, "done", 5, "inner", tr("Установка внутри Ubuntu", "Installing inside Ubuntu"))
                 set(Phase.INSTALLING, tr("Установка внутри Ubuntu (20–60 мин)", "Installing inside Ubuntu (20–60 min)"))
                 val p = EmbeddedRuntime.processBuilder(this@LocalRuntimeService, EmbeddedRuntime.murfLocalCommand(listOf("install")))
                     .redirectErrorStream(true)
@@ -83,6 +85,7 @@ class LocalRuntimeService : Service() {
                 p.outputStream.close()
                 val rc = p.waitFor()
                 installProcess = null
+                runCatching { EmbeddedRuntime.emptyTrash(this@LocalRuntimeService) }
                 EmbeddedRuntime.updateDiskUsage(this@LocalRuntimeService)
                 if (stopRequested) set(Phase.IDLE, tr("Установка прервана", "Installation cancelled"))
                 else if (rc == 0) set(Phase.IDLE, tr("Установка завершена", "Installation finished"))
@@ -94,7 +97,8 @@ class LocalRuntimeService : Service() {
                 EmbeddedRuntime.appendLog(this@LocalRuntimeService, "install.log", "ошибка: $e")
             } finally {
                 installProcess?.let { killTree(it) }; installProcess = null
-                releaseWake(); stopSelfIfIdle()
+                releaseWake(); stopSelfIfIdle(ignoreInstallJob = true)
+                if (_state.value.phase == Phase.ERROR) notifyResult(_state.value.message)
             }
         }
     }
@@ -178,8 +182,9 @@ class LocalRuntimeService : Service() {
         if (!p.waitFor(5, TimeUnit.SECONDS)) EmbeddedRuntime.appendLog(this, "install.log", "proot (pid $pid) не завершился после SIGKILL")
     }
 
-    private fun stopSelfIfIdle() {
-        if (process?.isAlive == true || installJob?.isActive == true) return
+    /** ignoreInstallJob: вызов из finally самой установки (job ещё «активен», но уже завершается). */
+    private fun stopSelfIfIdle(ignoreInstallJob: Boolean = false) {
+        if (process?.isAlive == true || (!ignoreInstallJob && installJob?.isActive == true)) return
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -218,6 +223,22 @@ class LocalRuntimeService : Service() {
             .build()
         val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
         ServiceCompat.startForeground(this, NOTIFICATION_ID, n, type)
+    }
+
+    /** После ошибки установки: обычное (не FGS) уведомление без «Стоп», смахивается, по нажатию открывает экран. */
+    private fun notifyResult(text: String) {
+        runCatching {
+            ensureChannel(this)
+            val n = NotificationCompat.Builder(this, CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setContentTitle(tr("MURF: установка не завершена", "MURF: installation failed"))
+                .setContentText(tr("Откройте «Локальная среда» и нажмите «Установить» для повтора", "Open “Local environment” and tap “Install” to retry"))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setAutoCancel(true)
+                .setContentIntent(PhoneBridgeService.openAppIntent(this, "local"))
+                .build()
+            androidx.core.app.NotificationManagerCompat.from(this).notify(NOTIFICATION_ID + 1, n)
+        }
     }
 
     override fun onDestroy() {

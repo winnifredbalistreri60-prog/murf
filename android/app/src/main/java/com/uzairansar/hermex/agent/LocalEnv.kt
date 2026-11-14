@@ -144,7 +144,10 @@ object LocalEnv {
         val inner = j.optJSONObject("progress")
         val term = j.optJSONObject("termux_progress")
         // пока Ubuntu не готова — прогресс внешней фазы (Termux/загрузка Ubuntu), потом — внутренний
-        val p = if (inner != null && (term == null || term.optString("state") == "done")) inner else term
+        // Внутренний прогресс старее внешнего (повторная установка после ошибки: в Ubuntu ещё лежит
+        // старый error) — показываем внешний, пока setup.sh не напишет свежий.
+        val innerFresh = inner != null && (term == null || inner.optLong("ts") >= term.optLong("ts") || term.optLong("ts") == 0L)
+        val p = if (inner != null && (term == null || (term.optString("state") == "done" && innerFresh))) inner else term
         return LocalStatus(
             scripts = true,
             version = j.optString("version"),

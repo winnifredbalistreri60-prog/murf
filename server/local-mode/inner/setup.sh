@@ -12,6 +12,9 @@ export UV_LINK_MODE=${UV_LINK_MODE:-copy}
 # Но pm Hermes вызывает uv с вычищенным окружением (UV_* кроме индексов отбрасываются, XDG_CONFIG_*
 # указывают во временный каталог), поэтому переменной мало: системный конфиг uv читается всё равно.
 mkdir -p /etc/uv && printf 'link-mode = "copy"\n' > /etc/uv/uv.toml
+# git по умолчанию переносит объекты хардлинком (link + unlink); под link2symlink это .l2s-ссылки
+# с абсолютным путём, которые ломаются при переносе каталога. rename надёжнее.
+git config --system core.createObject rename 2>/dev/null || true
 MURF_DIR=${MURF_DIR:-/opt/murf}
 MURF_HOME=${MURF_HOME:-/root/.murf}
 HERMES_COMMIT=${HERMES_COMMIT:-0240fa4a84123406a0e5e6e7262e5b772b43f0bd}
@@ -24,10 +27,15 @@ chmod 700 "$MURF_HOME"
 LOG="$MURF_HOME/logs/setup.log"
 exec > >(tee -a "$LOG") 2>&1
 
+# без python3 (свежая ubuntu-base до apt) — JSON вручную, с текстом шага (иначе на экране пустой шаг)
+progress_fallback() {
+  printf '{"phase":"inner","state":"%s","pct":%s,"step":"%s","msg":"%s","ts":%s}\n' "$1" "$2" "$3" \
+    "$(printf '%s' "$4" | sed 's/[\\"]/\\&/g' | tr -d '\n\r\t')" "$(date +%s)" > "$MURF_HOME/progress.json"
+}
 PCT=0
 progress() { # state pct step msg
   PCT=$2
-  python3 - "$MURF_HOME/progress.json" "$@" <<'PY' 2>/dev/null || printf '{"phase":"inner","state":"%s","pct":%s,"step":"%s"}\n' "$1" "$2" "$3" > "$MURF_HOME/progress.json"
+  python3 - "$MURF_HOME/progress.json" "$@" <<'PY' 2>/dev/null || progress_fallback "$@"
 import json, sys, time, os
 p, state, pct, step, msg = sys.argv[1:6]
 tmp = p + ".tmp"
@@ -39,6 +47,8 @@ PY
 done_step() { touch "$MURF_HOME/steps/$1.done"; }
 is_done() { [ -f "$MURF_HOME/steps/$1.done" ]; }
 fail() { progress error "$PCT" "${STEP:-?}" "$1"; echo "ОШИБКА: $1"; exit 1; }
+# каталог -> /root/.hermes/trash/<имя>.<время> (удаляет приложение снаружи proot; rm -rf внутри не видит .l2s)
+to_trash() { [ -e "$1" ] || return 0; mkdir -p /root/.hermes/trash && mv "$1" "/root/.hermes/trash/$(basename "$1").$(date +%s%N)" 2>/dev/null || rm -rf "$1" 2>/dev/null || true; }
 rand() { python3 -c 'import secrets;print(secrets.token_urlsafe(32))' 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 
 # ---------- 1. apt ----------
@@ -47,6 +57,7 @@ if ! is_done apt; then
   progress running 2 apt "Настройка apt"
   echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/01murf-sandbox
   printf 'Acquire::Retries "5";\nAcquire::http::Timeout "60";\n' > /etc/apt/apt.conf.d/02murf-net
+  progress running 3 apt "apt-get update: списки пакетов Ubuntu"
   if ! apt-get update; then
     # в свежих rootfs ключ backports бывает не в keyring — убираем backports и повторяем
     sed -i -E 's/ ?[a-z]+-backports//' /etc/apt/sources.list.d/*.sources 2>/dev/null || true
@@ -60,14 +71,50 @@ if ! is_done apt; then
         dbus-x11 x11-xserver-utils x11-utils x11-xkb-utils xauth fonts-dejavu-core fonts-noto-core fonts-noto-color-emoji"
   # после обрыва (закрыли Termux, убил Android) — доделать прерванную распаковку
   dpkg --configure -a || true; apt-get -f install -y || true
+  # Самый долгий шаг (минуты): раз в 5 с пишем в прогресс, сколько скачано и поставлено,
+  # иначе экран долго показывал «5%» без подробностей.
+  APT_TOTAL=$(apt-get install -s --no-install-recommends $PKGS 2>/dev/null | grep -c '^Inst ')
+  APT_BASE=$(dpkg-query -f '${db:Status-Abbrev}\n' -W 2>/dev/null | grep -c '^ii')
+  ( while sleep 5; do
+      dl=$(du -sm /var/cache/apt/archives 2>/dev/null | cut -f1)
+      now=$(dpkg-query -f '${db:Status-Abbrev}\n' -W 2>/dev/null | grep -c '^ii'); got=$((now - APT_BASE)); [ "$got" -lt 0 ] && got=0
+      pct=5; [ "${APT_TOTAL:-0}" -gt 0 ] && pct=$((6 + got * 23 / APT_TOTAL)); [ $pct -gt 29 ] && pct=29
+      progress running "$pct" apt "Пакеты: загружено ${dl:-0} МБ, установлено $got из ${APT_TOTAL:-?}" >/dev/null
+    done ) &
+  APT_TICK=$!
   apt-get install -y --no-install-recommends $PKGS || { apt-get -f install -y; apt-get install -y --no-install-recommends $PKGS; } \
-    || fail "apt-get install не прошёл"
+    || { kill $APT_TICK 2>/dev/null; fail "apt-get install не прошёл"; }
+  kill $APT_TICK 2>/dev/null; wait $APT_TICK 2>/dev/null
   # nginx из пакета пытается стартовать как служба — в proot это не нужно
   pkill -x nginx 2>/dev/null || true
   apt-get clean
   done_step apt
 fi
 progress running 30 apt "Пакеты установлены"
+
+# pm Hermes зовёт uv только через pm/environment.py:_run, причём с чистым окружением (UV_* отбрасываются)
+# и для изолированного runtime ещё и с --no-config, так что /etc/uv/uv.toml там не читается. Под proot
+# --link2symlink хардлинк, сделанный uv, превращается в .l2s-файл, и повторный хардлинк того же файла
+# даёт EINVAL (стадия products, сборка pm-runtime). Поэтому принудительно ставим UV_LINK_MODE=copy
+# в окружение каждого вызова uv. Правка локальная: файл помечается assume-unchanged, git status чистый.
+pm_force_copy() {
+  local f="$1/pm/environment.py"
+  [ -f "$f" ] || { echo "pm/environment.py не найден: правка uv link-mode пропущена"; return 0; }
+  grep -q 'MURF: uv link-mode copy' "$f" && return 0
+  python3 - "$f" <<'PY' || echo "не удалось поправить pm/environment.py (uv link-mode)"
+import re, sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+anchor = re.search(r"^(\s*)env\.update\(UV_PYTHON=", s, re.M)
+if not anchor:
+    sys.exit("anchor env.update(UV_PYTHON=...) not found")
+ind = anchor.group(1)
+s = s[:anchor.start()] + f"{ind}env[\"UV_LINK_MODE\"] = \"copy\"  # MURF: uv link-mode copy (proot --link2symlink)\n" + s[anchor.start():]
+open(p, "w", encoding="utf-8").write(s)
+PY
+  git -C "$1" update-index --assume-unchanged pm/environment.py 2>/dev/null || true
+  grep -q 'MURF: uv link-mode copy' "$f" && echo "pm: uv link-mode copy включён"
+}
 
 # ---------- 2. Hermes Agent (та же версия, что на сервере) ----------
 STEP=hermes
@@ -82,22 +129,35 @@ if ! is_done hermes || ! [ -x "$HERMES_BIN" ]; then
   # Поэтому сами кладём неглубокую копию ровно на нужном коммите и запускаем стадии установщика
   # без стадии repository. Если неглубокий clone не удался, работает обычный установщик целиком.
   HA=/root/.hermes/hermes-agent
+  git config --system core.createObject rename 2>/dev/null || true
   HI=(bash "$MURF_HOME/hermes-install.sh" --commit "$HERMES_COMMIT" --non-interactive --skip-browser --skip-computer-use)
-  if ! [ -f "$HA/.git/shallow" ] || [ "$(git -C "$HA" rev-parse -q --verify HEAD 2>/dev/null)" != "$HERMES_COMMIT" ]; then
-    rm -rf "$HA" "$HA.shallow"
-    if mkdir -p "$HA.shallow" \
-      && git -C "$HA.shallow" init -q -b main \
-      && git -C "$HA.shallow" remote add origin https://github.com/NousResearch/hermes-agent.git \
-      && git -C "$HA.shallow" fetch -q --depth 1 origin "$HERMES_COMMIT" \
-      && git -C "$HA.shallow" checkout -q -B main FETCH_HEAD \
-      && git -C "$HA.shallow" update-ref refs/remotes/origin/main HEAD \
-      && mv "$HA.shallow" "$HA"; then :
-    else echo "неглубокий clone не удался, установщик склонирует сам"; rm -rf "$HA.shallow" "$HA"; fi
+  # Остатки прошлой неудачной попытки: кэш uv и окружения pm могли получить .l2s-хардлинки, а такие
+  # каталоги изнутри proot не удаляются (proot прячет .l2s). Откладываем их в ~/.hermes/trash,
+  # приложение удаляет trash снаружи proot. Каждая попытка шага hermes начинает с чистого кэша.
+  to_trash /root/.hermes/cache/uv; to_trash /root/.hermes/installs; to_trash "$HA.shallow"
+  if ! [ -f "$HA/.git/shallow" ] || [ "$(git -C "$HA" rev-parse -q --verify HEAD 2>/dev/null)" != "$HERMES_COMMIT" ] \
+     || ! git -C "$HA" cat-file -e "$HERMES_COMMIT^{tree}" 2>/dev/null; then
+    # Сразу в итоговый каталог, без mv: proot --link2symlink делает .l2s-ссылки с абсолютным путём,
+    # и после переименования каталога объекты git становились битыми ссылками («bad object HEAD»).
+    to_trash "$HA"
+    if mkdir -p "$HA" \
+      && git -C "$HA" init -q -b main \
+      && git -C "$HA" config core.createObject rename \
+      && git -C "$HA" remote add origin https://github.com/NousResearch/hermes-agent.git \
+      && git -C "$HA" fetch -q --depth 1 origin "$HERMES_COMMIT" \
+      && git -C "$HA" checkout -q -B main FETCH_HEAD \
+      && git -C "$HA" update-ref refs/remotes/origin/main HEAD \
+      && git -C "$HA" cat-file -e "$HERMES_COMMIT^{tree}"; then :
+    else echo "неглубокий clone не удался, установщик склонирует сам"; to_trash "$HA"; fi
   fi
   if [ -f "$HA/.git/shallow" ]; then
     echo "Hermes: неглубокая копия $(git -C "$HA" rev-parse --short HEAD), .git $(du -sh "$HA/.git" | cut -f1)"
+    pm_force_copy "$HA"
+    n=0
     for st in prerequisites venv python-deps config products complete; do
-      "${HI[@]}" --stage "$st" </dev/null || fail "установщик Hermes: стадия $st завершилась с ошибкой (см. $LOG)"
+      progress running $((36 + n * 4)) hermes "Hermes Agent: стадия $st"
+      "${HI[@]}" --stage "$st" </dev/null || fail "установщик Hermes: стадия $st завершилась с ошибкой (см. журнал)"
+      n=$((n + 1))
     done
   else
     "${HI[@]}" </dev/null || fail "установщик Hermes завершился с ошибкой (см. $LOG)"
@@ -244,6 +304,6 @@ if [ "${MURF_WITH_DSH:-0}" = 1 ] || [ -f "$MURF_HOME/want-dsh" ]; then
 fi
 
 # кэш загрузок uv не нужен для работы (~300 МБ на телефоне)
-rm -rf /root/.hermes/cache/uv /root/.cache/pip 2>/dev/null || true
+to_trash /root/.hermes/cache/uv; rm -rf /root/.cache/pip 2>/dev/null || true
 progress done 100 done "Локальная среда установлена"
 echo "MURF local: установка завершена"
