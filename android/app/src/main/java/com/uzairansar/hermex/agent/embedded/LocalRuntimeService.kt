@@ -157,7 +157,8 @@ class LocalRuntimeService : Service() {
             } catch (e: Exception) {
                 set(Phase.ERROR, "proot: ${e.message}")
             } finally {
-                if (process == null) { releaseWake(); stopSelfIfIdle() }
+                // при «Стоп» службу гасит сам stopAll (иначе onDestroy обрывал бы его на «Остановка…»)
+                if (process == null && _state.value.phase != Phase.STOPPING) { releaseWake(); stopSelfIfIdle() }
             }
         }
     }
@@ -262,7 +263,9 @@ class LocalRuntimeService : Service() {
         process = null
         installProcess?.let { killTree(it, graceSec = 1) }; installProcess = null
         releaseWake()
-        if (_state.value.phase != Phase.ERROR) _state.value = State(Phase.IDLE, _state.value.message, _state.value.op)
+        val st = _state.value
+        if (st.phase == Phase.STOPPING) _state.value = State(Phase.IDLE, tr("Остановлено", "Stopped"), st.op)
+        else if (st.phase != Phase.ERROR) _state.value = State(Phase.IDLE, st.message, st.op)
         scope.cancel()
         super.onDestroy()
     }
