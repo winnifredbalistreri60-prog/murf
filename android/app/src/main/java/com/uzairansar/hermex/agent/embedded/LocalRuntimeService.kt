@@ -11,6 +11,8 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.system.Os
+import android.system.OsConstants
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -153,15 +155,18 @@ class LocalRuntimeService : Service() {
 
     /**
      * proot на SIGTERM не завершается, пока живы трассируемые процессы (проверено на эмуляторе:
-     * установка продолжалась после «Стоп»). SIGKILL proot надёжно гасит всё дерево: --kill-on-exit
-     * (PTRACE_O_EXITKILL) убивает потомков при смерти трассировщика.
+     * установка продолжалась после «Стоп»). На Android Process.destroyForcibly() тоже шлёт SIGTERM
+     * (libcore не переопределяет его), поэтому SIGKILL шлём сами через Os.kill. Смерть proot
+     * гасит всё дерево: --kill-on-exit (PTRACE_O_EXITKILL) убивает трассируемых потомков.
      */
     private fun killTree(p: Process, graceSec: Long = 3) {
         p.destroy()
-        if (!p.waitFor(graceSec, TimeUnit.SECONDS)) {
-            p.destroyForcibly()
-            p.waitFor(5, TimeUnit.SECONDS)
-        }
+        if (p.waitFor(graceSec, TimeUnit.SECONDS)) return
+        val pid = pidOf(p)
+        if (pid > 0) runCatching { Os.kill(pid, OsConstants.SIGKILL) }
+            .onFailure { EmbeddedRuntime.appendLog(this, "install.log", "SIGKILL $pid: $it") }
+        else p.destroyForcibly()
+        if (!p.waitFor(5, TimeUnit.SECONDS)) EmbeddedRuntime.appendLog(this, "install.log", "proot (pid $pid) не завершился после SIGKILL")
     }
 
     private fun stopSelfIfIdle() {
@@ -244,4 +249,16 @@ class LocalRuntimeService : Service() {
             }
         }
     }
+}
+
+/** pid дочернего процесса: java.lang.Process.pid() на Android недоступен, у UNIXProcess есть поле pid. */
+internal fun pidOf(p: Process): Int {
+    var c: Class<*>? = p.javaClass
+    while (c != null) {
+        val k = c
+        val v = runCatching { k.getDeclaredField("pid").apply { isAccessible = true }.getInt(p) }.getOrNull()
+        if (v != null && v > 0) return v
+        c = c.superclass
+    }
+    return Regex("pid=(\\d+)").find(p.toString())?.groupValues?.get(1)?.toIntOrNull() ?: -1
 }
