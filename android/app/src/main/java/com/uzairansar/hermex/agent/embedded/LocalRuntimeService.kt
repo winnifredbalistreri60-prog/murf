@@ -169,9 +169,12 @@ class LocalRuntimeService : Service() {
         p.destroy()
         if (p.waitFor(graceSec, TimeUnit.SECONDS)) return
         val pid = pidOf(p)
-        if (pid > 0) runCatching { Os.kill(pid, OsConstants.SIGKILL) }
-            .onFailure { EmbeddedRuntime.appendLog(this, "install.log", "SIGKILL $pid: $it") }
-        else p.destroyForcibly()
+        if (pid > 0) {
+            // Сначала потомки, потом сам proot: на эмуляторе после SIGKILL одного proot часть
+            // трассируемых процессов продолжала жить без трассировщика (syscalls -> ENOSYS).
+            val kids = ProcTree.descendants(pid)
+            (kids + pid).forEach { runCatching { Os.kill(it, OsConstants.SIGKILL) } }
+        } else p.destroyForcibly()
         if (!p.waitFor(5, TimeUnit.SECONDS)) EmbeddedRuntime.appendLog(this, "install.log", "proot (pid $pid) не завершился после SIGKILL")
     }
 
