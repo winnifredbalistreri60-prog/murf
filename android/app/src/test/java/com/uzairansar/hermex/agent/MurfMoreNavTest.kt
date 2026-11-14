@@ -41,8 +41,8 @@ class MurfMoreNavTest {
         assertEquals(listOf("Integrations", "Work", "Agent", "Advanced"), groups.map { it.titleEn })
         assertEquals(setOf("devices", "drive", "phone"), groups[0].items.map { it.routeOrPanel }.toSet())
         assertEquals(setOf("tasks", "kanban", "bottasks"), groups[1].items.map { it.routeOrPanel }.toSet())
-        assertEquals(setOf("dsh", "memory", "insights"), groups[2].items.map { it.routeOrPanel }.toSet())
-        assertEquals(setOf("providers", "clis", "local", "deploy"), groups[3].items.map { it.routeOrPanel }.toSet())
+        assertEquals(setOf("dsh", "local", "memory", "insights"), groups[2].items.map { it.routeOrPanel }.toSet())
+        assertEquals(setOf("providers", "clis", "deploy"), groups[3].items.map { it.routeOrPanel }.toSet())
     }
 
     @Test

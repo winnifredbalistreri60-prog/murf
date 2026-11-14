@@ -160,6 +160,8 @@ cmd_install() {
 }
 sync_inner() { # свежие скрипты из $D/inner → Ubuntu /opt/murf (+ сам супервизор murf-svc, если уже установлен)
   mkdir -p "$ROOTFS/opt/murf" && cp -f "$D/inner/"* "$ROOTFS/opt/murf/" && chmod 755 "$ROOTFS/opt/murf/"*.sh 2>/dev/null || true
+  # страница экрана агента (подписи RU/EN) — без «Обновить»
+  [ -f "$D/inner/index.html" ] && [ -d "$ROOTFS/root/agent-screen" ] && cp -f "$D/inner/index.html" "$ROOTFS/root/agent-screen/index.html" 2>/dev/null || true
   if [ -f "$ROOTFS/usr/local/bin/murf-svc" ] && ! cmp -s "$ROOTFS/opt/murf/svc.sh" "$ROOTFS/usr/local/bin/murf-svc"; then
     cp -f "$ROOTFS/opt/murf/svc.sh" "$ROOTFS/usr/local/bin/murf-svc.new" && chmod 755 "$ROOTFS/usr/local/bin/murf-svc.new" \
       && mv -f "$ROOTFS/usr/local/bin/murf-svc.new" "$ROOTFS/usr/local/bin/murf-svc"

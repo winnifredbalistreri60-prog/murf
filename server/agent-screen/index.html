@@ -95,9 +95,12 @@ body.ctl.kbdopen #kbd{display:flex}
 </div>
 <script>
 // MURF: сторож загрузки. Если модуль noVNC не выполнился (файлы core/ не отдались), показываем причину, а не вечное «Подключение…»
+// язык: ?lang=ru|en от приложения MURF, иначе язык браузера (по умолчанию русский)
+window.MURF_EN=(function(){var l=(new URLSearchParams(location.search).get('lang')||navigator.language||'ru').toLowerCase();return !l.startsWith('ru');})();
+window.L=function(ru,en){return window.MURF_EN?en:ru;};
 window.murfState={js:false,connected:false,attempts:0,failed:[],t0:Date.now()};
 addEventListener('error',function(e){var t=e.target;if(t&&t!==window&&(t.src||t.href)){murfState.failed.push(String(t.src||t.href).replace(location.origin,''));}},true);
-setTimeout(function(){if(!murfState.js){var m=document.getElementById('msg');if(m)m.textContent='Не загрузились файлы экрана (noVNC)'+(murfState.failed.length?': '+murfState.failed.slice(0,2).join(', '):'')+'. Перезапустите экран или откройте «Диагностика».';var d=document.getElementById('dot');if(d)d.style.background='#e5484d';}},12000);
+setTimeout(function(){if(!murfState.js){var m=document.getElementById('msg');if(m)m.textContent=L('Не загрузились файлы экрана (noVNC)','Screen files (noVNC) did not load')+(murfState.failed.length?': '+murfState.failed.slice(0,2).join(', '):'')+L('. Перезапустите экран или откройте «Диагностика».','. Restart the screen or open “Diagnostics”.');var d=document.getElementById('dot');if(d)d.style.background='#e5484d';}},12000);
 </script>
 <script type="module" crossorigin="use-credentials">
 import RFB from './core/rfb.js';
@@ -109,16 +112,21 @@ const $=id=>document.getElementById(id);
 if(MINI) document.body.classList.add('mini');
 if(CTL){ document.body.classList.add('ctl'); $('vp').setAttribute('content','width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'); }
 if(!q.get('app')) document.body.classList.add('standalone');
-$('mode').textContent = CTL ? '👁 Смотреть' : '🖱 Управлять';
+if(window.MURF_EN){ document.documentElement.lang='en'; document.title='Agent screen — MURF';
+  $('warn').textContent='⚠ The agent is working on this screen right now — your taps and typing may get in its way.';
+  if($('msg').textContent==='Подключение…') $('msg').textContent='Connecting…';
+  $('txt').placeholder='Text to type (Enter — type)'; $('send').textContent='Type'; $('sendEnter').textContent='Type ⏎';
+  $('k-kbd').title='Keyboard'; $('k-zoom').title='Zoom'; $('k-pan').title='Move the zoomed screen'; }
+$('mode').textContent = CTL ? L('👁 Смотреть','👁 View') : L('🖱 Управлять','🖱 Control');
 $('mode').onclick=()=>{ q.set('mode', CTL?'view':'control'); location.search=q.toString(); };
 let rfb=null, connected=false, activity='';
 function toast(t){ const e=$('toast'); e.textContent=t; e.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>{e.style.display='none';},2600); }
 function status(){
   $('dot').className = connected ? (activity?'dot work':'dot live') : 'dot';
   document.body.classList.toggle('busy', !!activity);
-  $('msg').textContent = !connected ? 'Экран не запущен. Он включится при первом действии агента на компьютере/в браузере.'
-    : CTL ? (activity ? '🖱 Управление · ▶ '+activity : '🖱 Управление: тап — клик, долгое нажатие — правый клик, 2 пальца — прокрутка')
-    : (activity ? '▶ '+activity : 'Агент свободен — экран в реальном времени');
+  $('msg').textContent = !connected ? L('Экран не запущен. Он включится при первом действии агента на компьютере/в браузере.','The screen is not running. It starts with the agent’s first action on the computer/in the browser.')
+    : CTL ? (activity ? L('🖱 Управление · ▶ ','🖱 Control · ▶ ')+activity : L('🖱 Управление: тап — клик, долгое нажатие — правый клик, 2 пальца — прокрутка','🖱 Control: tap — click, long press — right click, 2 fingers — scroll'))
+    : (activity ? '▶ '+activity : L('Агент свободен — экран в реальном времени','Agent is idle — live screen'));
 }
 function connect(){
   const base=location.pathname.replace(/[^/]*$/,'');
@@ -145,7 +153,7 @@ function connect(){
 }
 async function poll(){
   try{ const r=await fetch('/api/sessions',{credentials:'same-origin'}); if(r.ok){ const d=await r.json(); const s=(d.sessions||d||[]);
-    const act=s.filter(x=>x.active_stream_id).sort((a,b)=>(b.updated_at||0)-(a.updated_at||0))[0]; activity=act?(act.title||'агент работает'):''; } }catch(e){}
+    const act=s.filter(x=>x.active_stream_id).sort((a,b)=>(b.updated_at||0)-(a.updated_at||0))[0]; activity=act?(act.title||L('агент работает','agent is working')):''; } }catch(e){}
   status(); setTimeout(poll,3000);
 }
 // ---- управление: клавиши
@@ -153,7 +161,7 @@ const CODES={Escape:'Escape',Tab:'Tab',Return:'Enter',BackSpace:'Backspace',Left
   Super_L:'MetaLeft',Delete:'Delete',Home:'Home',End:'End',Page_Up:'PageUp',Page_Down:'PageDown',Control:'ControlLeft',Alt:'AltLeft',Shift:'ShiftLeft'};
 const MODSYM={Control:KeyTable.XK_Control_L,Alt:KeyTable.XK_Alt_L,Shift:KeyTable.XK_Shift_L};
 const sticky=new Set();
-function ready(){ if(!rfb||!connected){ toast('Нет соединения с экраном'); return false; } return true; }
+function ready(){ if(!rfb||!connected){ toast(L('Нет соединения с экраном','No connection to the screen')); return false; } return true; }
 function press(sym, code){
   if(!ready()) return;
   sticky.forEach(m=>rfb.sendKey(MODSYM[m], CODES[m], true));
@@ -175,7 +183,7 @@ async function sendText(enter){
   }catch(e){
     if(t){ rfb.clipboardPasteFrom(t); sticky.add('Control'); press(KeyTable.XK_v,'KeyV'); }
     if(enter) press(KeyTable.XK_Return,'Enter');
-    toast('Ввод через сервер недоступен ('+e.message+') — вставлено через буфер обмена');
+    toast(L('Ввод через сервер недоступен (','Server-side typing unavailable (')+e.message+L(') — вставлено через буфер обмена',') — pasted via clipboard'));
   }
   $('txt').value='';
 }
@@ -192,7 +200,7 @@ function applyZoom(){
 $('k-zoom').onclick=()=>{ const w=$('wrap'); const cx=(w.scrollLeft+w.clientWidth/2)/(w.scrollWidth||1), cy=(w.scrollTop+w.clientHeight/2)/(w.scrollHeight||1);
   zoom = zoom>=3 ? 1 : zoom+1; applyZoom();
   requestAnimationFrame(()=>{ w.scrollLeft=cx*w.scrollWidth-w.clientWidth/2; w.scrollTop=cy*w.scrollHeight-w.clientHeight/2; }); };
-$('k-pan').onclick=()=>{ if(zoom===1){ toast('Сначала увеличьте экран (🔍)'); return; } const on=!$('wrap').classList.contains('pan'); $('wrap').classList.toggle('pan',on); $('k-pan').classList.toggle('on',on); toast(on?'Перемещение: двигайте экран пальцем':'Перемещение выключено — касания снова управляют'); };
+$('k-pan').onclick=()=>{ if(zoom===1){ toast(L('Сначала увеличьте экран (🔍)','Zoom in first (🔍)')); return; } const on=!$('wrap').classList.contains('pan'); $('wrap').classList.toggle('pan',on); $('k-pan').classList.toggle('on',on); toast(on?L('Перемещение: двигайте экран пальцем','Pan: drag the screen with a finger'):L('Перемещение выключено — касания снова управляют','Pan off — taps control again')); };
 window.murf={mode:CTL?'control':'view', zoom:()=>zoom};
 // сразу поднимаем Bot Desktop (идемпотентно); ошибку показываем, не глотаем молча
 (async function deskStart(){

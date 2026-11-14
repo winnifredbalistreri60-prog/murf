@@ -67,13 +67,14 @@ object MurfMoreNav {
         )),
         Group("Агент", "Agent", listOf(
             Item("dsh", R.string.nav_dsh, R.drawable.ic_hermex_sparkles, Kind.Route),
+            // «Среда на телефоне» на виду (раньше пряталась в «Расширенные (+)»)
+            Item("local", R.string.nav_local, R.drawable.ic_lucide_server, Kind.Route),
             Item("memory", R.string.nav_memory, R.drawable.ic_lucide_brain, Kind.Panel),
             Item("insights", R.string.nav_insights, R.drawable.ic_lucide_chart_column_increasing, Kind.Panel),
         )),
         Group("Расширенные", "Advanced", listOf(
             Item("providers", R.string.nav_providers, R.drawable.ic_lucide_cloud, Kind.Route),
             Item("clis", R.string.nav_clis, R.drawable.ic_hermex_tools_wrench, Kind.Route),
-            Item("local", R.string.nav_local, R.drawable.ic_lucide_server, Kind.Route),
             Item("deploy", R.string.nav_deploy, R.drawable.ic_lucide_cloud, Kind.Route),
         )),
     )

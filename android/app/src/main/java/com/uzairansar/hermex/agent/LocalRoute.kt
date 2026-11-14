@@ -107,6 +107,9 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
     var status by remember { mutableStateOf<LocalStatus?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    // баннер «Установка/Обновление запущено…» в message: снимаем, когда установка вышла из INSTALLING
+    var installBanner by remember { mutableStateOf(false) }
+    var sawInstalling by remember { mutableStateOf(false) }
     var proxy by remember { mutableStateOf("") }
     var withSecrets by remember { mutableStateOf(false) }
     var confirmSecrets by remember { mutableStateOf(false) }
@@ -127,17 +130,26 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
     val serverAcc = servers.servers.firstOrNull { !LocalEnv.isLocal(it.urlString) }
     val batteryOk = remember(refresh) { LocalEnv.ignoringOptimizations(context) }
 
-    // опрос состояния: часто во время установки, редко в покое
-    LaunchedEffect(refresh, envOk) {
+    // фаза службы меняется сразу (ошибка/конец установки, «Стоп»): снимаем баннер без ожидания опроса
+    LaunchedEffect(runtimeState.phase, embedded) {
+        if (runtimeState.phase == com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING) sawInstalling = true
+        if (installBanner && message != null && LocalUi.clearInstallBanner(embedded, sawInstalling, runtimeState.phase, status?.stepState.orEmpty(), status?.installing == true)) {
+            installBanner = false; message = null
+        }
+    }
+    // опрос состояния: часто во время установки, редко в покое; смена фазы службы перезапускает опрос сразу
+    LaunchedEffect(refresh, envOk, runtimeState.phase) {
         if (!envOk) return@LaunchedEffect
         while (true) {
             status = LocalEnv.status(context)
-            // баннер «Установка запущена… 20–60 мин» не оставляем висеть после ошибки установки
             val st = status
-            if (st != null && st.stepState == "error" && !st.installing && message != null &&
-                runtimeState.phase != com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING &&
-                (message!!.startsWith("Установка запущена") || message!!.startsWith("Installation started"))) message = null
-            delay(if (status?.installing == true || busy != null) 4000 else 15000)
+            if (st != null && installBanner && message != null && LocalUi.clearInstallBanner(embedded, sawInstalling, runtimeState.phase, st.stepState, st.installing)) {
+                installBanner = false; message = null
+            }
+            val active = status?.installing == true || busy != null ||
+                runtimeState.phase != com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.IDLE &&
+                runtimeState.phase != com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.RUNNING
+            delay(if (active) 3000 else 15000)
         }
     }
     LaunchedEffect(loginPolling) {
@@ -153,7 +165,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
     }
 
     fun act(label: String, block: suspend () -> String?) {
-        busy = label; message = null
+        busy = label; message = null; installBanner = false
         scope.launch {
             message = runCatching { block() }.getOrElse { e ->
                 LocalEnv.localConnectUserMessage(e)
@@ -249,19 +261,32 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                         else -> {
                             Check(s.installed, if (s.installed) tr("Среда установлена (murf-local ${s.version})", "Environment installed (murf-local ${s.version})") else localizedString("Environment not installed"))
                             val ru = isRussianUi()
-                            val installFailed = s.stepState == "error" && !s.installing &&
-                                (!embedded || runtimeState.phase != com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING)
-                            if (installFailed) {
-                                Text(tr("Установка не завершена", "Installation failed"), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
-                                Text(InstallSteps.error(s.step, s.pct, s.stepMsg, ru), color = MaterialTheme.colorScheme.error)
-                                Text(tr("Нажмите «Установить» ещё раз: установка продолжится с места остановки. Подробности — «Журнал».",
-                                    "Tap “Install” to retry: it continues where it stopped. Details: “Log”."), style = MaterialTheme.typography.bodySmall)
-                            } else if (s.installing || s.stepState == "running" || (embedded && runtimeState.phase == com.uzairansar.hermex.agent.embedded.LocalRuntimeService.Phase.INSTALLING)) {
-                                Text(tr("Установка: ${s.pct}% — ", "Installing: ${s.pct}% — ") + InstallSteps.running(s.step, s.stepMsg, ru))
-                                LinearProgressIndicator(progress = { s.pct / 100f }, modifier = Modifier.fillMaxWidth())
+                            val upd = embedded && runtimeState.update
+                            val alive = com.uzairansar.hermex.agent.embedded.LocalRuntimeService.running
+                            when (LocalUi.installView(embedded, runtimeState.phase, runtimeState.installOp, s.stepState, s.installing, s.installed)) {
+                                LocalUi.InstallView.FAILED -> {
+                                    Text(if (upd) tr("Обновление не завершено", "Update failed") else tr("Установка не завершена", "Installation failed"),
+                                        color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                                    Text(InstallSteps.error(s.step, s.pct, s.stepMsg, ru), color = MaterialTheme.colorScheme.error)
+                                    Text(if (upd) tr("Нажмите «Обновить» ещё раз. Подробности — «Журнал».", "Tap “Update” to retry. Details: “Log”.")
+                                        else tr("Нажмите «Установить» ещё раз: установка продолжится с места остановки. Подробности — «Журнал».",
+                                        "Tap “Install” to retry: it continues where it stopped. Details: “Log”."), style = MaterialTheme.typography.bodySmall)
+                                }
+                                LocalUi.InstallView.RUNNING -> {
+                                    Text((if (upd) tr("Обновление: ${s.pct}% — ", "Updating: ${s.pct}% — ") else tr("Установка: ${s.pct}% — ", "Installing: ${s.pct}% — ")) +
+                                        InstallSteps.running(s.step, s.stepMsg, ru))
+                                    LinearProgressIndicator(progress = { s.pct / 100f }, modifier = Modifier.fillMaxWidth())
+                                }
+                                LocalUi.InstallView.NONE -> Unit
                             }
-                            Check(s.running, if (s.running) tr("Запущена", "Running") else localizedString("Stopped"))
-                            if (s.running || s.health != null) {
+                            val run = LocalUi.runView(embedded, runtimeState.phase, alive, s.running)
+                            when (run) {
+                                LocalUi.RunView.STOPPING -> Text(tr("⏳ Остановка…", "⏳ Stopping…"), style = MaterialTheme.typography.bodyMedium)
+                                LocalUi.RunView.STARTING -> Text(tr("⏳ Запуск служб…", "⏳ Starting services…"), style = MaterialTheme.typography.bodyMedium)
+                                LocalUi.RunView.RUNNING -> Check(true, tr("Запущена", "Running"))
+                                LocalUi.RunView.STOPPED -> Check(false, localizedString("Stopped"))
+                            }
+                            if (run == LocalUi.RunView.RUNNING && (s.running || s.health != null)) {
                                 Check(s.webui, "WebUI"); Check(s.api, localizedString("Agent API (127.0.0.1:8642)"))
                                 Check(s.desktop, localizedString("Desktop (screen)")); Check(s.providerLoggedIn, localizedString("xAI provider login"))
                                 if (s.proxy) Text(localizedString("Provider proxy: on"), style = MaterialTheme.typography.bodySmall)
@@ -276,31 +301,39 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                         act(context.localizedString("Preparing installation")) {
                             val r = LocalEnv.pushScripts(context)
                             if (r.error != null || r.exitCode != 0) error(r.error ?: r.combined().take(300))
+                            val update = s?.installed == true
+                            if (embedded && com.uzairansar.hermex.agent.embedded.LocalRuntimeService.running) error(tr("Сначала остановите среду («Стоп»)", "Stop the environment first (“Stop”)"))
+                            sawInstalling = false
                             LocalEnv.install(context)
-                            if (embedded) tr("Установка запущена в службе MURF (уведомление «Локальная среда»). Сначала загрузка Ubuntu (~30 МБ), потом пакеты: 20–60 мин и ~4 ГБ. Прогресс и журнал здесь.",
-                                "Installation started in the MURF service (“Local environment” notification). First Ubuntu (~30 MB), then packages: 20–60 min and ~4 GB. Progress and log are here.")
-                            else context.localizedString("Installation started in the background (no Termux window). Takes 20–60 min and ~4 GB — progress and log stay in MURF.")
+                            val text = LocalUi.installBanner(embedded, update)
+                            installBanner = true
+                            text
                         }
                     }) { Text(if (s?.installed == true) localizedString("Update") else localizedString("Install")) }
                     OutlinedButton(enabled = envOk && busy == null && s?.installed == true && !s.running, onClick = {
                         act(context.localizedString("Starting")) {
                             LocalEnv.pushScripts(context)
                             LocalEnv.startDetached(context)
-                            // После старта — дождаться health и сразу выбрать профиль «Телефон».
-                            val deadline = System.currentTimeMillis() + 180_000L
+                            // После старта — дождаться WebUI (health 200 приходит раньше, вход тогда падал
+                            // «сервер или туннель недоступен») и сразу выбрать профиль «Телефон».
+                            val deadline = System.currentTimeMillis() + 240_000L
                             var waited = 0
+                            var lastErr: Throwable? = null
                             while (System.currentTimeMillis() < deadline) {
                                 delay(3_000)
                                 waited += 3
-                                if (LocalEnv.health() != null) {
-                                    LocalEnv.switchToLocal(context, auth) { busy = it }.getOrThrow()
-                                    return@act tr(
+                                val h = LocalEnv.health()
+                                if (LocalUi.webuiReady(h) || (h != null && waited >= 120)) {
+                                    val r = LocalEnv.switchToLocal(context, auth) { busy = it }
+                                    if (r.isSuccess) return@act tr(
                                         "Среда запущена, выбран профиль «Телефон (локально)».",
                                         "Environment started; “Phone (local)” profile selected.",
                                     )
+                                    lastErr = r.exceptionOrNull() // WebUI ещё поднимается — повторим
                                 }
                                 busy = LocalEnv.startBusyLabel(waited, context.localizedString("Waiting for environment"))
                             }
+                            lastErr?.let { throw it }
                             tr(
                                 "Службы стартуют в фоне (WebUI 1–3 мин). Оставайтесь в MURF — журнал и статус здесь. Потом «Телефон (локально)».",
                                 "Services are starting in the background (WebUI 1–3 min). Stay in MURF — log and status are here. Then tap “Phone (local)”.",

@@ -40,7 +40,11 @@ import java.util.concurrent.TimeUnit
  */
 class LocalRuntimeService : Service() {
     enum class Phase { IDLE, INSTALLING, STARTING, RUNNING, STOPPING, ERROR }
-    data class State(val phase: Phase = Phase.IDLE, val message: String = "")
+    /** op: какая операция дала это состояние ([OP_INSTALL]/[OP_UPDATE] — установка/обновление), для экрана и тестов. */
+    data class State(val phase: Phase = Phase.IDLE, val message: String = "", val op: String = "") {
+        val installOp: Boolean get() = op == OP_INSTALL || op == OP_UPDATE
+        val update: Boolean get() = op == OP_UPDATE
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var wakeLock: PowerManager.WakeLock? = null
@@ -68,37 +72,44 @@ class LocalRuntimeService : Service() {
         stopRequested = false
         runCatching { androidx.core.app.NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID + 1) }
         acquireWake()
+        val upd = EmbeddedRuntime.installed(this)
+        installOp = if (upd) OP_UPDATE else OP_INSTALL
         installJob = scope.launch {
-            set(Phase.INSTALLING, tr("Установка: загрузка Ubuntu", "Installing: downloading Ubuntu"))
+            set(Phase.INSTALLING, if (upd) tr("Обновление: проверка Ubuntu", "Updating: checking Ubuntu") else tr("Установка: загрузка Ubuntu", "Installing: downloading Ubuntu"))
             try {
                 EmbeddedRuntime.syncScripts(this@LocalRuntimeService)
                 runCatching { EmbeddedRuntime.emptyTrash(this@LocalRuntimeService) }
                 RootfsInstaller(this@LocalRuntimeService).run { !isActive }
                 selfTest()
                 EmbeddedRuntime.writeProgress(this@LocalRuntimeService, "done", 5, "inner", tr("Установка внутри Ubuntu", "Installing inside Ubuntu"))
-                set(Phase.INSTALLING, tr("Установка внутри Ubuntu (20–60 мин)", "Installing inside Ubuntu (20–60 min)"))
+                set(Phase.INSTALLING, if (upd) tr("Обновление внутри Ubuntu (обычно несколько минут)", "Updating inside Ubuntu (usually a few minutes)")
+                    else tr("Установка внутри Ubuntu (20–60 мин)", "Installing inside Ubuntu (20–60 min)"))
                 val p = EmbeddedRuntime.processBuilder(this@LocalRuntimeService, EmbeddedRuntime.murfLocalCommand(listOf("install")))
                     .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.appendTo(File(EmbeddedRuntime.logsDir(this@LocalRuntimeService), "runtime.log")))
                     .start()
                 installProcess = p
                 p.outputStream.close()
-                val rc = p.waitFor()
+                // «Занято средой» растёт во время установки: пересчёт раз в 45 с, а не только в конце
+                while (!p.waitFor(45, TimeUnit.SECONDS)) runCatching { EmbeddedRuntime.updateDiskUsage(this@LocalRuntimeService) }
+                val rc = p.exitValue()
                 installProcess = null
                 runCatching { EmbeddedRuntime.emptyTrash(this@LocalRuntimeService) }
                 EmbeddedRuntime.updateDiskUsage(this@LocalRuntimeService)
-                if (stopRequested) set(Phase.IDLE, tr("Установка прервана", "Installation cancelled"))
-                else if (rc == 0) set(Phase.IDLE, tr("Установка завершена", "Installation finished"))
-                else set(Phase.ERROR, tr("Ошибка установки (код $rc), см. журнал", "Installation failed (code $rc), see log"))
+                if (stopRequested) set(Phase.IDLE, if (upd) tr("Обновление прервано", "Update cancelled") else tr("Установка прервана", "Installation cancelled"))
+                else if (rc == 0) set(Phase.IDLE, if (upd) tr("Обновление завершено", "Update finished") else tr("Установка завершена", "Installation finished"))
+                else set(Phase.ERROR, if (upd) tr("Ошибка обновления (код $rc), см. журнал", "Update failed (code $rc), see log")
+                    else tr("Ошибка установки (код $rc), см. журнал", "Installation failed (code $rc), see log"))
             } catch (e: java.util.concurrent.CancellationException) {
-                set(Phase.IDLE, tr("Установка прервана", "Installation cancelled"))
+                set(Phase.IDLE, if (upd) tr("Обновление прервано", "Update cancelled") else tr("Установка прервана", "Installation cancelled"))
             } catch (e: Exception) {
                 set(Phase.ERROR, e.message ?: e.toString())
                 EmbeddedRuntime.appendLog(this@LocalRuntimeService, "install.log", "ошибка: $e")
             } finally {
                 installProcess?.let { killTree(it) }; installProcess = null
                 releaseWake(); stopSelfIfIdle(ignoreInstallJob = true)
-                if (_state.value.phase == Phase.ERROR) notifyResult(_state.value.message)
+                if (_state.value.phase == Phase.ERROR) notifyResult(_state.value.message, upd)
+                installOp = ""
             }
         }
     }
@@ -116,6 +127,9 @@ class LocalRuntimeService : Service() {
         }
         EmbeddedRuntime.appendLog(c, "install.log", "proot ok: " + r.stdout.trim().replace('\n', ' '))
     }
+
+    /** Текущая операция для [State.op]: пока идёт установка/обновление — OP_INSTALL/OP_UPDATE. */
+    @Volatile private var installOp = ""
 
     private fun startServices() {
         if (process?.isAlive == true) { set(Phase.RUNNING, tr("Среда работает", "Environment is running")); return }
@@ -199,7 +213,7 @@ class LocalRuntimeService : Service() {
     private fun releaseWake() { runCatching { wakeLock?.takeIf { it.isHeld }?.release() }; wakeLock = null }
 
     private fun set(phase: Phase, msg: String) {
-        _state.value = State(phase, msg)
+        _state.value = State(phase, msg, installOp)
         EmbeddedRuntime.appendLog(this, "runtime-state.log", "$phase: $msg")
         if (phase != Phase.IDLE || process?.isAlive == true || installJob?.isActive == true) {
             goForeground(tr("MURF: локальная среда", "MURF: local environment"), msg)
@@ -226,13 +240,14 @@ class LocalRuntimeService : Service() {
     }
 
     /** После ошибки установки: обычное (не FGS) уведомление без «Стоп», смахивается, по нажатию открывает экран. */
-    private fun notifyResult(text: String) {
+    private fun notifyResult(text: String, update: Boolean = false) {
         runCatching {
             ensureChannel(this)
             val n = NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_notify_error)
-                .setContentTitle(tr("MURF: установка не завершена", "MURF: installation failed"))
-                .setContentText(tr("Откройте «Локальная среда» и нажмите «Установить» для повтора", "Open “Local environment” and tap “Install” to retry"))
+                .setContentTitle(if (update) tr("MURF: обновление не завершено", "MURF: update failed") else tr("MURF: установка не завершена", "MURF: installation failed"))
+                .setContentText(if (update) tr("Откройте «Среда на телефоне» и нажмите «Обновить» для повтора", "Open “Phone environment” and tap “Update” to retry")
+                    else tr("Откройте «Среда на телефоне» и нажмите «Установить» для повтора", "Open “Phone environment” and tap “Install” to retry"))
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setAutoCancel(true)
                 .setContentIntent(PhoneBridgeService.openAppIntent(this, "local"))
@@ -247,7 +262,7 @@ class LocalRuntimeService : Service() {
         process = null
         installProcess?.let { killTree(it, graceSec = 1) }; installProcess = null
         releaseWake()
-        if (_state.value.phase != Phase.ERROR) _state.value = State(Phase.IDLE, _state.value.message)
+        if (_state.value.phase != Phase.ERROR) _state.value = State(Phase.IDLE, _state.value.message, _state.value.op)
         scope.cancel()
         super.onDestroy()
     }
@@ -258,6 +273,8 @@ class LocalRuntimeService : Service() {
         const val ACTION_STOP = "com.uzairansar.hermex.local.STOP"
         const val CHANNEL = "murf_local_runtime"
         const val NOTIFICATION_ID = 7701
+        const val OP_INSTALL = "install"
+        const val OP_UPDATE = "update"
 
         @Volatile private var process: Process? = null
         @Volatile private var installProcess: Process? = null

@@ -92,6 +92,8 @@ import okhttp3.HttpUrl
  */
 fun screenUrl(server: HttpUrl, mini: Boolean = false, control: Boolean = false): String =
     server.newBuilder().encodedPath("/screen/").apply {
+        // язык подписей страницы экрана (index.html) = язык интерфейса MURF
+        addQueryParameter("lang", if (com.uzairansar.hermex.agent.isRussianUi()) "ru" else "en")
         if (mini) addQueryParameter("mini", "1")
         else {
             addQueryParameter("app", "1")
