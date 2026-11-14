@@ -7,7 +7,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Base64
 import com.uzairansar.hermex.data.repository.AddServerResult
 import com.uzairansar.hermex.data.repository.AuthRepository
 import com.uzairansar.hermex.data.secure.ServerAccount
@@ -40,6 +39,7 @@ data class LocalStatus(
     val stepState: String = "",
     val health: JSONObject? = null,
     val error: String? = null,
+    val embedded: Boolean = false,   // встроенный proot MURF (без Termux)
 ) {
     val webui get() = health?.optBoolean("webui") == true
     val api get() = health?.optBoolean("api") == true
@@ -49,8 +49,9 @@ data class LocalStatus(
 }
 
 /**
- * Локальный режим MURF: Hermes Agent + WebUI + рабочий стол в proot Ubuntu внутри Termux.
- * Приложение управляет средой через Termux RUN_COMMAND (скрипт `murf-local`, лежит в assets/murf-local.tgz).
+ * Локальный режим MURF: Hermes Agent + WebUI + рабочий стол в proot Ubuntu.
+ * Два пути (см. [LocalBackend]): встроенный proot из APK (по умолчанию, без Termux) и Termux RUN_COMMAND
+ * (запасной). В обоих — скрипт `murf-local` из assets/murf-local.tgz.
  */
 object LocalEnv {
     const val PORT = 18080
@@ -88,39 +89,33 @@ object LocalEnv {
         }.getOrDefault(false)
     }
 
-    /** Кладёт свежие скрипты из APK в Termux (~/.murf-local) и ссылку $PREFIX/bin/murf-local. */
-    suspend fun pushScripts(context: Context): TermuxResult {
-        val bytes = withContext(Dispatchers.IO) { context.assets.open("murf-local.tgz").use { it.readBytes() } }
-        val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        // Комплект с noVNC ~170 КБ (base64 ~230 КБ), а один аргумент команды в Linux — не больше 128 КБ:
-        // передаём частями по 60 КБ и склеиваем в Termux.
-        val parts = b64.chunked(60_000)
-        parts.forEachIndexed { i, part ->
-            val op = if (i == 0) ">" else ">>"
-            val r = Termux.run(context, "mkdir -p ~/.murf-local && printf '%s' '$part' $op ~/.murf-local/bundle.b64", timeoutMs = 60_000)
-            if (r.error != null || (r.exitCode ?: 0) != 0) return r
-        }
-        val cmd = "cd ~/.murf-local && base64 -d bundle.b64 > bundle.tgz && rm -f bundle.b64 && " +
-            "tar -xzf bundle.tgz -C ~/.murf-local && rm -f bundle.tgz && " +
-            "chmod 755 ~/.murf-local/murf-local && ln -sf ~/.murf-local/murf-local \$PREFIX/bin/murf-local && " +
-            "echo murf-local \$(cat ~/.murf-local/VERSION)"
-        return Termux.run(context, cmd, timeoutMs = 60_000)
-    }
+    /** Текущий способ запуска среды: встроенный proot MURF или Termux (см. [LocalBackends]). */
+    fun backend(context: Context): LocalBackend = LocalBackends.current(context)
+
+    /** Свежие скрипты из APK: в Termux (~/.murf-local) или в данные MURF (встроенный режим). */
+    suspend fun pushScripts(context: Context): TermuxResult = backend(context).pushScripts(context)
 
     /** `murf-local doctor`: короткий отчёт по всем частям среды (свежие скрипты кладём перед запуском). */
     suspend fun doctor(context: Context): String {
-        pushScripts(context)
-        return Termux.run(context, "murf-local doctor", timeoutMs = 120_000).combined().trim()
+        val b = backend(context)
+        b.pushScripts(context)
+        val head = if (b.kind == LocalBackendKind.EMBEDDED) {
+            val st = EmbeddedRuntimeInfo.summary(context)
+            if (!com.uzairansar.hermex.agent.embedded.EmbeddedRuntime.rootfsReady(context)) return st
+            st + "\n"
+        } else ""
+        return head + b.murf(context, listOf("doctor"), 120_000).combined().trim()
     }
 
     /** Перезапуск экрана агента (Xvnc + websockify) внутри уже работающей среды. */
     suspend fun restartScreen(context: Context): TermuxResult {
-        pushScripts(context)
-        return Termux.run(context, "murf-local restart-screen", timeoutMs = 150_000)
+        val b = backend(context)
+        b.pushScripts(context)
+        return b.murf(context, listOf("restart-screen"), 150_000)
     }
 
     suspend fun screenLogs(context: Context): String =
-        Termux.run(context, "murf-local logs screen 15", timeoutMs = 30_000).combined().trim()
+        backend(context).murf(context, listOf("logs", "screen", "15"), 30_000).combined().trim()
 
     /** Подробное состояние экрана из работающей среды (?full=1: noVNC, Xvnc, VNC-сокеты). */
     suspend fun screenHealth(): JSONObject? = withContext(Dispatchers.IO) {
@@ -133,14 +128,22 @@ object LocalEnv {
     }
 
     suspend fun status(context: Context): LocalStatus {
-        val r = Termux.run(context, "command -v murf-local >/dev/null || exit 127; murf-local status", timeoutMs = 60_000)
-        if (r.error != null) return LocalStatus(scripts = false, error = r.error)
-        if (r.exitCode == 127) return LocalStatus(scripts = false)
-        val j = runCatching { JSONObject(r.stdout.trim().lines().last { it.startsWith("{") }) }.getOrNull()
-            ?: return LocalStatus(scripts = true, error = r.combined().take(400))
+        val b = backend(context)
+        if (!b.ready(context)) return LocalStatus(scripts = false, error = b.notReadyReason(context))
+        val (j, r) = b.statusJson(context)
+        if (j == null) {
+            if (r.error != null) return LocalStatus(scripts = false, error = r.error)
+            if (r.exitCode == 127) return LocalStatus(scripts = false)
+            return LocalStatus(scripts = true, error = r.combined().take(400))
+        }
+        return parseStatus(j)
+    }
+
+    /** Разбор JSON `murf-local status` (общий для Termux и встроенного режима; юнит-тест). */
+    internal fun parseStatus(j: JSONObject): LocalStatus {
         val inner = j.optJSONObject("progress")
         val term = j.optJSONObject("termux_progress")
-        // пока Ubuntu не готова — прогресс Termux-фазы, потом — внутренний
+        // пока Ubuntu не готова — прогресс внешней фазы (Termux/загрузка Ubuntu), потом — внутренний
         val p = if (inner != null && (term == null || term.optString("state") == "done")) inner else term
         return LocalStatus(
             scripts = true,
@@ -155,68 +158,48 @@ object LocalEnv {
             stepMsg = p?.optString("msg").orEmpty(),
             stepState = p?.optString("state").orEmpty(),
             health = j.optJSONObject("health"),
+            embedded = j.optBoolean("embedded"),
         )
     }
 
     /**
-     * Установка без окна Termux: фоновый RUN_COMMAND + progress в `murf-local status`
-     * (LocalRoute уже опрашивает pct/step). Повторный вызов продолжит с места остановки.
+     * Установка в фоне: Termux (RUN_COMMAND без окна) или служба MURF (встроенный режим).
+     * Прогресс — в `status` (LocalRoute опрашивает pct/step). Повторный вызов продолжит с места остановки.
      */
-    fun install(context: Context) = Termux.runDetached(
-        context,
-        "termux-wake-lock 2>/dev/null; murf-local install >> ~/.murf-local/logs/install.log 2>&1",
-    )
+    fun install(context: Context) = backend(context).install(context)
 
-    /**
-     * Старт служб внутри MURF: без --fg и без Termux Activity.
-     * `murf-local start` сам nohup-ит murf-svc и до ~90 с ждёт health.
-     */
-    suspend fun start(context: Context): TermuxResult =
-        Termux.run(context, "termux-wake-lock 2>/dev/null; murf-local start", timeoutMs = 150_000)
+    /** Старт служб без окна Termux; ждёт health до ~90 с. */
+    suspend fun start(context: Context): TermuxResult = backend(context).start(context)
 
     /** Fire-and-forget старт (для параллельного опроса логов в UI). */
-    fun startDetached(context: Context) = Termux.runDetached(
-        context,
-        "termux-wake-lock 2>/dev/null; murf-local start >> ~/.murf-local/logs/svc.log 2>&1",
-    )
+    fun startDetached(context: Context) = backend(context).startDetached(context)
 
-    suspend fun stop(context: Context) = Termux.run(context, "murf-local stop", timeoutMs = 60_000)
+    suspend fun stop(context: Context) = backend(context).stop(context)
 
-    fun login(context: Context, openTermux: Boolean) {
-        val cmd = "murf-local login xai-oauth"
-        if (openTermux) {
-            Termux.runSession(context, "$cmd; echo; read -p 'Enter — закрыть окно' _", openActivity = true)
-        } else {
-            Termux.runDetached(context, "$cmd >> ~/.murf-local/logs/login.log 2>&1")
-        }
-    }
+    fun login(context: Context, openTermux: Boolean) = backend(context).login(context, openTermux)
 
     suspend fun loginStatus(context: Context): JSONObject? =
-        Termux.run(context, "murf-local login-status", timeoutMs = 30_000).stdout.lines().lastOrNull { it.startsWith("{") }
+        backend(context).murf(context, listOf("login-status"), 30_000).stdout.lines().lastOrNull { it.startsWith("{") }
             ?.let { runCatching { JSONObject(it) }.getOrNull() }
 
     suspend fun netcheck(context: Context): JSONObject? =
-        Termux.run(context, "murf-local netcheck", timeoutMs = 90_000).stdout.lines().lastOrNull { it.startsWith("{") }
+        backend(context).murf(context, listOf("netcheck"), 90_000).stdout.lines().lastOrNull { it.startsWith("{") }
             ?.let { runCatching { JSONObject(it) }.getOrNull() }
 
     suspend fun setProxy(context: Context, url: String) =
-        Termux.run(context, "murf-local proxy " + Termux.shellQuote(url.ifBlank { "off" }), timeoutMs = 60_000)
+        backend(context).murf(context, listOf("proxy", url.ifBlank { "off" }), 60_000)
 
-    fun uninstall(context: Context) = Termux.runDetached(context, "murf-local uninstall --yes >> ~/.murf-local/logs/uninstall.log 2>&1")
+    fun uninstall(context: Context) = backend(context).uninstall(context)
 
     suspend fun logs(context: Context, name: String) =
-        Termux.run(context, "murf-local logs " + Termux.shellQuote(name) + " 60", timeoutMs = 30_000).combined()
+        backend(context).murf(context, listOf("logs", name, "60"), 30_000).let { r ->
+            if (r.error != null && backend(context).kind == LocalBackendKind.EMBEDDED) {
+                r.combined() + "\n" + backend(context).startLogTail(context, 60)
+            } else r.combined()
+        }
 
     /** Хвост лога старта/служб для UI (без открытия Termux). */
-    suspend fun startLogTail(context: Context, lines: Int = 40): String {
-        val n = lines.coerceIn(10, 120)
-        val r = Termux.run(
-            context,
-            "tail -n $n ~/.murf-local/logs/svc.log ~/.murf-local/logs/gateway.log ~/.murf-local/logs/install.log 2>/dev/null | tail -n $n",
-            timeoutMs = 20_000,
-        )
-        return r.combined().trim().takeLast(4000)
-    }
+    suspend fun startLogTail(context: Context, lines: Int = 40): String = backend(context).startLogTail(context, lines)
 
     /** Короткий статус шага для Harness/Local (юнит-тестируется). */
     internal fun startBusyLabel(elapsedSec: Int, phase: String): String =
@@ -258,12 +241,7 @@ object LocalEnv {
         onBusy(context.localizedString("Checking local environment"))
         var h = health()
         if (h == null) {
-            if (!Termux.isInstalled(context)) {
-                error(context.localizedString("Install Termux (F-Droid/GitHub) — the local environment cannot start without it"))
-            }
-            if (!Termux.hasPermission(context)) {
-                error(context.localizedString("Grant MURF the “Run commands in Termux” permission (Phone & Termux)"))
-            }
+            backend(context).notReadyReason(context)?.let { error(it) }
             onBusy(context.localizedString("Syncing scripts…"))
             val push = runCatching { pushScripts(context) }.getOrNull()
             if (push != null && push.error != null) {
@@ -314,7 +292,7 @@ object LocalEnv {
         }
 
         onBusy(context.localizedString("First login to local WebUI"))
-        val r = Termux.run(context, "murf-local creds", timeoutMs = 60_000)
+        val r = backend(context).murf(context, listOf("creds"), 60_000)
         r.error?.let { error(it) }
         val j = runCatching { JSONObject(r.stdout.lines().last { it.startsWith("{") }) }.getOrElse {
             error(context.localizedString("Local environment is not installed (no WebUI password)"))
@@ -350,7 +328,7 @@ object LocalEnv {
         }
         if (!resp.optBoolean("ok")) error(resp.optString("error", context.localizedString("export failed")))
         val url = resp.getString("url")
-        val r = Termux.run(context, "murf-local import " + Termux.shellQuote(url) + if (withSecrets) " --with-secrets" else "", timeoutMs = 300_000)
+        val r = backend(context).murf(context, listOf("import", url) + if (withSecrets) listOf("--with-secrets") else emptyList(), 300_000)
         if (r.error != null) error(r.error)
         return context.localizedString("Transferred: ") + resp.optJSONArray("included")?.let { a -> (0 until a.length()).joinToString { a.getString(it) } } +
             " (${resp.optLong("size") / 1024} " + context.localizedString("KB") + ")\n" + r.stdout.trim().takeLast(600)

@@ -116,15 +116,20 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
     var logText by remember { mutableStateOf<String?>(null) }
     var diagText by remember { mutableStateOf<String?>(null) }
     var fallback by remember { mutableStateOf(LocalEnv.fallbackOffer(context)) }
-    val termuxOk = remember(refresh) { Termux.isInstalled(context) && Termux.hasPermission(context) }
+    var backendPref by remember { mutableStateOf(LocalBackends.preference(context)) }
+    val backend = remember(refresh, backendPref) { LocalEnv.backend(context) }
+    val embedded = backend.kind == LocalBackendKind.EMBEDDED
+    val embeddedSupported = remember { com.uzairansar.hermex.agent.embedded.EmbeddedRuntime.isSupported(context) }
+    val runtimeState by com.uzairansar.hermex.agent.embedded.LocalRuntimeService.state.collectAsState()
+    val envOk = remember(refresh, backendPref) { backend.ready(context) }
     val activeUrl = (authState as? AuthState.LoggedIn)?.server
     val onLocal = LocalEnv.isLocal(activeUrl)
     val serverAcc = servers.servers.firstOrNull { !LocalEnv.isLocal(it.urlString) }
     val batteryOk = remember(refresh) { LocalEnv.ignoringOptimizations(context) }
 
     // опрос состояния: часто во время установки, редко в покое
-    LaunchedEffect(refresh, termuxOk) {
-        if (!termuxOk) return@LaunchedEffect
+    LaunchedEffect(refresh, envOk) {
+        if (!envOk) return@LaunchedEffect
         while (true) {
             status = LocalEnv.status(context)
             delay(if (status?.installing == true || busy != null) 4000 else 15000)
@@ -165,7 +170,9 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                localizedString("The whole agent on the phone: Ubuntu (proot) in Termux — Hermes Agent 0.21.5, WebUI, XFCE desktop and browser. ") +
+                (if (embedded) tr("Весь агент на телефоне: Ubuntu (proot) прямо внутри MURF, Termux не нужен — Hermes Agent 0.21.5, WebUI, рабочий стол XFCE и браузер. ",
+                    "The whole agent on the phone: Ubuntu (proot) right inside MURF, no Termux needed — Hermes Agent 0.21.5, WebUI, XFCE desktop and browser. ")
+                else localizedString("The whole agent on the phone: Ubuntu (proot) in Termux — Hermes Agent 0.21.5, WebUI, XFCE desktop and browser. ")) +
                     localizedString("The server stays primary, the phone is a fallback. Docker and systemd are not available here."),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -201,16 +208,39 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 Text(localizedString("Chats, screen (view/control) and settings use the selected profile."), style = MaterialTheme.typography.bodySmall)
             }
 
+            LSection(tr("Способ запуска", "Runtime")) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = embedded, enabled = embeddedSupported && busy == null,
+                        onClick = { LocalBackends.setPreference(context, LocalBackendKind.EMBEDDED); backendPref = LocalBackendKind.EMBEDDED; status = null; refresh++ },
+                        modifier = Modifier.testTag("local_backend_embedded"),
+                    )
+                    Text(tr("Встроенный в MURF (без Termux)", "Built into MURF (no Termux)"))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = !embedded, enabled = busy == null,
+                        onClick = { LocalBackends.setPreference(context, LocalBackendKind.TERMUX); backendPref = LocalBackendKind.TERMUX; status = null; refresh++ },
+                        modifier = Modifier.testTag("local_backend_termux"),
+                    )
+                    Text(tr("Через Termux (запасной путь)", "Via Termux (fallback)"))
+                }
+                if (!embeddedSupported) Text(tr("Встроенный режим недоступен для этого процессора (${android.os.Build.SUPPORTED_ABIS.firstOrNull()}).",
+                    "Built-in mode is not available for this CPU (${android.os.Build.SUPPORTED_ABIS.firstOrNull()})."), style = MaterialTheme.typography.bodySmall)
+                if (embedded && runtimeState.message.isNotBlank()) Text(tr("Служба: ", "Service: ") + runtimeState.message, style = MaterialTheme.typography.bodySmall)
+            }
+
             LSection(tr("Состояние", "Status")) {
-                if (!termuxOk) {
-                    Text(localizedString("Requires Termux (F-Droid/GitHub) and the “Run commands in Termux” permission — set it up in “Phone & Termux”."),
+                if (!envOk) {
+                    Text(backend.notReadyReason(context) ?: localizedString("Requires Termux (F-Droid/GitHub) and the “Run commands in Termux” permission — set it up in “Phone & Termux”."),
                         color = MaterialTheme.colorScheme.error)
                 } else {
                     val s = status
                     when {
                         s == null -> Text(tr("Проверка…", "Checking…"))
-                        s.error != null -> Text("Termux: ${s.error}", color = MaterialTheme.colorScheme.error)
-                        !s.scripts -> Text(localizedString("MURF scripts are not installed in Termux yet — tap “Install”."))
+                        s.error != null -> Text((if (embedded) "" else "Termux: ") + s.error, color = MaterialTheme.colorScheme.error)
+                        !s.scripts -> Text(if (embedded) tr("Среда ещё не установлена — нажмите «Установить».", "Environment is not installed yet — tap “Install”.")
+                            else localizedString("MURF scripts are not installed in Termux yet — tap “Install”."))
                         else -> {
                             Check(s.installed, if (s.installed) tr("Среда установлена (murf-local ${s.version})", "Environment installed (murf-local ${s.version})") else localizedString("Environment not installed"))
                             if (s.installing || (s.stepState == "running") || s.stepState == "error") {
@@ -229,15 +259,17 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val s = status
-                    Button(enabled = termuxOk && busy == null && s?.installing != true, modifier = Modifier.testTag("local_install"), onClick = {
+                    Button(enabled = envOk && busy == null && s?.installing != true, modifier = Modifier.testTag("local_install"), onClick = {
                         act(context.localizedString("Preparing installation")) {
                             val r = LocalEnv.pushScripts(context)
                             if (r.error != null || r.exitCode != 0) error(r.error ?: r.combined().take(300))
                             LocalEnv.install(context)
-                            context.localizedString("Installation started in the background (no Termux window). Takes 20–60 min and ~4 GB — progress and log stay in MURF.")
+                            if (embedded) tr("Установка запущена в службе MURF (уведомление «Локальная среда»). Сначала загрузка Ubuntu (~30 МБ), потом пакеты: 20–60 мин и ~4 ГБ. Прогресс и журнал здесь.",
+                                "Installation started in the MURF service (“Local environment” notification). First Ubuntu (~30 MB), then packages: 20–60 min and ~4 GB. Progress and log are here.")
+                            else context.localizedString("Installation started in the background (no Termux window). Takes 20–60 min and ~4 GB — progress and log stay in MURF.")
                         }
                     }) { Text(if (s?.installed == true) localizedString("Update") else localizedString("Install")) }
-                    OutlinedButton(enabled = termuxOk && busy == null && s?.installed == true && !s.running, onClick = {
+                    OutlinedButton(enabled = envOk && busy == null && s?.installed == true && !s.running, onClick = {
                         act(context.localizedString("Starting")) {
                             LocalEnv.pushScripts(context)
                             LocalEnv.startDetached(context)
@@ -262,10 +294,10 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                             )
                         }
                     }) { Text(tr("Запустить", "Start")) }
-                    OutlinedButton(enabled = termuxOk && busy == null && s?.running == true, onClick = {
+                    OutlinedButton(enabled = envOk && busy == null && s?.running == true, onClick = {
                         act(context.localizedString("Stopping")) { LocalEnv.stop(context).combined().take(300) }
                     }) { Text(localizedString("Stop")) }
-                    TextButton(enabled = termuxOk, onClick = { act(context.localizedString("Log")) { logText = LocalEnv.logs(context, if (status?.installed == true) "gateway" else "install"); null } }) { Text(localizedString("Log")) }
+                    TextButton(enabled = envOk, onClick = { act(context.localizedString("Log")) { logText = LocalEnv.logs(context, if (status?.installed == true) "gateway" else "install"); null } }) { Text(localizedString("Log")) }
                 }
             }
 
@@ -273,14 +305,14 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 Text(localizedString("Checks every part of the environment (Ubuntu, services, ports, screen files and WebSocket, VNC, Android limits) and shows a short report you can send to the developer."),
                     style = MaterialTheme.typography.bodySmall)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = termuxOk && busy == null, modifier = Modifier.testTag("local_doctor"), onClick = {
+                    Button(enabled = envOk && busy == null, modifier = Modifier.testTag("local_doctor"), onClick = {
                         act(context.localizedString("Diagnostics (up to 1 min)")) { diagText = LocalEnv.doctor(context); null }
                     }) { Text(localizedString("Diagnostics")) }
-                    OutlinedButton(enabled = termuxOk && busy == null && status?.installed == true, onClick = {
+                    OutlinedButton(enabled = envOk && busy == null && status?.installed == true, onClick = {
                         act(context.localizedString("Restarting the screen (up to 1.5 min)")) { LocalEnv.restartScreen(context).combined().trim().takeLast(400) }
                     }) { Text(localizedString("Restart screen")) }
-                    TextButton(enabled = termuxOk, onClick = { act(context.localizedString("Screen log")) { logText = LocalEnv.screenLogs(context); null } }) { Text(localizedString("Screen log")) }
-                    TextButton(onClick = { LocalEnv.openTermux(context) }) {
+                    TextButton(enabled = envOk, onClick = { act(context.localizedString("Screen log")) { logText = LocalEnv.screenLogs(context); null } }) { Text(localizedString("Screen log")) }
+                    if (!embedded) TextButton(onClick = { LocalEnv.openTermux(context) }) {
                         Text(localizedString("Termux (diagnostics)"))
                     }
                 }
@@ -302,10 +334,10 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 Text(localizedString("xAI login runs inside the local environment (device code): open the link and confirm the code in the phone browser."),
                     style = MaterialTheme.typography.bodySmall)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(enabled = termuxOk && status?.installed == true && busy == null, modifier = Modifier.testTag("local_login"), onClick = {
+                    Button(enabled = envOk && status?.installed == true && busy == null, modifier = Modifier.testTag("local_login"), onClick = {
                         loginInfo = null; LocalEnv.login(context, openTermux = false); loginPolling = true
                     }) { Text(localizedString("Log in to provider")) }
-                    OutlinedButton(enabled = termuxOk && status?.installed == true && busy == null, onClick = {
+                    OutlinedButton(enabled = envOk && status?.installed == true && busy == null, onClick = {
                         act(context.localizedString("Network check")) { netText(LocalEnv.netcheck(context)) }
                     }) { Text(localizedString("Check access")) }
                 }
@@ -327,10 +359,10 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 OutlinedTextField(value = proxy, onValueChange = { proxy = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     label = { Text(localizedString("Proxy (optional)")) }, placeholder = { Text("socks5h://127.0.0.1:10808") })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(enabled = termuxOk && status?.installed == true && busy == null, onClick = {
+                    OutlinedButton(enabled = envOk && status?.installed == true && busy == null, onClick = {
                         act(context.localizedString("Proxy")) { LocalEnv.setProxy(context, proxy.trim()).combined().take(200) }
                     }) { Text(localizedString("Save proxy")) }
-                    TextButton(enabled = termuxOk && status?.installed == true && busy == null, onClick = {
+                    TextButton(enabled = envOk && status?.installed == true && busy == null, onClick = {
                         proxy = ""; act(context.localizedString("Proxy")) { LocalEnv.setProxy(context, "off").combined().take(200) }
                     }) { Text(localizedString("Turn off")) }
                 }
@@ -345,7 +377,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                     Checkbox(checked = withSecrets, onCheckedChange = { if (it) confirmSecrets = true else withSecrets = false })
                     Text(localizedString("Include secrets (xAI login and API keys)"), style = MaterialTheme.typography.bodyMedium)
                 }
-                Button(enabled = termuxOk && status?.installed == true && busy == null && serverAcc != null, onClick = {
+                Button(enabled = envOk && status?.installed == true && busy == null && serverAcc != null, onClick = {
                     val su = LocalEnv.serverUrlOf(serverAcc)!!
                     act(context.localizedString("Transferring settings")) { LocalEnv.copyFromServer(context, su, cookieJar, withSecrets) }
                 }) { Text(localizedString("Copy from server")) }
@@ -360,7 +392,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
                 Check(batteryOk, localizedString("MURF: no battery optimization"))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { LocalEnv.requestIgnoreOptimizations(context); refresh++ }) { Text(localizedString("MURF: battery")) }
-                    OutlinedButton(onClick = { LocalEnv.openAppDetails(context, Termux.PACKAGE) }) { Text(localizedString("Termux: settings")) }
+                    if (!embedded) OutlinedButton(onClick = { LocalEnv.openAppDetails(context, Termux.PACKAGE) }) { Text(localizedString("Termux: settings")) }
                     OutlinedButton(onClick = { if (!LocalEnv.openVivoBackground(context)) AgentShare.toast(context, context.localizedString("vivo screen not found — open “i Manager” → App management")) }) { Text(localizedString("vivo: autostart/background")) }
                     OutlinedButton(onClick = { LocalEnv.openDeveloperOptions(context) }) { Text(localizedString("Developer options")) }
                 }
@@ -369,7 +401,7 @@ fun LocalRoute(auth: AuthRepository, cookieJar: CookieJar, onBack: () -> Unit) {
             LSection(localizedString("Removal")) {
                 Text(localizedString("Removes Ubuntu with everything inside (agent, login, local chats). The server profile is not affected."),
                     style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(enabled = termuxOk && status?.rootfsPresent() == true && busy == null, onClick = { confirmUninstall = true }) { Text(localizedString("Remove local environment")) }
+                OutlinedButton(enabled = envOk && status?.rootfsPresent() == true && busy == null, onClick = { confirmUninstall = true }) { Text(localizedString("Remove local environment")) }
             }
         }
     }

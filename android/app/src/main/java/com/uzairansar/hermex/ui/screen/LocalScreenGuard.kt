@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.uzairansar.hermex.agent.AgentShare
 import com.uzairansar.hermex.agent.LocalEnv
-import com.uzairansar.hermex.agent.Termux
 import com.uzairansar.hermex.agent.tr
 import com.uzairansar.hermex.ui.localization.localizedString
 import kotlinx.coroutines.delay
@@ -117,7 +116,8 @@ fun LocalScreenGuard(server: HttpUrl, webView: () -> WebView?, onReload: () -> U
                 busy?.let { Text("⏳ $it…", color = Color(0xFF8AB4FF), fontSize = 12.sp) }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = busy == null, onClick = {
-                        if (!Termux.hasPermission(context)) { AgentShare.toast(context, context.localizedString("No Termux command permission — see “Phone & Termux”")); return@Button }
+                        val backend = LocalEnv.backend(context)
+                        if (!backend.ready(context)) { AgentShare.toast(context, backend.notReadyReason(context) ?: context.localizedString("No Termux command permission — see “Phone & Termux”")); return@Button }
                         busy = context.localizedString("Restarting the screen (up to 1.5 min)")
                         scope.launch {
                             val r = LocalEnv.restartScreen(context)
