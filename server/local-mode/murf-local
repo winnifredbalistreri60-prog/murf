@@ -71,7 +71,7 @@ if $EMBEDDED; then
   inner() { # уже внутри proot: только чистое окружение, как у proot-distro login
     /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" LANG=C.UTF-8 \
       PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-      MURF_PORT="$PORT" HERMES_COMMIT="$HERMES_COMMIT" MURF_PAYLOAD_URL="$PAYLOAD_URL" "$@"
+      MURF_PORT="$PORT" HERMES_COMMIT="$HERMES_COMMIT" MURF_PAYLOAD_URL="$PAYLOAD_URL" UV_LINK_MODE=copy "$@"
   }
 fi
 installed() { [ -x "$ROOTFS/root/.hermes/hermes-agent/.hermes/bin/hermes" ] && [ -f "$ROOTFS/root/.murf/steps/config.done" ]; }
@@ -86,7 +86,9 @@ cmd_install() {
   termux-wake-lock 2>/dev/null || true
   local free_mb; free_mb=$(df -Pk "$D" | awk 'NR==2{print int($4/1024)}')
   echo "свободно: ${free_mb} МБ"
-  if [ "${free_mb:-0}" -lt 4500 ]; then tprogress error 0 space "Мало места: ${free_mb} МБ, нужно ≥ 4,5 ГБ"; return 1; fi
+  # повтор после частичной установки: пакеты Ubuntu уже стоят, осталось ~1,5 ГБ (Hermes, WebUI)
+  local need_mb=4500; [ -f "$INNER_HOME/steps/apt.done" ] && need_mb=2000
+  if [ "${free_mb:-0}" -lt "$need_mb" ]; then tprogress error 0 space "Мало места: ${free_mb} МБ, нужно ≥ $need_mb МБ"; return 1; fi
   if $EMBEDDED; then
     # Ubuntu уже скачана и распакована приложением (RootfsInstaller), wakelock держит служба MURF
     [ -x /usr/bin/bash ] || { tprogress error 3 rootfs "Ubuntu не распакована (встроенный режим)"; return 1; }

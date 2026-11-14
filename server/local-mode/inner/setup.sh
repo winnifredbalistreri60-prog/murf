@@ -6,6 +6,9 @@ set -uo pipefail
 export HOME=/root LANG=C.UTF-8 LC_ALL=C.UTF-8 DEBIAN_FRONTEND=noninteractive
 export PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 unset TERMUX_VERSION PREFIX LD_PRELOAD TERMUX_APP__PACKAGE_NAME 2>/dev/null || true
+# proot --link2symlink эмулирует хардлинки файлами .l2s.*; uv (установщик Hermes) по умолчанию
+# хардлинкает кэш и падает с EINVAL на таких файлах — копируем (чуть медленнее, зато работает)
+export UV_LINK_MODE=${UV_LINK_MODE:-copy}
 MURF_DIR=${MURF_DIR:-/opt/murf}
 MURF_HOME=${MURF_HOME:-/root/.murf}
 HERMES_COMMIT=${HERMES_COMMIT:-0240fa4a84123406a0e5e6e7262e5b772b43f0bd}
