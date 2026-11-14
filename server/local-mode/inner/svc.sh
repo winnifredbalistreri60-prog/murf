@@ -21,6 +21,10 @@ HERMES_BIN=/root/.hermes/hermes-agent/.hermes/bin/hermes
 PORT=$(sed -n 's/.*listen 127.0.0.1:\([0-9]*\);.*/\1/p' $MURF_HOME/nginx.conf 2>/dev/null | head -1); PORT=${PORT:-18080}
 mkdir -p "$RUN/nginx" "$LOGS" /root/.cache/agent-screen
 SERVICES="gateway webui viewproxy wsview wsctl api nginx"
+# seccomp приложений Android пускает только epoll_create1, а nginx на x86_64/arm32 зовёт старый
+# epoll_create (worker падал с ENOSYS). Подменяем функцию через LD_PRELOAD (aarch64 не нужно).
+case "$(uname -m)" in x86_64) EF=x86_64 ;; arm*) EF=armhf ;; *) EF="" ;; esac
+NGINX_ENV=""; [ -n "$EF" ] && [ -f "$MURF_DIR/epollfix-$EF.so" ] && NGINX_ENV="env LD_PRELOAD=$MURF_DIR/epollfix-$EF.so "
 
 svc_cmd() {
   case "$1" in
@@ -30,7 +34,7 @@ svc_cmd() {
     wsview)    echo "websockify --unix-target=/root/.cache/agent-screen/view.sock 127.0.0.1:18081" ;;
     wsctl)     echo "websockify --unix-target=/root/.hermes/bot-desktop/rfb.sock 127.0.0.1:18082" ;;
     api)       echo "python3 $MURF_DIR/murf_api.py" ;;
-    nginx)     echo "nginx -c $MURF_HOME/nginx.conf -p $RUN/nginx -g 'daemon off;'" ;;
+    nginx)     echo "${NGINX_ENV}nginx -c $MURF_HOME/nginx.conf -p $RUN/nginx -g 'daemon off;'" ;;
   esac
 }
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1" 2>/dev/null)" 2>/dev/null; }
