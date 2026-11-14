@@ -19,8 +19,8 @@ class RootfsInstaller(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).retryOnConnectionFailure(true).build(),
 ) {
-    private fun progress(state: String, pct: Int, step: String, msg: String) =
-        EmbeddedRuntime.writeProgress(context, state, pct, step, msg)
+    private fun progress(state: String, pct: Int, step: String, msg: String, log: Boolean = true) =
+        EmbeddedRuntime.writeProgress(context, state, pct, step, msg, log)
 
     /** true — Ubuntu готова. Исключение — ошибка (прогресс уже помечен error). */
     fun run(cancelled: () -> Boolean = { false }) {
@@ -40,12 +40,16 @@ class RootfsInstaller(
         val img = UbuntuBase.pick(sums, arch) ?: fail(1, "rootfs", "не найден ubuntu-base $arch в SHA256SUMS")
 
         val tarball = File(EmbeddedRuntime.cacheDir(c), img.name)
+        var loggedMb = -1L
         try {
             ResumableDownloader(client).download("$baseUrl/${img.name}", tarball, img.sha256, { done, total ->
                 val mb = done / (1024 * 1024)
                 val msg = if (total > 0) "Загрузка ${img.name}: $mb из ${total / (1024 * 1024)} МБ" else "Загрузка ${img.name}: $mb МБ"
                 val pct = if (total > 0) 1 + (done * 2 / total).toInt() else 2
-                progress("running", pct.coerceIn(1, 3), "rootfs", msg)
+                // progress.json — на каждый шаг, в журнал — раз в 5 МБ
+                val logIt = mb / 5 != loggedMb / 5 || (total in 1..done)
+                if (logIt) loggedMb = mb
+                progress("running", pct.coerceIn(1, 3), "rootfs", msg, logIt)
             }, cancelled)
         } catch (e: ChecksumMismatchException) {
             fail(2, "rootfs", "контрольная сумма ${img.name} не совпала, повторите")
@@ -66,7 +70,7 @@ class RootfsInstaller(
                 val st = TarExtractor(root) { it == "dev" || it.startsWith("dev/") }.extract(GZIPInputStream(counting, 64 * 1024)) {
                     if (cancelled()) throw java.util.concurrent.CancellationException("unpack cancelled")
                     val p = (counting.count * 100 / total).toInt()
-                    if (p != lastPct && p % 5 == 0) { lastPct = p; progress("running", 3, "rootfs", "Распаковка Ubuntu: $p%") }
+                    if (p != lastPct && p % 5 == 0) { lastPct = p; progress("running", 3, "rootfs", "Распаковка Ubuntu: $p%", p % 25 == 0) }
                 }
                 EmbeddedRuntime.appendLog(c, "install.log", "распаковано: $st")
             }

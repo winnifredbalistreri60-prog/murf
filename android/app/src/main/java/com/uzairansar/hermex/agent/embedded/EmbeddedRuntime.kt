@@ -151,14 +151,14 @@ object EmbeddedRuntime {
 
     // ---------- прогресс и статус без Ubuntu ----------
 
-    fun writeProgress(c: Context, state: String, pct: Int, step: String, msg: String) {
+    fun writeProgress(c: Context, state: String, pct: Int, step: String, msg: String, log: Boolean = true) {
         val host = hostDir(c).apply { mkdirs() }
         val j = JSONObject().put("phase", "embedded").put("state", state).put("pct", pct).put("step", step)
             .put("msg", msg).put("ts", System.currentTimeMillis() / 1000)
         val tmp = File(host, "progress.json.tmp")
         tmp.writeText(j.toString() + "\n")
         tmp.renameTo(File(host, "progress.json"))
-        appendLog(c, "install.log", "[$state $pct%] $step: $msg")
+        if (log) appendLog(c, "install.log", "[$state $pct%] $step: $msg")
     }
 
     fun appendLog(c: Context, name: String, line: String) {
