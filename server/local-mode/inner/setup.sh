@@ -9,6 +9,9 @@ unset TERMUX_VERSION PREFIX LD_PRELOAD TERMUX_APP__PACKAGE_NAME 2>/dev/null || t
 # proot --link2symlink эмулирует хардлинки файлами .l2s.*; uv (установщик Hermes) по умолчанию
 # хардлинкает кэш и падает с EINVAL на таких файлах — копируем (чуть медленнее, зато работает)
 export UV_LINK_MODE=${UV_LINK_MODE:-copy}
+# Но pm Hermes вызывает uv с вычищенным окружением (UV_* кроме индексов отбрасываются, XDG_CONFIG_*
+# указывают во временный каталог), поэтому переменной мало: системный конфиг uv читается всё равно.
+mkdir -p /etc/uv && printf 'link-mode = "copy"\n' > /etc/uv/uv.toml
 MURF_DIR=${MURF_DIR:-/opt/murf}
 MURF_HOME=${MURF_HOME:-/root/.murf}
 HERMES_COMMIT=${HERMES_COMMIT:-0240fa4a84123406a0e5e6e7262e5b772b43f0bd}
@@ -74,8 +77,31 @@ if ! is_done hermes || ! [ -x "$HERMES_BIN" ]; then
     "https://raw.githubusercontent.com/NousResearch/hermes-agent/$HERMES_COMMIT/scripts/install.sh" \
     || fail "не скачать install.sh Hermes с GitHub"
   progress running 35 hermes "Hermes Agent: установка (git clone + Python-зависимости, 5–20 мин)"
-  bash "$MURF_HOME/hermes-install.sh" --commit "$HERMES_COMMIT" --non-interactive --skip-browser --skip-computer-use </dev/null \
-    || fail "установщик Hermes завершился с ошибкой (см. $LOG)"
+  # Установщик клонирует с --filter=blob:none и потом догружает блобы по одному, а при повторе
+  # делает полный fetch origin/main (650k объектов): под proot .git разрастался до 3.8 ГБ.
+  # Поэтому сами кладём неглубокую копию ровно на нужном коммите и запускаем стадии установщика
+  # без стадии repository. Если неглубокий clone не удался, работает обычный установщик целиком.
+  HA=/root/.hermes/hermes-agent
+  HI=(bash "$MURF_HOME/hermes-install.sh" --commit "$HERMES_COMMIT" --non-interactive --skip-browser --skip-computer-use)
+  if ! [ -f "$HA/.git/shallow" ] || [ "$(git -C "$HA" rev-parse -q --verify HEAD 2>/dev/null)" != "$HERMES_COMMIT" ]; then
+    rm -rf "$HA" "$HA.shallow"
+    if mkdir -p "$HA.shallow" \
+      && git -C "$HA.shallow" init -q -b main \
+      && git -C "$HA.shallow" remote add origin https://github.com/NousResearch/hermes-agent.git \
+      && git -C "$HA.shallow" fetch -q --depth 1 origin "$HERMES_COMMIT" \
+      && git -C "$HA.shallow" checkout -q -B main FETCH_HEAD \
+      && git -C "$HA.shallow" update-ref refs/remotes/origin/main HEAD \
+      && mv "$HA.shallow" "$HA"; then :
+    else echo "неглубокий clone не удался, установщик склонирует сам"; rm -rf "$HA.shallow" "$HA"; fi
+  fi
+  if [ -f "$HA/.git/shallow" ]; then
+    echo "Hermes: неглубокая копия $(git -C "$HA" rev-parse --short HEAD), .git $(du -sh "$HA/.git" | cut -f1)"
+    for st in prerequisites venv python-deps config products complete; do
+      "${HI[@]}" --stage "$st" </dev/null || fail "установщик Hermes: стадия $st завершилась с ошибкой (см. $LOG)"
+    done
+  else
+    "${HI[@]}" </dev/null || fail "установщик Hermes завершился с ошибкой (см. $LOG)"
+  fi
   [ -x "$HERMES_BIN" ] || fail "после установки нет $HERMES_BIN"
   done_step hermes
 fi
