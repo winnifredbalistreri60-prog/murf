@@ -7,6 +7,21 @@ Security sections per release.
 
 ## [Unreleased]
 
+## [1.10.16-murf] - 2026-11-14
+
+### Added
+- **Built-in phone environment (no Termux):** Ubuntu (proot) runs inside MURF as a foreground service; one universal APK for arm64-v8a, armeabi-v7a and x86_64. One “Install” button downloads Ubuntu, installs packages, Hermes Agent and WebUI; Start/Stop from the app or the notification. Termux stays as a fallback.
+- **Встроенная среда на телефоне (без Termux):** Ubuntu (proot) работает внутри MURF как foreground-служба; один universal APK для arm64-v8a, armeabi-v7a и x86_64. Одна кнопка «Установить» скачивает Ubuntu, ставит пакеты, Hermes Agent и WebUI; «Запустить»/«Стоп» в приложении и в уведомлении. Termux остаётся запасным путём.
+- “Phone environment” is now in More → Agent (no longer hidden under Advanced). / «Среда на телефоне» теперь в «Ещё → Агент», а не в «Расширенные».
+
+### Fixed
+- Hermes install under proot: uv no longer fails with hardlink `.l2s` EINVAL at the `products` stage; shallow clone of Hermes; stale cache cleanup. / Установка Hermes под proot: uv больше не падает на hardlink `.l2s` EINVAL на стадии `products`; неглубокий клон Hermes; чистка старого кэша.
+- Install screen: steps and errors in English UI are in English; an error shows a clear failed state with retry immediately; live progress for system packages; the “20–60 min” banner and disk usage no longer lag at the end. / Экран установки: шаги и ошибки на языке интерфейса; ошибка сразу показывается с повтором; живой прогресс системных пакетов; баннер «20–60 мин» и «Занято» не запаздывают в конце.
+- Update has its own texts (no “20–60 min”). / У обновления свои тексты (без «20–60 мин»).
+- Stop shows “Stopping…” and clears Running/WebUI right away. / «Стоп» показывает «Остановка…» и сразу снимает зелёные Running/WebUI.
+- First Start waits for WebUI and selects the “Phone (local)” profile automatically. / Первый «Запустить» ждёт WebUI и сам выбирает профиль «Телефон (локально)».
+- Agent screen captions follow the app language (RU/EN). / Подписи экрана агента на языке приложения (RU/EN).
+
 ## [1.10.15-murf] - 2026-11-04
 
 ### Changed
