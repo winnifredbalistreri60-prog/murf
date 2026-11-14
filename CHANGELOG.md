@@ -12,7 +12,7 @@ Security sections per release.
 ### Added
 - **Built-in phone environment (no Termux):** Ubuntu (proot) runs inside MURF as a foreground service; one universal APK for arm64-v8a, armeabi-v7a and x86_64. One “Install” button downloads Ubuntu, installs packages, Hermes Agent and WebUI; Start/Stop from the app or the notification. Termux stays as a fallback.
 - **Встроенная среда на телефоне (без Termux):** Ubuntu (proot) работает внутри MURF как foreground-служба; один universal APK для arm64-v8a, armeabi-v7a и x86_64. Одна кнопка «Установить» скачивает Ubuntu, ставит пакеты, Hermes Agent и WebUI; «Запустить»/«Стоп» в приложении и в уведомлении. Termux остаётся запасным путём.
-- “Phone environment” is now in More → Agent (no longer hidden under Advanced). / «Среда на телефоне» теперь в «Ещё → Агент», а не в «Расширенные».
+- “Phone environment” is now in More → Agent (no longer hidden under Advanced). / «Среда на телефоне» теперь в «Дополнительно → Агент», а не в «Расширенные».
 
 ### Fixed
 - Hermes install under proot: uv no longer fails with hardlink `.l2s` EINVAL at the `products` stage; shallow clone of Hermes; stale cache cleanup. / Установка Hermes под proot: uv больше не падает на hardlink `.l2s` EINVAL на стадии `products`; неглубокий клон Hermes; чистка старого кэша.
