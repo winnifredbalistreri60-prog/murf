@@ -86,7 +86,7 @@ class LocalRuntimeService : Service() {
                 set(Phase.ERROR, e.message ?: e.toString())
                 EmbeddedRuntime.appendLog(this@LocalRuntimeService, "install.log", "ошибка: $e")
             } finally {
-                installProcess?.destroy(); installProcess = null
+                installProcess?.let { killTree(it) }; installProcess = null
                 releaseWake(); stopSelfIfIdle()
             }
         }
@@ -139,18 +139,29 @@ class LocalRuntimeService : Service() {
 
     private suspend fun stopAll() {
         set(Phase.STOPPING, tr("Остановка…", "Stopping…"))
-        installJob?.cancel(); installProcess?.destroy()
+        installJob?.cancel()
+        installProcess?.let { killTree(it) }; installProcess = null
         val p = process
         if (EmbeddedRuntime.rootfsReady(this)) {
             runCatching { EmbeddedRuntime.murfLocal(this, listOf("stop"), 60_000) }
         }
-        if (p != null) {
-            p.destroy()
-            if (!p.waitFor(10, TimeUnit.SECONDS)) p.destroyForcibly()
-        }
+        if (p != null) killTree(p, graceSec = 10)
         process = null
         releaseWake()
         set(Phase.IDLE, tr("Остановлено", "Stopped"))
+    }
+
+    /**
+     * proot на SIGTERM не завершается, пока живы трассируемые процессы (проверено на эмуляторе:
+     * установка продолжалась после «Стоп»). SIGKILL proot надёжно гасит всё дерево: --kill-on-exit
+     * (PTRACE_O_EXITKILL) убивает потомков при смерти трассировщика.
+     */
+    private fun killTree(p: Process, graceSec: Long = 3) {
+        p.destroy()
+        if (!p.waitFor(graceSec, TimeUnit.SECONDS)) {
+            p.destroyForcibly()
+            p.waitFor(5, TimeUnit.SECONDS)
+        }
     }
 
     private fun stopSelfIfIdle() {
@@ -197,9 +208,9 @@ class LocalRuntimeService : Service() {
 
     override fun onDestroy() {
         // служба уничтожена (стоп пользователем или системой): процессы proot не оставляем сиротами
-        process?.let { p -> runCatching { runBlocking { EmbeddedRuntime.murfLocal(this@LocalRuntimeService, listOf("stop"), 20_000) } }; p.destroy() }
+        process?.let { p -> runCatching { runBlocking { EmbeddedRuntime.murfLocal(this@LocalRuntimeService, listOf("stop"), 20_000) } }; killTree(p, graceSec = 3) }
         process = null
-        installProcess?.destroy(); installProcess = null
+        installProcess?.let { killTree(it, graceSec = 1) }; installProcess = null
         releaseWake()
         if (_state.value.phase != Phase.ERROR) _state.value = State(Phase.IDLE, _state.value.message)
         scope.cancel()
