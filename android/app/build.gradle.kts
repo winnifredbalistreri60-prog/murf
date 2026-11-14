@@ -30,6 +30,10 @@ android {
         val defaultServerUrl = (project.findProperty("murf.defaultServerUrl") as String?).orEmpty()
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"$defaultServerUrl\"")
 
+        // Встроенный локальный режим: proot (jniLibs) собран android/native/build-proot.sh
+        // для arm64-v8a, armeabi-v7a, x86_64. abiFilters не задаём, чтобы APK ставился и на x86
+        // (там встроенного режима нет, остаётся запасной путь через Termux).
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -56,6 +60,12 @@ android {
                 "proguard-rules.pro",
             )
         }
+    }
+
+    packaging {
+        // libproot*.so — исполняемые файлы (exec из nativeLibraryDir, обход W^X на targetSdk 29+):
+        // они должны распаковываться на диск при установке.
+        jniLibs { useLegacyPackaging = true }
     }
 
     compileOptions {
